@@ -1,0 +1,8 @@
+.env
+.git
+.go-cache
+.cache-go-*
+.docker-codex
+.openmycelium-state.json
+data
+*.log

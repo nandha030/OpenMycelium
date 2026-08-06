@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in | OpenMycelium</title>
+    <style>
+      :root { --ink: #122029; --muted: #64767c; --line: #dbe3e3; --green: #116b51; --green-dark: #0b513d; --lime: #cfea64; --night: #0d191f; --night-line: #2a3b41; }
+      * { box-sizing: border-box; }
+      html, body { min-height: 100%; }
+      body { margin: 0; color: var(--ink); background: #eef2f2; font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      button, input { font: inherit; }
+      .auth-shell { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(440px, 43%) minmax(0, 57%); }
+      .auth-panel { min-width: 0; padding: 28px 64px 22px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: #fbfcfc; border-right: 1px solid var(--line); }
+      .brand { display: inline-flex; align-items: center; gap: 11px; width: fit-content; color: #101d24; font-size: 18px; font-weight: 800; letter-spacing: 0; }
+      .brand-mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 6px; color: #13211e; background: var(--lime); font: 800 12px ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .form-wrap { width: min(100%, 480px); align-self: center; padding: 28px 0; }
+      .eyebrow { margin: 0 0 12px; color: #6e8288; font: 700 11px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 1.4px; text-transform: uppercase; }
+      h1 { margin: 0; font-size: 40px; line-height: 1.12; letter-spacing: 0; }
+      .intro { max-width: 430px; margin: 12px 0 26px; color: var(--muted); font-size: 14px; line-height: 1.65; }
+      .tabs { display: flex; gap: 4px; padding: 4px; margin: 0 0 22px; background: #eef2f2; border: 1px solid #e4eaea; border-radius: 7px; }
+      .tabs button { flex: 1; min-height: 42px; padding: 8px 12px; border: 0; border-radius: 5px; background: transparent; color: #617278; font-weight: 750; cursor: pointer; }
+      .tabs button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px #10202718; }
+      form { display: grid; gap: 15px; }
+      label { display: grid; gap: 8px; color: #26363d; font-size: 12px; font-weight: 760; }
+      input { width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid #cbd6d7; border-radius: 6px; background: #fff; color: var(--ink); outline: none; transition: border-color .16s, box-shadow .16s; }
+      input:hover { border-color: #aebfc0; }
+      input:focus { border-color: #287b63; box-shadow: 0 0 0 3px #287b6318; }
+      input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus { -webkit-text-fill-color: var(--ink); box-shadow: 0 0 0 1000px #fff inset, 0 0 0 3px #287b6318; transition: background-color 9999s ease-out; }
+      .submit { min-height: 48px; margin-top: 2px; border: 1px solid var(--green-dark); border-radius: 6px; background: var(--green); color: #fff; font-weight: 800; cursor: pointer; box-shadow: 0 2px 0 var(--green-dark); transition: background .16s, transform .16s; }
+      .submit:hover { background: #0e6149; }
+      .submit:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--green-dark); }
+      .submit:disabled { opacity: .6; cursor: wait; }
+      .message { min-height: 18px; margin: 0; color: #a33434; font-size: 12px; line-height: 1.5; }
+      .setup { display: none; padding: 12px 14px; margin: 0 0 18px; border: 1px solid #e1c46f; border-radius: 6px; background: #fff8df; color: #704e08; font-size: 12px; line-height: 1.55; }
+      .panel-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 18px; border-top: 1px solid #e3e9e9; color: #748489; font-size: 11px; }
+      .security-state { display: inline-flex; align-items: center; gap: 7px; }
+      .security-state i { width: 7px; height: 7px; border-radius: 50%; background: #2aa877; box-shadow: 0 0 0 3px #2aa87716; }
+      .auth-context { min-width: 0; padding: 28px 64px 34px; display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; background: var(--night); color: #eef7f4; }
+      .context-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--night-line); color: #9bb0b1; font: 700 10px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 1px; text-transform: uppercase; }
+      .context-state { display: inline-flex; align-items: center; gap: 8px; color: #c9d8d5; }
+      .context-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); }
+      .context-copy { width: min(100%, 760px); align-self: center; padding: 34px 0; }
+      .context-copy .eyebrow { color: #9eb9bc; }
+      .context-copy h2 { max-width: 720px; margin: 0 0 22px; font-size: 54px; line-height: 1.08; letter-spacing: 0; }
+      .context-copy > p:last-of-type { max-width: 610px; margin: 0; color: #9fb2b4; font-size: 16px; line-height: 1.7; }
+      .topology { width: min(100%, 760px); display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--night-line); border-bottom: 1px solid var(--night-line); }
+      .topology-step { position: relative; min-width: 0; padding: 17px 18px 17px 0; }
+      .topology-step + .topology-step { padding-left: 18px; border-left: 1px solid var(--night-line); }
+      .topology-step span { display: block; margin-bottom: 7px; color: #71888a; font: 700 9px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 1px; }
+      .topology-step strong { display: block; overflow: hidden; color: #d9e6e2; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+      .topology-step:nth-child(1) strong { color: #cee969; }
+      .topology-step:nth-child(3) strong { color: #7ec8e3; }
+      .context-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; padding-top: 22px; border-top: 1px solid var(--night-line); color: #789092; font: 700 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .vendor-list { display: flex; flex-wrap: wrap; gap: 18px; color: #a9bdbc; }
+      [hidden] { display: none !important; }
+      @media (max-height: 760px) and (min-width: 821px) {
+        .auth-panel, .auth-context { padding-top: 22px; padding-bottom: 18px; }
+        .form-wrap { padding: 18px 0; }
+        h1 { font-size: 36px; }
+        .intro { margin-bottom: 20px; }
+        .tabs { margin-bottom: 18px; }
+        .context-copy { padding: 24px 0; }
+        .context-copy h2 { font-size: 46px; margin-bottom: 16px; }
+        .context-copy > p:last-of-type { font-size: 14px; }
+      }
+      @media (max-width: 1050px) { .auth-panel { padding-left: 42px; padding-right: 42px; } .auth-context { padding-left: 48px; padding-right: 48px; } .context-copy h2 { font-size: 44px; } }
+      @media (max-width: 820px) {
+        .auth-shell { grid-template-columns: 1fr; }
+        .auth-panel { min-height: 100vh; min-height: 100dvh; padding: 24px 26px 20px; border: 0; }
+        .form-wrap { width: min(100%, 500px); justify-self: center; padding: 32px 0; }
+        .auth-context { display: none; }
+        h1 { font-size: 36px; }
+      }
+      @media (max-width: 430px) { .auth-panel { padding-left: 20px; padding-right: 20px; } .brand { font-size: 17px; } h1 { font-size: 32px; } .panel-footer { align-items: flex-start; flex-direction: column; gap: 7px; } }
+    </style>
+  </head>
+  <body>
+    <main class="auth-shell">
+      <section class="auth-panel">
+        <div class="brand"><span class="brand-mark">OM</span> OpenMycelium</div>
+        <div class="form-wrap">
+          <p class="eyebrow">Control plane access</p>
+          <h1 id="form-title">Welcome back</h1>
+          <p class="intro" id="form-intro">Sign in to manage infrastructure, workloads, models, and operations.</p>
+          <div class="setup" id="setup-message">No administrator account exists. Check the bootstrap admin values in your local .env file, then rebuild the stack.</div>
+          <div class="tabs" id="auth-tabs" hidden>
+            <button class="active" type="button" data-mode="login">Sign in</button>
+            <button type="button" data-mode="signup">Create account</button>
+          </div>
+          <form id="auth-form">
+            <label>Email address<input id="email" type="email" autocomplete="username" required /></label>
+            <label>Password<input id="password" type="password" autocomplete="current-password" minlength="12" required /></label>
+            <button class="submit" id="submit" type="submit">Sign in</button>
+            <p class="message" id="message" role="alert"></p>
+          </form>
+        </div>
+        <footer class="panel-footer"><span class="security-state"><i></i> Encrypted local session</span><span>Developer Edition</span></footer>
+      </section>
+      <aside class="auth-context">
+        <header class="context-header"><span>OpenMycelium / Control Plane</span><span class="context-state"><i></i> Ready</span></header>
+        <div class="context-copy">
+          <p class="eyebrow">Open, vendor-neutral AI infrastructure</p>
+          <h2>One control plane for heterogeneous compute.</h2>
+          <p>Discover hardware, plan model placement, and operate training and inference workloads across local systems and clusters.</p>
+          <div class="topology" aria-label="OpenMycelium workload lifecycle"><div class="topology-step"><span>01</span><strong>Discover</strong></div><div class="topology-step"><span>02</span><strong>Plan</strong></div><div class="topology-step"><span>03</span><strong>Schedule</strong></div><div class="topology-step"><span>04</span><strong>Observe</strong></div></div>
+        </div>
+        <footer class="context-footer"><div class="vendor-list"><span>NVIDIA</span><span>AMD</span><span>INTEL</span><span>APPLE</span></div><span>LOCAL / CLOUD / K8S</span></footer>
+      </aside>
+    </main>
+    <script>
+      const form = document.getElementById('auth-form');
+      const tabs = document.getElementById('auth-tabs');
+      const message = document.getElementById('message');
+      const setupMessage = document.getElementById('setup-message');
+      const submit = document.getElementById('submit');
+      let mode = 'login';
+
+      function setMode(nextMode) {
+        mode = nextMode;
+        document.querySelectorAll('[data-mode]').forEach(button => button.classList.toggle('active', button.dataset.mode === mode));
+        document.getElementById('form-title').textContent = mode === 'login' ? 'Welcome back' : 'Create your account';
+        document.getElementById('form-intro').textContent = mode === 'login' ? 'Sign in to manage infrastructure, workloads, models, and operations.' : 'Registration is enabled by your platform administrator.';
+        document.getElementById('password').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+        submit.textContent = mode === 'login' ? 'Sign in' : 'Create account';
+        message.textContent = '';
+      }
+
+      tabs.addEventListener('click', event => { if (event.target.dataset.mode) setMode(event.target.dataset.mode); });
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        submit.disabled = true;
+        message.textContent = '';
+        try {
+          const response = await fetch(`/api/v1/auth/${mode === 'login' ? 'login' : 'signup'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value }) });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Authentication failed');
+          if (mode === 'signup') { setMode('login'); message.style.color = '#13704e'; message.textContent = 'Account created. Sign in with your new credentials.'; return; }
+          window.location.replace('/');
+        } catch (error) { message.style.color = '#a33434'; message.textContent = error.message; }
+        finally { submit.disabled = false; }
+      });
+
+      fetch('/api/v1/auth/status').then(response => response.json()).then(status => {
+        setupMessage.style.display = status.configured ? 'none' : 'block';
+        tabs.hidden = !status.registrationOpen;
+      }).catch(() => { setupMessage.textContent = 'The control plane is not reachable. Check the Docker services and reload this page.'; setupMessage.style.display = 'block'; });
+    </script>
+  </body>
+</html>

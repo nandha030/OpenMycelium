@@ -1,0 +1,8 @@
+.env
+.cache-go-*
+.docker-codex/
+.go-cache/
+__pycache__/
+*.pyc
+.openmycelium-state.json
+data/
