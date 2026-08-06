@@ -8,6 +8,7 @@ This document distinguishes working product capabilities from adapters that stil
 - Persistent light/dark dual-tone visual system with live compute-topology canvas
 - Local account bootstrap, admin-created users, bcrypt password hashing, revocable server-side sessions, account deletion, signup policy, admin/operator/viewer RBAC, and self/last-admin protection
 - PostgreSQL-backed users, sessions, clusters, accelerator-pool policies, queues, quotas, integrations, settings, and audit events
+- Authenticated Kubernetes inventory check-in with node readiness, version, accelerator totals, audit events, and a Windows kubeconfig bridge for local k3s/Vagrant clusters
 - Windows CPU, RAM, and display-adapter discovery through the included host agent
 - Local NVIDIA and AMD command-line discovery when vendor tools are visible to the control-plane process
 - Apple Silicon Metal/Core ML domain identification when running natively on macOS

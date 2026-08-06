@@ -107,6 +107,9 @@ main > header { border-bottom: 1px solid var(--border) !important; margin-bottom
 .metrics article:nth-child(4)::before { background: var(--violet); }
 .metrics p, .metrics span, .section-heading p, .install-copy, .input-note, .empty-inline, .pool-meta, .cluster-card p, .mono, .service-row span, .audit-entry span { color: var(--text-2) !important; }
 .metrics strong { color: var(--text-1); font-size: 32px !important; font-weight: 620; }
+.cluster-stats { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cluster-stats span { min-width: 0; text-align: center; }
+.cluster-seen { margin-top: 12px !important; padding-top: 10px; border-top: 1px solid var(--border); color: var(--text-3) !important; font-size: 9px !important; }
 
 .topology-panel { margin-bottom: 14px; padding-bottom: 14px !important; overflow: hidden; }
 .topology-live { color: var(--mint); font: 650 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-transform: uppercase; letter-spacing: .6px; }

@@ -81,6 +81,31 @@ kubectl port-forward -n openmycelium service/control-plane 8080:8080
 
 The current Kubernetes manifest deploys the control plane. Real cluster accelerator discovery requires a published, privileged-enough but read-only node agent with vendor tooling; the checked-in DaemonSet still references a future agent image.
 
+### Vagrant k3s laptop integration
+
+For a local k3s cluster that exports a kubeconfig to Windows, use the included authenticated bridge. It reads node readiness, Kubernetes version, and extended GPU/NPU/TPU allocatable resources through `kubectl`, then creates or refreshes the matching OpenMycelium cluster record.
+
+Rebuild OpenMycelium once so PostgreSQL receives the cluster-inventory migration:
+
+```powershell
+docker compose up --build -d
+```
+
+Run a one-time check-in from the OpenMycelium project directory. `Get-Credential` keeps the password out of shell history:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+$credential = Get-Credential -Message "OpenMycelium login"
+.\agents\windows\sync-kubernetes.ps1 `
+  -Kubeconfig "C:\path\to\k8s-vagrant-lite\shared\kubeconfig" `
+  -ClusterName "laptop-k3s" `
+  -Credential $credential
+```
+
+Use `-Watch -IntervalSeconds 30` to keep readiness and accelerator capacity current. Open **Clusters** in the dashboard and select **Refresh**; a healthy three-node cluster appears as `Running`, `3` nodes, and `3` ready. A CPU-only cluster correctly reports `0` accelerators.
+
+This bridge performs inventory integration. Generic OpenMycelium workload records are not yet translated into Kubernetes Jobs or Deployments; that requires the Kubernetes workload adapter and image registry path described in the roadmap.
+
 ### API quick test
 
 ```powershell

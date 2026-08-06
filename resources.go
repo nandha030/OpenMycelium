@@ -20,7 +20,9 @@ type Cluster struct {
 	Type         string    `json:"type"`
 	Status       string    `json:"status"`
 	Nodes        int       `json:"nodes"`
+	ReadyNodes   int       `json:"readyNodes"`
 	Accelerators int       `json:"accelerators"`
+	Version      string    `json:"version"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
@@ -57,6 +59,8 @@ type Integration struct {
 
 var resourceSchema = []string{
 	`CREATE TABLE IF NOT EXISTS clusters (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, endpoint TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL, nodes INTEGER NOT NULL DEFAULT 0, accelerators INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS ready_nodes INTEGER NOT NULL DEFAULT 0`,
+	`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT ''`,
 	`CREATE TABLE IF NOT EXISTS accelerator_pools (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, vendor TEXT NOT NULL, runtime TEXT NOT NULL, policy TEXT NOT NULL, selector TEXT NOT NULL DEFAULT '', enabled BOOLEAN NOT NULL DEFAULT true, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
 	`CREATE TABLE IF NOT EXISTS queues (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, priority INTEGER NOT NULL, accelerator_quota INTEGER NOT NULL, memory_quota_gb INTEGER NOT NULL, preemption_enabled BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
 	`CREATE TABLE IF NOT EXISTS integrations (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, type TEXT NOT NULL, target TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'configured', created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
@@ -87,7 +91,7 @@ func clustersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet {
-		rows, err := database.Query(r.Context(), `SELECT id,name,endpoint,type,status,nodes,accelerators,created_at,updated_at FROM clusters ORDER BY created_at DESC`)
+		rows, err := database.Query(r.Context(), `SELECT id,name,endpoint,type,status,nodes,ready_nodes,accelerators,version,created_at,updated_at FROM clusters ORDER BY created_at DESC`)
 		if err != nil {
 			writeJSON(w, 500, map[string]string{"error": "cannot list clusters"})
 			return
@@ -96,7 +100,7 @@ func clustersHandler(w http.ResponseWriter, r *http.Request) {
 		items := []Cluster{}
 		for rows.Next() {
 			var item Cluster
-			if rows.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Type, &item.Status, &item.Nodes, &item.Accelerators, &item.CreatedAt, &item.UpdatedAt) == nil {
+			if rows.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Type, &item.Status, &item.Nodes, &item.ReadyNodes, &item.Accelerators, &item.Version, &item.CreatedAt, &item.UpdatedAt) == nil {
 				items = append(items, item)
 			}
 		}
@@ -134,12 +138,14 @@ func clusterResourceHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireDatabase(w) {
 		return
 	}
-	id := strings.TrimPrefix(r.URL.Path, "/api/v1/clusters/")
-	if id == "" {
+	relative := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/clusters/"), "/")
+	parts := strings.Split(relative, "/")
+	if len(parts) == 0 || parts[0] == "" || len(parts) > 2 {
 		writeJSON(w, 404, map[string]string{"error": "cluster not found"})
 		return
 	}
-	if r.Method == http.MethodDelete {
+	id := parts[0]
+	if len(parts) == 1 && r.Method == http.MethodDelete {
 		result, err := database.Exec(r.Context(), `DELETE FROM clusters WHERE id=$1`, id)
 		if err != nil {
 			writeJSON(w, 500, map[string]string{"error": "cannot delete cluster"})
@@ -151,6 +157,34 @@ func clusterResourceHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		auditRequest(r, "cluster.deleted", map[string]any{"cluster_id": id})
 		writeJSON(w, 200, map[string]bool{"ok": true})
+		return
+	}
+	if len(parts) == 2 && parts[1] == "inventory" && r.Method == http.MethodPatch {
+		var input struct {
+			Nodes        int    `json:"nodes"`
+			ReadyNodes   int    `json:"readyNodes"`
+			Accelerators int    `json:"accelerators"`
+			Version      string `json:"version"`
+		}
+		if decode(r, &input) != nil || input.Nodes < 0 || input.ReadyNodes < 0 || input.ReadyNodes > input.Nodes || input.Accelerators < 0 {
+			writeJSON(w, 400, map[string]string{"error": "valid node, ready-node, and accelerator counts are required"})
+			return
+		}
+		status := "pending"
+		if input.Nodes > 0 && input.ReadyNodes == input.Nodes {
+			status = "ready"
+		} else if input.Nodes > 0 {
+			status = "degraded"
+		}
+		var item Cluster
+		err := database.QueryRow(r.Context(), `UPDATE clusters SET status=$1,nodes=$2,ready_nodes=$3,accelerators=$4,version=$5,updated_at=now() WHERE id=$6 RETURNING id,name,endpoint,type,status,nodes,ready_nodes,accelerators,version,created_at,updated_at`, status, input.Nodes, input.ReadyNodes, input.Accelerators, strings.TrimSpace(input.Version), id).Scan(&item.ID, &item.Name, &item.Endpoint, &item.Type, &item.Status, &item.Nodes, &item.ReadyNodes, &item.Accelerators, &item.Version, &item.CreatedAt, &item.UpdatedAt)
+		if err != nil {
+			writeJSON(w, 404, map[string]string{"error": "cluster not found"})
+			return
+		}
+		auditRequest(r, "cluster.inventory_reported", map[string]any{"cluster_id": item.ID, "nodes": item.Nodes, "ready_nodes": item.ReadyNodes, "accelerators": item.Accelerators, "version": item.Version})
+		publishEvent("cluster.inventory_reported", item)
+		writeJSON(w, 200, item)
 		return
 	}
 	writeJSON(w, 405, map[string]string{"error": "method not allowed"})
