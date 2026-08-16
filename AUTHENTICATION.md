@@ -8,6 +8,7 @@ The Developer Edition implements local bootstrap authentication from `.env`.
 - Random browser session tokens are stored only as SHA-256 hashes and sent in `HttpOnly`, `SameSite=Strict` cookies.
 - Implemented roles are `platform_admin`, `operator`, and `viewer`.
 - Authentication events and existing control-plane mutations write PostgreSQL audit records.
+- Native discovery agents authenticate with a dedicated `AGENT_TOKEN` bearer token or an operator session.
 - Public signup is disabled unless a platform administrator enables local registration in Settings.
 
 Authentication modes:
@@ -16,4 +17,4 @@ Authentication modes:
 2. `oidc`: planned for standards-based providers, including Microsoft Entra ID.
 3. `ldap`: planned as optional enterprise directory synchronization.
 
-Authenticated viewers can read control-plane resources and run model inference. Operators can mutate workloads, discovery, pools, and workflows. Platform administrators can also change platform settings. The host-agent import endpoint is intentionally not yet authenticated and must not be exposed outside a trusted local network until signed agent enrollment is implemented.
+Authenticated viewers can read control-plane resources and run model inference. Operators can mutate workloads, discovery, pools, and workflows. Platform administrators can also change platform settings. The native host-agent import endpoint requires an operator session or dedicated bearer token; per-agent enrollment, token rotation, and revocation remain production milestones.

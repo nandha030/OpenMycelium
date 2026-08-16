@@ -9,6 +9,7 @@ import os
 import pathlib
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 DEFAULT_URL = os.environ.get("OPENMYCELIUM_URL", "http://127.0.0.1:8081")
@@ -59,8 +60,15 @@ def add_resource_commands(sub):
     cluster_sub.add_parser("list")
     cluster_add = cluster_sub.add_parser("add")
     cluster_add.add_argument("name")
-    cluster_add.add_argument("endpoint")
+    cluster_add.add_argument("endpoint", nargs="?", default="")
     cluster_add.add_argument("--type", default="kubernetes", choices=["kubernetes", "docker", "bare-metal"])
+    cluster_add.add_argument("--kubeconfig")
+    cluster_add.add_argument("--namespace", default="openmycelium-workloads")
+    cluster_add.add_argument("--storage-class", default="")
+    cluster_refresh = cluster_sub.add_parser("refresh")
+    cluster_refresh.add_argument("id")
+    cluster_nodes = cluster_sub.add_parser("nodes")
+    cluster_nodes.add_argument("id")
     cluster_delete = cluster_sub.add_parser("delete")
     cluster_delete.add_argument("id")
 
@@ -73,6 +81,10 @@ def add_resource_commands(sub):
     pool_add.add_argument("--runtime", required=True, choices=["cuda", "rocm", "oneapi", "metal", "cpu", "compatible"])
     pool_add.add_argument("--policy", default="compatible-runtime")
     pool_add.add_argument("--selector", default="")
+    pool_add.add_argument("--resource-name", default="", help="Exact extended resource advertised by the device plugin")
+    pool_add.add_argument("--sharing-mode", choices=["exclusive", "mig", "time-slicing", "mps", "device-plugin"], default="exclusive")
+    pool_add.add_argument("--slice-profile", default="")
+    pool_add.add_argument("--sharing-replicas", type=int, default=1)
     pool_delete = pool_sub.add_parser("delete")
     pool_delete.add_argument("id")
 
@@ -88,6 +100,27 @@ def add_resource_commands(sub):
     queue_delete = queue_sub.add_parser("delete")
     queue_delete.add_argument("id")
 
+    fabric = sub.add_parser("fabric", help="Plan Hypha distributed tensor memory")
+    fabric_sub = fabric.add_subparsers(dest="action", required=True)
+    fabric_sub.add_parser("list")
+    fabric_capabilities = fabric_sub.add_parser("capabilities")
+    fabric_capabilities.add_argument("--cluster", required=True)
+    fabric_capabilities.add_argument("--device-memory-gib", type=float, default=0)
+    fabric_capabilities.add_argument("--include-host-memory", action="store_true")
+    fabric_plan = fabric_sub.add_parser("plan")
+    fabric_plan.add_argument("name")
+    fabric_plan.add_argument("--cluster", required=True)
+    fabric_plan.add_argument("--tensor", default="weights")
+    fabric_plan.add_argument("--size-gib", type=float, required=True)
+    fabric_plan.add_argument("--strategy", choices=["auto", "shard", "replicate"], default="auto")
+    fabric_plan.add_argument("--consistency", choices=["immutable", "single-writer", "reduce", "transactional"], default="immutable")
+    fabric_plan.add_argument("--device-memory-gib", type=float, default=0)
+    fabric_plan.add_argument("--reserve-percent", type=float, default=10)
+    fabric_plan.add_argument("--max-devices", type=int, default=16)
+    fabric_plan.add_argument("--include-host-memory", action="store_true")
+    fabric_delete = fabric_sub.add_parser("delete")
+    fabric_delete.add_argument("id")
+
 
 def add_workload_commands(sub):
     workload = sub.add_parser("workload", help="Submit and operate workloads")
@@ -96,18 +129,47 @@ def add_workload_commands(sub):
     workload_sub.add_parser("refresh")
     submit = workload_sub.add_parser("submit")
     submit.add_argument("name")
-    submit.add_argument("--kind", default="batch", choices=["training", "batch", "interactive", "inference"])
+    submit.add_argument("--kind", default="batch", choices=["training", "finetuning", "batch", "interactive", "inference", "agent"])
     submit.add_argument("--pool", default="cpu-local")
     submit.add_argument("--image", default="")
+    submit.add_argument("--image-pull-secret", default="")
     submit.add_argument("--accelerators", type=int, default=0)
-    submit.add_argument("--ssh-host", default="")
-    submit.add_argument("--ssh-port", type=int, default=22)
-    submit.add_argument("--ssh-user", default="")
+    submit.add_argument("--cluster", required=True)
+    submit.add_argument("--namespace", default="")
+    submit.add_argument("--model", default="")
+    submit.add_argument("--model-version", default="", help="Governed model version ID")
+    submit.add_argument("--command", dest="container_command", default="")
+    submit.add_argument("--cpu", default="1")
+    submit.add_argument("--memory", default="2Gi")
+    submit.add_argument("--storage-gb", type=int, default=20)
+    submit.add_argument("--replicas", type=int, default=1)
+    submit.add_argument("--service-type", choices=["ClusterIP", "NodePort", "LoadBalancer"], default="ClusterIP")
+    submit.add_argument("--port", type=int, default=8000)
+    submit.add_argument("--fabric-plan", default="")
+    submit.add_argument("--scheduler", choices=["kubernetes", "kueue", "volcano"], default="kubernetes")
+    submit.add_argument("--queue", default="")
+    submit.add_argument("--gang-min", type=int, default=0)
+    submit.add_argument("--priority-class", default="")
+    submit.add_argument("--topology-mode", choices=["none", "compact", "spread"], default="none")
+    submit.add_argument("--topology-key", default="kubernetes.io/hostname")
+    submit.add_argument("--network-mode", choices=["standard", "rdma", "infiniband"], default="standard")
     for action in ("start", "stop", "redeploy", "checkpoint"):
         command = workload_sub.add_parser(action)
         command.add_argument("id")
     workload_delete = workload_sub.add_parser("delete")
     workload_delete.add_argument("id")
+    for operation in ("diagnostics", "logs", "events", "service", "manifest", "storage"):
+        command = workload_sub.add_parser(operation)
+        command.add_argument("id")
+    workload_exec = workload_sub.add_parser("exec", help="Run a non-interactive command in the workload pod")
+    workload_exec.add_argument("id")
+    workload_exec.add_argument("command")
+    workload_exec.add_argument("--container", default="")
+    workload_probe = workload_sub.add_parser("probe", help="Probe the workload Service through the Kubernetes API")
+    workload_probe.add_argument("id")
+    workload_probe.add_argument("--method", choices=["GET", "POST"], default="GET")
+    workload_probe.add_argument("--path", default="/")
+    workload_probe.add_argument("--body", default="")
     workload_ssh = workload_sub.add_parser("ssh")
     workload_ssh.add_argument("id")
     workload_ssh_config = workload_sub.add_parser("ssh-config")
@@ -119,11 +181,76 @@ def add_workload_commands(sub):
     model = sub.add_parser("model", help="Use the configured Ollama runtime")
     model_sub = model.add_subparsers(dest="action", required=True)
     model_sub.add_parser("list")
+    model_sub.add_parser("catalog")
+    model_sub.add_parser("sync-ollama")
     deploy = model_sub.add_parser("deploy")
     deploy.add_argument("name")
     generate = model_sub.add_parser("generate")
     generate.add_argument("name")
     generate.add_argument("prompt")
+
+    manifest = sub.add_parser("manifest", help="Preview or apply safe namespaced Kubernetes YAML")
+    manifest_sub = manifest.add_subparsers(dest="action", required=True)
+    for action in ("preview", "apply"):
+        command = manifest_sub.add_parser(action)
+        command.add_argument("--cluster", required=True)
+        command.add_argument("--namespace", default="")
+        command.add_argument("--file", required=True, help="YAML file path or - for stdin")
+
+
+def add_agent_commands(sub):
+    agent = sub.add_parser("agent", help="Manage agent definitions, flows, runs, approvals, and traces")
+    agent_sub = agent.add_subparsers(dest="action", required=True)
+    agent_list = agent_sub.add_parser("list")
+    agent_list.add_argument("--workspace", default="")
+    agent_create = agent_sub.add_parser("create")
+    agent_create.add_argument("name")
+    agent_create.add_argument("--workspace", default="")
+    agent_create.add_argument("--description", default="")
+    agent_create.add_argument("--framework", default="generic")
+    agent_create.add_argument("--image", required=True)
+    agent_create.add_argument("--command", default="")
+    agent_create.add_argument("--port", type=int, default=8000)
+    agent_create.add_argument("--model-version", default="")
+    agent_create.add_argument("--pool", default="cpu-local")
+    agent_create.add_argument("--cpu", default="1")
+    agent_create.add_argument("--memory", default="2Gi")
+    agent_create.add_argument("--accelerators", type=int, default=0)
+    agent_create.add_argument("--storage-gb", type=int, default=0)
+    agent_create.add_argument("--token-budget", type=int, default=100000)
+    agent_create.add_argument("--timeout", type=int, default=900)
+    agent_create.add_argument("--require-approval", action="store_true")
+    agent_create.add_argument("--memory-mode", choices=["run", "thread", "workspace", "none"], default="run")
+    agent_delete = agent_sub.add_parser("delete")
+    agent_delete.add_argument("id")
+    agent_run = agent_sub.add_parser("run")
+    agent_run.add_argument("--workspace", required=True)
+    agent_run.add_argument("--agent", required=True)
+    agent_run.add_argument("--flow", default="")
+    agent_run.add_argument("--input", default='{"message":"Run the requested task."}')
+    agent_run.add_argument("--token-budget", type=int, default=100000)
+    agent_runs = agent_sub.add_parser("runs")
+    agent_runs.add_argument("--workspace", default="")
+    agent_cancel = agent_sub.add_parser("cancel")
+    agent_cancel.add_argument("id")
+    agent_trace = agent_sub.add_parser("trace")
+    agent_trace.add_argument("id")
+    agent_flows = agent_sub.add_parser("flows")
+    agent_flows.add_argument("--workspace", default="")
+    agent_flow_create = agent_sub.add_parser("flow-create")
+    agent_flow_create.add_argument("name")
+    agent_flow_create.add_argument("--workspace", required=True)
+    agent_flow_create.add_argument("--file", required=True, help="Flow graph JSON file")
+    agent_flow_create.add_argument("--description", default="")
+    agent_approvals = agent_sub.add_parser("approvals")
+    agent_approvals.add_argument("--workspace", default="")
+    for decision in ("approve", "reject"):
+        command = agent_sub.add_parser(decision)
+        command.add_argument("id")
+    agent_tools = agent_sub.add_parser("tools")
+    agent_tools.add_argument("--workspace", default="")
+    agent_memory = agent_sub.add_parser("memory")
+    agent_memory.add_argument("--workspace", default="")
 
 
 def parser():
@@ -139,6 +266,7 @@ def parser():
     discover.add_argument("action", choices=["scan"])
     add_resource_commands(sub)
     add_workload_commands(sub)
+    add_agent_commands(sub)
     observability = sub.add_parser("observability")
     observability.add_argument("action", choices=["summary"])
     users = sub.add_parser("user", help="Administer local accounts")
@@ -170,38 +298,97 @@ def route(args):
             return "/api/v1/clusters", "GET", None
         if args.action == "delete":
             return f"/api/v1/clusters/{args.id}", "DELETE", None
-        return "/api/v1/clusters", "POST", {"name": args.name, "endpoint": args.endpoint, "type": args.type}
+        if args.action == "refresh":
+            return f"/api/v1/clusters/{args.id}/refresh", "POST", None
+        if args.action == "nodes":
+            return f"/api/v1/clusters/{args.id}/nodes", "GET", None
+        kubeconfig = pathlib.Path(args.kubeconfig).read_text(encoding="utf-8") if args.kubeconfig else ""
+        return "/api/v1/clusters", "POST", {"name": args.name, "endpoint": args.endpoint, "type": args.type, "kubeconfig": kubeconfig, "namespace": args.namespace, "storageClass": args.storage_class}
     if args.command == "pool":
         if args.action == "list":
             return "/api/v1/pools", "GET", None
         if args.action == "delete":
             return f"/api/v1/pools/{args.id}", "DELETE", None
-        return "/api/v1/pools", "POST", {"name": args.name, "vendor": args.vendor, "runtime": args.runtime, "policy": args.policy, "selector": args.selector}
+        return "/api/v1/pools", "POST", {"name": args.name, "vendor": args.vendor, "runtime": args.runtime, "policy": args.policy, "selector": args.selector, "resourceName": args.resource_name, "sharingMode": args.sharing_mode, "sliceProfile": args.slice_profile, "sharingReplicas": args.sharing_replicas}
     if args.command == "queue":
         if args.action == "list":
             return "/api/v1/queues", "GET", None
         if args.action == "delete":
             return f"/api/v1/queues/{args.id}", "DELETE", None
         return "/api/v1/queues", "POST", {"name": args.name, "priority": args.priority, "acceleratorQuota": args.accelerators, "memoryQuotaGB": args.memory_gb, "preemptionEnabled": args.preemption}
+    if args.command == "fabric":
+        if args.action == "list":
+            return "/api/v1/fabric/plans", "GET", None
+        if args.action == "delete":
+            return f"/api/v1/fabric/plans/{args.id}", "DELETE", None
+        if args.action == "capabilities":
+            query = urllib.parse.urlencode({"clusterId": args.cluster, "defaultDeviceMemoryGiB": args.device_memory_gib, "includeHostMemory": str(args.include_host_memory).lower()})
+            return f"/api/v1/fabric/capabilities?{query}", "GET", None
+        return "/api/v1/fabric/plans", "POST", {"name": args.name, "clusterId": args.cluster, "tensorName": args.tensor, "tensorGiB": args.size_gib, "strategy": args.strategy, "consistency": args.consistency, "defaultDeviceMemoryGiB": args.device_memory_gib, "reservePercent": args.reserve_percent, "maxDevices": args.max_devices, "includeHostMemory": args.include_host_memory}
     if args.command == "workload":
         if args.action in ("list", "refresh"):
             return "/api/v1/workloads", "GET", None
         if args.action == "submit":
-            ssh_configured = bool(args.ssh_host or args.ssh_user)
-            return "/api/v1/workloads", "POST", {"name": args.name, "kind": args.kind, "pool": args.pool, "image": args.image, "accelerators": args.accelerators, "sshHost": args.ssh_host, "sshPort": args.ssh_port if ssh_configured else 0, "sshUser": args.ssh_user}
+            return "/api/v1/workloads", "POST", {"name": args.name, "kind": args.kind, "runtime": "kubernetes", "clusterId": args.cluster, "namespace": args.namespace, "pool": args.pool, "fabricPlanId": args.fabric_plan, "image": args.image, "imagePullSecret": args.image_pull_secret, "model": args.model, "modelVersionId": args.model_version, "command": args.container_command, "accelerators": args.accelerators, "cpu": args.cpu, "memory": args.memory, "storageGB": args.storage_gb, "replicas": args.replicas, "schedulerBackend": args.scheduler, "queueName": args.queue, "gangMinAvailable": args.gang_min, "priorityClass": args.priority_class, "topologyMode": args.topology_mode, "topologyKey": args.topology_key, "networkMode": args.network_mode, "serviceType": args.service_type, "port": args.port}
         if args.action == "delete":
             return f"/api/v1/workloads/{args.id}", "DELETE", None
         if args.action == "ssh":
             return f"/api/v1/workloads/{args.id}/ssh", "GET", None
         if args.action == "ssh-config":
             return f"/api/v1/workloads/{args.id}/ssh", "PATCH", {"host": args.host, "port": args.port, "user": args.user}
+        if args.action in ("diagnostics", "logs", "events", "service", "manifest", "storage"):
+            return f"/api/v1/workloads/{args.id}/{args.action}", "GET", None
+        if args.action == "exec":
+            return f"/api/v1/workloads/{args.id}/exec", "POST", {"container": args.container, "command": args.command}
+        if args.action == "probe":
+            return f"/api/v1/workloads/{args.id}/probe", "POST", {"method": args.method, "path": args.path, "body": args.body}
         return f"/api/v1/workloads/{args.id}/action", "POST", {"action": args.action}
     if args.command == "model":
         if args.action == "list":
             return "/api/v1/models", "GET", None
+        if args.action == "catalog":
+            return "/api/v1/model-catalog", "GET", None
+        if args.action == "sync-ollama":
+            return "/api/v1/model-catalog-sync/ollama", "POST", None
         if args.action == "deploy":
             return "/api/v1/inference/deploy", "POST", {"model": args.name}
         return "/api/v1/inference/generate", "POST", {"model": args.name, "prompt": args.prompt}
+    if args.command == "agent":
+        query = lambda workspace: "?" + urllib.parse.urlencode({"workspaceId": workspace}) if workspace else ""
+        if args.action == "list":
+            return "/api/v1/agents" + query(args.workspace), "GET", None
+        if args.action == "create":
+            return "/api/v1/agents", "POST", {"name": args.name, "workspaceId": args.workspace, "description": args.description, "framework": args.framework, "image": args.image, "command": args.command, "port": args.port, "modelVersionId": args.model_version, "spec": {"pool": args.pool, "cpu": args.cpu, "memoryRequest": args.memory, "accelerators": args.accelerators, "storageGB": args.storage_gb, "serviceType": "ClusterIP", "policy": {"tokenBudget": args.token_budget, "timeoutSeconds": args.timeout, "maxRetries": 2, "requireApproval": args.require_approval}, "memory": {"mode": args.memory_mode, "retentionDays": 30, "checkpointing": True}}}
+        if args.action == "delete":
+            return f"/api/v1/agents/{args.id}", "DELETE", None
+        if args.action == "run":
+            try:
+                run_input = json.loads(args.input)
+            except json.JSONDecodeError as error:
+                raise RuntimeError(f"invalid --input JSON: {error}") from error
+            return "/api/v1/agent-runs", "POST", {"workspaceId": args.workspace, "agentId": args.agent, "flowId": args.flow, "input": run_input, "tokenBudget": args.token_budget}
+        if args.action == "runs":
+            return "/api/v1/agent-runs" + query(args.workspace), "GET", None
+        if args.action == "cancel":
+            return f"/api/v1/agent-runs/{args.id}/action", "POST", {"action": "cancel"}
+        if args.action == "trace":
+            return f"/api/v1/agent-runs/{args.id}/events", "GET", None
+        if args.action == "flows":
+            return "/api/v1/agent-flows" + query(args.workspace), "GET", None
+        if args.action == "flow-create":
+            graph = json.loads(pathlib.Path(args.file).read_text(encoding="utf-8"))
+            return "/api/v1/agent-flows", "POST", {"workspaceId": args.workspace, "name": args.name, "description": args.description, "graph": graph}
+        if args.action == "approvals":
+            return "/api/v1/agent-approvals" + query(args.workspace), "GET", None
+        if args.action in ("approve", "reject"):
+            return "/api/v1/agent-approvals", "PATCH", {"id": args.id, "decision": args.action}
+        if args.action == "tools":
+            return "/api/v1/agent-tools" + query(args.workspace), "GET", None
+        if args.action == "memory":
+            return "/api/v1/agent-memory" + query(args.workspace), "GET", None
+    if args.command == "manifest":
+        content = sys.stdin.read() if args.file == "-" else pathlib.Path(args.file).read_text(encoding="utf-8")
+        return f"/api/v1/manifests/{args.action}", "POST", {"clusterId": args.cluster, "namespace": args.namespace, "manifest": content}
     if args.command == "observability":
         return "/api/v1/observability/summary", "GET", None
     if args.command == "user":

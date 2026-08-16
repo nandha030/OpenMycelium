@@ -19,7 +19,9 @@ secrets:
   natsUrl: ""
   bootstrapAdminEmail: ""
   bootstrapAdminPassword: ""
+  clusterCredentialKey: ""
   metricsToken: ""
+  agentToken: ""
 
 resources:
   requests:

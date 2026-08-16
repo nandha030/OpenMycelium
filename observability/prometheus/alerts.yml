@@ -1,0 +1,50 @@
+groups:
+  - name: openmycelium.control-plane
+    rules:
+      - alert: OpenMyceliumControlPlaneDown
+        expr: up{job="openmycelium"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: OpenMycelium metrics target is unavailable
+          description: Prometheus has not scraped the OpenMycelium control plane for two minutes.
+      - alert: OpenMyceliumDependencyDown
+        expr: openmycelium_dependency_up == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: OpenMycelium dependency is unavailable
+          description: Dependency {{ $labels.dependency }} is not connected.
+      - alert: OpenMyceliumFailedWorkloads
+        expr: openmycelium_workloads{status="failed"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Managed AI workloads are failing
+          description: OpenMycelium reports {{ $value }} failed workload(s).
+      - alert: OpenMyceliumNodeNotReady
+        expr: openmycelium_cluster_nodes{state="not_ready"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes nodes are not ready
+          description: Cluster {{ $labels.cluster }} reports {{ $value }} non-ready node(s).
+      - alert: OpenMyceliumRestartGrowth
+        expr: delta(openmycelium_workload_restarts[15m]) >= 3
+        labels:
+          severity: warning
+        annotations:
+          summary: Workload restart count is increasing
+          description: Managed containers accumulated at least three restarts in fifteen minutes.
+      - alert: OpenMyceliumAgentApprovalWaiting
+        expr: openmycelium_agent_approvals_pending > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Agent runs are waiting for operator approval
+          description: OpenMycelium reports {{ $value }} pending agent approval request(s).

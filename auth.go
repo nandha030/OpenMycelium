@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -315,5 +316,21 @@ func requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		next(w, r)
+	}
+}
+
+func requireAgentOrOperator(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if user, ok := currentUser(r); ok && (user.Role == "operator" || user.Role == "platform_admin") {
+			next(w, r)
+			return
+		}
+		expected := os.Getenv("AGENT_TOKEN")
+		provided := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if expected != "" && len(provided) == len(expected) && subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) == 1 {
+			next(w, r)
+			return
+		}
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "operator session or valid agent bearer token required"})
 	}
 }
