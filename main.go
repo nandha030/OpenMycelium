@@ -22,7 +22,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-//go:embed index.html login.html app.js styles.css premium.css
+//go:embed index.html login.html login-fabric.png app.js styles.css premium.css
 var ui embed.FS
 
 type Accelerator struct {
@@ -48,29 +48,81 @@ type Pool struct {
 	Members          []Accelerator `json:"members"`
 }
 type Workload struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Kind         string    `json:"kind"`
-	Pool         string    `json:"pool"`
-	Image        string    `json:"image"`
-	Accelerators int       `json:"accelerators"`
-	Status       string    `json:"status"`
-	Checkpoint   string    `json:"checkpoint"`
-	SSHHost      string    `json:"sshHost,omitempty"`
-	SSHPort      int       `json:"sshPort,omitempty"`
-	SSHUser      string    `json:"sshUser,omitempty"`
-	CreatedAt    time.Time `json:"createdAt"`
+	ID               string            `json:"id"`
+	AgentID          string            `json:"agentId,omitempty"`
+	AgentRunID       string            `json:"agentRunId,omitempty"`
+	AgentSpecJSON    string            `json:"agentSpecJson,omitempty"`
+	AgentFlowJSON    string            `json:"agentFlowJson,omitempty"`
+	AgentToolsJSON   string            `json:"agentToolsJson,omitempty"`
+	WorkspaceID      string            `json:"workspaceId,omitempty"`
+	ReleaseID        string            `json:"releaseId,omitempty"`
+	Name             string            `json:"name"`
+	Kind             string            `json:"kind"`
+	Runtime          string            `json:"runtime"`
+	Pool             string            `json:"pool"`
+	Image            string            `json:"image"`
+	ImagePullSecret  string            `json:"imagePullSecret,omitempty"`
+	Accelerators     int               `json:"accelerators"`
+	SchedulerBackend string            `json:"schedulerBackend,omitempty"`
+	QueueName        string            `json:"queueName,omitempty"`
+	GangMinAvailable int32             `json:"gangMinAvailable,omitempty"`
+	TopologyMode     string            `json:"topologyMode,omitempty"`
+	TopologyKey      string            `json:"topologyKey,omitempty"`
+	NetworkMode      string            `json:"networkMode,omitempty"`
+	PriorityClass    string            `json:"priorityClass,omitempty"`
+	Status           string            `json:"status"`
+	Checkpoint       string            `json:"checkpoint"`
+	ClusterID        string            `json:"clusterId,omitempty"`
+	ClusterName      string            `json:"clusterName,omitempty"`
+	Namespace        string            `json:"namespace,omitempty"`
+	ResourceName     string            `json:"resourceName,omitempty"`
+	PodName          string            `json:"podName,omitempty"`
+	NodeName         string            `json:"nodeName,omitempty"`
+	ServiceName      string            `json:"serviceName,omitempty"`
+	Endpoint         string            `json:"endpoint,omitempty"`
+	ServiceType      string            `json:"serviceType,omitempty"`
+	Port             int32             `json:"port,omitempty"`
+	Model            string            `json:"model,omitempty"`
+	ModelVersionID   string            `json:"modelVersionId,omitempty"`
+	ModelSourceURI   string            `json:"modelSourceUri,omitempty"`
+	ModelRuntime     string            `json:"modelRuntime,omitempty"`
+	Command          string            `json:"command,omitempty"`
+	CPU              string            `json:"cpu,omitempty"`
+	Memory           string            `json:"memory,omitempty"`
+	StorageGB        int               `json:"storageGB,omitempty"`
+	StorageClass     string            `json:"storageClass,omitempty"`
+	PVCName          string            `json:"pvcName,omitempty"`
+	DesiredCount     int32             `json:"desiredCount,omitempty"`
+	Placement        PlacementDecision `json:"placement,omitempty"`
+	PodPhase         string            `json:"podPhase,omitempty"`
+	StatusReason     string            `json:"statusReason,omitempty"`
+	StatusMessage    string            `json:"statusMessage,omitempty"`
+	Restarts         int32             `json:"restarts,omitempty"`
+	FabricPlanID     string            `json:"fabricPlanId,omitempty"`
+	FabricAddress    string            `json:"fabricAddress,omitempty"`
+	FabricMode       string            `json:"fabricMode,omitempty"`
+	FabricPlan       string            `json:"-"`
+	LastError        string            `json:"lastError,omitempty"`
+	UpdatedAt        time.Time         `json:"updatedAt,omitempty"`
+	SSHHost          string            `json:"sshHost,omitempty"`
+	SSHPort          int               `json:"sshPort,omitempty"`
+	SSHUser          string            `json:"sshUser,omitempty"`
+	CreatedAt        time.Time         `json:"createdAt"`
 }
 
 var sshNamePattern = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 var sshHostPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9.:-]*$`)
+var kubernetesObjectNamePattern = regexp.MustCompile(`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`)
 
 type Workflow struct {
 	ID, Name, Status string
 	Stages           []WorkflowStage `json:"stages"`
 }
 type WorkflowStage struct {
-	Name, Kind, Pool, DependsOn string `json:"dependsOn"`
+	Name      string `json:"name"`
+	Kind      string `json:"kind"`
+	Pool      string `json:"pool"`
+	DependsOn string `json:"dependsOn"`
 }
 type OllamaModel struct {
 	Name       string    `json:"name"`
@@ -215,7 +267,8 @@ func initializeInfrastructure() {
 		if err != nil {
 			fmt.Printf("PostgreSQL unavailable: %v\n", err)
 		} else {
-			for _, statement := range append(schema, resourceSchema...) {
+			statements := append(append(append([]string{}, schema...), resourceSchema...), agentSchema...)
+			for _, statement := range statements {
 				_, err = pool.Exec(ctx, statement)
 				if err != nil {
 					break
@@ -237,6 +290,7 @@ func initializeInfrastructure() {
 			fmt.Printf("NATS unavailable: %v\n", err)
 		} else {
 			eventBus = connection
+			initializeAgentEventStream()
 			fmt.Println("NATS event bus ready")
 		}
 	}
@@ -276,6 +330,10 @@ func hostAccelerators() []Accelerator {
 	return found
 }
 func scanHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
 	state.Lock()
 	state.Accelerators = hostAccelerators()
 	values := state.Accelerators
@@ -291,6 +349,10 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"source": source, "host": runtime.GOOS, "hostProfile": profile, "accelerators": values, "count": len(values)})
 }
 func importHostHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
 	var profile HostProfile
 	if err := decode(r, &profile); err != nil || profile.Name == "" || profile.CPU == "" {
 		writeJSON(w, 400, map[string]string{"error": "host name and CPU are required"})
@@ -311,20 +373,44 @@ func poolsHandler(w http.ResponseWriter, r *http.Request) {
 }
 func workloadsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		reconcileAllKubernetesWorkloads(r.Context())
 		state.RLock()
 		defer state.RUnlock()
 		writeJSON(w, http.StatusOK, map[string]any{"workloads": state.Workloads})
 		return
 	}
 	var input struct {
-		Name         string `json:"name"`
-		Kind         string `json:"kind"`
-		Pool         string `json:"pool"`
-		Image        string `json:"image"`
-		Accelerators int    `json:"accelerators"`
-		SSHHost      string `json:"sshHost"`
-		SSHPort      int    `json:"sshPort"`
-		SSHUser      string `json:"sshUser"`
+		Name             string `json:"name"`
+		Kind             string `json:"kind"`
+		Pool             string `json:"pool"`
+		Image            string `json:"image"`
+		ImagePullSecret  string `json:"imagePullSecret"`
+		Accelerators     int    `json:"accelerators"`
+		SSHHost          string `json:"sshHost"`
+		SSHPort          int    `json:"sshPort"`
+		SSHUser          string `json:"sshUser"`
+		Runtime          string `json:"runtime"`
+		ClusterID        string `json:"clusterId"`
+		Namespace        string `json:"namespace"`
+		Model            string `json:"model"`
+		ModelVersionID   string `json:"modelVersionId"`
+		Command          string `json:"command"`
+		CPU              string `json:"cpu"`
+		Memory           string `json:"memory"`
+		StorageGB        int    `json:"storageGB"`
+		StorageClass     string `json:"storageClass"`
+		ServiceType      string `json:"serviceType"`
+		Port             int32  `json:"port"`
+		Replicas         int32  `json:"replicas"`
+		FabricPlanID     string `json:"fabricPlanId"`
+		WorkspaceID      string `json:"workspaceId"`
+		SchedulerBackend string `json:"schedulerBackend"`
+		QueueName        string `json:"queueName"`
+		GangMinAvailable int32  `json:"gangMinAvailable"`
+		TopologyMode     string `json:"topologyMode"`
+		TopologyKey      string `json:"topologyKey"`
+		NetworkMode      string `json:"networkMode"`
+		PriorityClass    string `json:"priorityClass"`
 	}
 	if err := decode(r, &input); err != nil || strings.TrimSpace(input.Name) == "" {
 		writeJSON(w, 400, map[string]string{"error": "name is required"})
@@ -332,6 +418,15 @@ func workloadsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if input.Accelerators < 0 {
 		writeJSON(w, 400, map[string]string{"error": "accelerator count cannot be negative"})
+		return
+	}
+	if input.StorageGB < 0 || input.Replicas < 0 || input.Port < 0 || input.Port > 65535 {
+		writeJSON(w, 400, map[string]string{"error": "storage, replicas, and service port must be valid non-negative values"})
+		return
+	}
+	input.ImagePullSecret = strings.TrimSpace(input.ImagePullSecret)
+	if input.ImagePullSecret != "" && (len(input.ImagePullSecret) > 253 || !kubernetesObjectNamePattern.MatchString(input.ImagePullSecret)) {
+		writeJSON(w, 400, map[string]string{"error": "imagePullSecret must be a valid Kubernetes DNS name"})
 		return
 	}
 	input.Name = strings.TrimSpace(input.Name)
@@ -346,12 +441,216 @@ func workloadsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if input.Kind != "inference" && input.Kind != "training" && input.Kind != "finetuning" && input.Kind != "batch" && input.Kind != "interactive" && input.Kind != "agent" {
+		writeJSON(w, 400, map[string]string{"error": "kind must be inference, training, finetuning, batch, interactive, or agent"})
+		return
+	}
+	input.WorkspaceID = strings.TrimSpace(input.WorkspaceID)
+	input.SchedulerBackend = strings.ToLower(strings.TrimSpace(input.SchedulerBackend))
+	if input.SchedulerBackend == "" {
+		input.SchedulerBackend = "kubernetes"
+	}
+	if input.SchedulerBackend != "kubernetes" && input.SchedulerBackend != "kueue" && input.SchedulerBackend != "volcano" {
+		writeJSON(w, 400, map[string]string{"error": "schedulerBackend must be kubernetes, kueue, or volcano"})
+		return
+	}
+	input.QueueName = strings.TrimSpace(input.QueueName)
+	input.TopologyMode = strings.ToLower(strings.TrimSpace(input.TopologyMode))
+	if input.TopologyMode == "" {
+		input.TopologyMode = "none"
+	}
+	if input.TopologyMode != "none" && input.TopologyMode != "compact" && input.TopologyMode != "spread" {
+		writeJSON(w, 400, map[string]string{"error": "topologyMode must be none, compact, or spread"})
+		return
+	}
+	input.TopologyKey = strings.TrimSpace(input.TopologyKey)
+	if input.TopologyKey == "" {
+		if input.TopologyMode == "spread" {
+			input.TopologyKey = "topology.kubernetes.io/zone"
+		} else {
+			input.TopologyKey = "kubernetes.io/hostname"
+		}
+	}
+	if !validKubernetesQualifiedName(input.TopologyKey) {
+		writeJSON(w, 400, map[string]string{"error": "topologyKey must be a valid Kubernetes label key"})
+		return
+	}
+	input.NetworkMode = strings.ToLower(strings.TrimSpace(input.NetworkMode))
+	if input.NetworkMode == "" {
+		input.NetworkMode = "standard"
+	}
+	if input.NetworkMode != "standard" && input.NetworkMode != "rdma" && input.NetworkMode != "infiniband" {
+		writeJSON(w, 400, map[string]string{"error": "networkMode must be standard, rdma, or infiniband"})
+		return
+	}
+	input.PriorityClass = strings.TrimSpace(input.PriorityClass)
+	if input.QueueName != "" && (len(input.QueueName) > 253 || !kubernetesObjectNamePattern.MatchString(input.QueueName)) {
+		writeJSON(w, 400, map[string]string{"error": "queueName must be a valid Kubernetes object name"})
+		return
+	}
+	if input.PriorityClass != "" && (len(input.PriorityClass) > 253 || !kubernetesObjectNamePattern.MatchString(input.PriorityClass)) {
+		writeJSON(w, 400, map[string]string{"error": "priorityClass must be a valid Kubernetes object name"})
+		return
+	}
+	if input.WorkspaceID != "" {
+		workspace, workspaceErr := loadWorkspace(r.Context(), input.WorkspaceID)
+		if workspaceErr != nil {
+			writeJSON(w, 400, map[string]string{"error": "selected workspace does not exist"})
+			return
+		}
+		input.ClusterID, input.Namespace = workspace.ClusterID, workspace.Namespace
+		if strings.TrimSpace(input.StorageClass) == "" {
+			input.StorageClass = workspace.StorageClass
+		}
+		if input.QueueName == "" {
+			input.QueueName = workspace.Queue
+		}
+	}
+	if strings.TrimSpace(input.ModelVersionID) != "" {
+		if database == nil {
+			writeJSON(w, 503, map[string]string{"error": "PostgreSQL is required to attach a catalog model"})
+			return
+		}
+		model, version, err := loadModelVersion(r.Context(), strings.TrimSpace(input.ModelVersionID))
+		if err != nil {
+			writeJSON(w, 400, map[string]string{"error": "selected model version does not exist"})
+			return
+		}
+		input.Model = model.Name
+		if strings.TrimSpace(input.Image) == "" {
+			input.Image = modelRuntimeImage(version.Runtime)
+		}
+	}
+	if input.Runtime == "" && input.ClusterID != "" {
+		input.Runtime = "kubernetes"
+	}
+	if input.Runtime == "kubernetes" {
+		if strings.TrimSpace(input.Image) == "" && strings.TrimSpace(input.Model) == "" {
+			writeJSON(w, 400, map[string]string{"error": "container image is required for a Kubernetes workload"})
+			return
+		}
+		if strings.TrimSpace(input.Model) != "" && strings.TrimSpace(input.Image) == "" {
+			input.Image = "ollama/ollama:latest"
+			input.Runtime = "ollama"
+		}
+	} else if input.Runtime == "" {
+		writeJSON(w, 400, map[string]string{"error": "select a connected Kubernetes cluster as the deployment target"})
+		return
+	}
+	if input.Replicas == 0 {
+		input.Replicas = 1
+	}
+	if input.GangMinAvailable < 0 || input.GangMinAvailable > input.Replicas {
+		writeJSON(w, 400, map[string]string{"error": "gangMinAvailable must be between 0 and the replica count"})
+		return
+	}
+	if input.SchedulerBackend == "kueue" && !workloadUsesJob(input.Kind) {
+		writeJSON(w, 400, map[string]string{"error": "Kueue admission currently supports training, fine-tuning, and batch Jobs"})
+		return
+	}
+	if input.SchedulerBackend == "kueue" && input.QueueName == "" {
+		writeJSON(w, 400, map[string]string{"error": "Kueue workloads require a LocalQueue name"})
+		return
+	}
+	if input.GangMinAvailable > 1 && !workloadUsesJob(input.Kind) {
+		writeJSON(w, 400, map[string]string{"error": "gang scheduling is available for training, fine-tuning, and batch Jobs"})
+		return
+	}
+	if input.GangMinAvailable > 1 && input.SchedulerBackend == "kubernetes" {
+		writeJSON(w, 400, map[string]string{"error": "strict gang scheduling requires the Kueue or Volcano backend"})
+		return
+	}
+	if input.Port == 0 && (input.Kind == "inference" || input.Kind == "interactive" || input.Kind == "agent") {
+		input.Port = 8000
+	}
+	if input.ServiceType == "" {
+		input.ServiceType = "ClusterIP"
+	}
+	now := time.Now().UTC()
+	item := Workload{ID: fmt.Sprintf("job-%d", time.Now().UnixNano()), WorkspaceID: input.WorkspaceID, Name: input.Name, Kind: input.Kind, Runtime: input.Runtime, Pool: input.Pool, Image: strings.TrimSpace(input.Image), ImagePullSecret: input.ImagePullSecret, Accelerators: input.Accelerators, SchedulerBackend: input.SchedulerBackend, QueueName: input.QueueName, GangMinAvailable: input.GangMinAvailable, TopologyMode: input.TopologyMode, TopologyKey: input.TopologyKey, NetworkMode: input.NetworkMode, PriorityClass: input.PriorityClass, Status: "queued", ClusterID: strings.TrimSpace(input.ClusterID), Namespace: strings.TrimSpace(input.Namespace), Model: strings.TrimSpace(input.Model), Command: strings.TrimSpace(input.Command), CPU: strings.TrimSpace(input.CPU), Memory: strings.TrimSpace(input.Memory), StorageGB: input.StorageGB, StorageClass: strings.TrimSpace(input.StorageClass), ServiceType: input.ServiceType, Port: input.Port, DesiredCount: input.Replicas, FabricPlanID: strings.TrimSpace(input.FabricPlanID), SSHHost: input.SSHHost, SSHPort: input.SSHPort, SSHUser: input.SSHUser, CreatedAt: now, UpdatedAt: now}
+	if item.WorkspaceID != "" {
+		item.ReleaseID = "rel_" + randomToken(9)
+	}
+	item.ModelVersionID = strings.TrimSpace(input.ModelVersionID)
+	if item.ModelVersionID != "" {
+		if database == nil {
+			writeJSON(w, 503, map[string]string{"error": "PostgreSQL is required to attach a catalog model"})
+			return
+		}
+		model, version, err := loadModelVersion(r.Context(), item.ModelVersionID)
+		if err != nil {
+			writeJSON(w, 400, map[string]string{"error": "selected model version does not exist"})
+			return
+		}
+		item.Model, item.ModelSourceURI, item.ModelRuntime = model.Name, version.SourceURI, version.Runtime
+	}
+	if item.FabricPlanID != "" {
+		if database == nil {
+			writeJSON(w, 503, map[string]string{"error": "PostgreSQL is required to attach a Hypha fabric plan"})
+			return
+		}
+		plan, err := loadFabricPlan(r.Context(), item.FabricPlanID)
+		if err != nil {
+			writeJSON(w, 400, map[string]string{"error": "selected Hypha fabric plan does not exist"})
+			return
+		}
+		if plan.ClusterID != item.ClusterID {
+			writeJSON(w, 400, map[string]string{"error": "Hypha fabric plan belongs to a different cluster"})
+			return
+		}
+		item.FabricAddress, item.FabricMode = plan.LogicalAddress, plan.Consistency
+		planJSON, err := json.Marshal(plan)
+		if err != nil {
+			writeJSON(w, 500, map[string]string{"error": "Hypha fabric plan could not be encoded for the workload"})
+			return
+		}
+		item.FabricPlan = string(planJSON)
+	}
+	item.ResourceName = workloadResourceName(item.ID, item.Name)
+	if item.Kind == "inference" || item.Kind == "interactive" || item.Kind == "agent" {
+		item.ServiceName = item.ResourceName
+	} else if workloadUsesJob(item.Kind) && item.DesiredCount > 1 {
+		item.ServiceName = item.ResourceName + "-workers"
+	}
+	if item.StorageGB > 0 {
+		item.PVCName = item.ResourceName + "-models"
+	}
+	if item.Runtime == "ollama" {
+		item.Port = 11434
+	}
+	if item.Runtime == "kubernetes" && item.ModelRuntime == "ollama" {
+		item.Port = 11434
+	}
+	if item.Runtime == "kubernetes" || item.Runtime == "ollama" {
+		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
+		err := deployKubernetesWorkload(ctx, &item)
+		cancel()
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
+			return
+		}
+		item.Runtime = "kubernetes"
+	}
+	if item.WorkspaceID != "" {
+		sourceRef := item.Image
+		if item.ModelSourceURI != "" {
+			sourceRef = item.ModelSourceURI
+		}
+		if err := workspaceRelease(r.Context(), item.WorkspaceID, item.ReleaseID, item.Name, "celium-ai", sourceRef, item.Status, item); err != nil {
+			if item.Runtime == "kubernetes" {
+				ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+				_ = deleteKubernetesWorkload(ctx, item)
+				cancel()
+			}
+			writeJSON(w, 500, map[string]string{"error": "workload deployed but workspace release could not be recorded"})
+			return
+		}
+	}
 	state.Lock()
-	item := Workload{ID: fmt.Sprintf("job-%d", time.Now().UnixNano()), Name: input.Name, Kind: input.Kind, Pool: input.Pool, Image: input.Image, Accelerators: input.Accelerators, Status: "queued", SSHHost: input.SSHHost, SSHPort: input.SSHPort, SSHUser: input.SSHUser, CreatedAt: time.Now()}
 	state.Workloads = append(state.Workloads, item)
 	persistStateLocked()
 	state.Unlock()
-	auditRequest(r, "workload.created", map[string]any{"workload_id": item.ID, "name": item.Name, "kind": item.Kind})
+	auditRequest(r, "workload.created", map[string]any{"workload_id": item.ID, "workspace_id": item.WorkspaceID, "release_id": item.ReleaseID, "name": item.Name, "kind": item.Kind})
 	publishEvent("workload.created", item)
 	writeJSON(w, 201, item)
 }
@@ -364,6 +663,24 @@ func workloadActionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := parts[0]
 	if len(parts) == 1 && r.Method == http.MethodDelete {
+		state.RLock()
+		var target Workload
+		for _, item := range state.Workloads {
+			if item.ID == id {
+				target = item
+				break
+			}
+		}
+		state.RUnlock()
+		if target.ID != "" && target.Runtime == "kubernetes" {
+			ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+			err := deleteKubernetesWorkload(ctx, target)
+			cancel()
+			if err != nil {
+				writeJSON(w, http.StatusBadGateway, map[string]string{"error": "Kubernetes resources were not deleted: " + err.Error()})
+				return
+			}
+		}
 		state.Lock()
 		for i := range state.Workloads {
 			if state.Workloads[i].ID == id {
@@ -379,6 +696,28 @@ func workloadActionHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		state.Unlock()
 		writeJSON(w, 404, map[string]string{"error": "workload not found"})
+		return
+	}
+	readOperation := len(parts) == 2 && r.Method == http.MethodGet && (parts[1] == "diagnostics" || parts[1] == "logs" || parts[1] == "events" || parts[1] == "service" || parts[1] == "manifest" || parts[1] == "storage")
+	writeOperation := len(parts) == 2 && r.Method == http.MethodPost && (parts[1] == "exec" || parts[1] == "probe")
+	if readOperation || writeOperation {
+		state.RLock()
+		var target Workload
+		for _, item := range state.Workloads {
+			if item.ID == id {
+				target = item
+				break
+			}
+		}
+		state.RUnlock()
+		if target.ID == "" {
+			writeJSON(w, 404, map[string]string{"error": "workload not found"})
+			return
+		}
+		if kubernetesWorkloadSubresourceHandler(w, r, target, parts[1]) {
+			return
+		}
+		writeJSON(w, 409, map[string]string{"error": "this operation is available only for Kubernetes workloads"})
 		return
 	}
 	if len(parts) == 2 && parts[1] == "ssh" && r.Method == http.MethodGet {
@@ -453,6 +792,37 @@ func workloadActionHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct{ Action string }
 	if err := decode(r, &input); err != nil {
 		writeJSON(w, 400, map[string]string{"error": "invalid action"})
+		return
+	}
+	state.RLock()
+	var kubernetesTarget Workload
+	for _, item := range state.Workloads {
+		if item.ID == id {
+			kubernetesTarget = item
+			break
+		}
+	}
+	state.RUnlock()
+	if kubernetesTarget.ID != "" && kubernetesTarget.Runtime == "kubernetes" {
+		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
+		err := actOnKubernetesWorkload(ctx, &kubernetesTarget, input.Action)
+		cancel()
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
+			return
+		}
+		state.Lock()
+		for i := range state.Workloads {
+			if state.Workloads[i].ID == id {
+				state.Workloads[i] = kubernetesTarget
+				break
+			}
+		}
+		persistStateLocked()
+		state.Unlock()
+		auditRequest(r, "workload."+input.Action, map[string]any{"workload_id": kubernetesTarget.ID, "name": kubernetesTarget.Name, "cluster_id": kubernetesTarget.ClusterID})
+		publishEvent("workload."+input.Action, kubernetesTarget)
+		writeJSON(w, 200, kubernetesTarget)
 		return
 	}
 	state.Lock()
@@ -531,6 +901,10 @@ func ollamaModels() ([]OllamaModel, error) {
 	return payload.Models, err
 }
 func modelsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
 	models, err := ollamaModels()
 	if err != nil {
 		writeJSON(w, 502, map[string]string{"error": "cannot reach Ollama at " + ollamaBaseURL() + ": " + err.Error()})
@@ -539,6 +913,10 @@ func modelsHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"runtime": "ollama", "baseURL": ollamaBaseURL(), "models": models})
 }
 func deployInferenceHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
 	var input struct {
 		Model string `json:"model"`
 	}
@@ -572,6 +950,10 @@ func deployInferenceHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 201, map[string]any{"workload": workload, "endpoint": "/api/v1/inference/generate"})
 }
 func generateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, 16<<20))
 	if err != nil {
 		writeJSON(w, 400, map[string]string{"error": "cannot read request"})
@@ -614,7 +996,7 @@ func staticHandler(w http.ResponseWriter, r *http.Request) {
 	if path == "" {
 		path = "index.html"
 	}
-	if path != "index.html" && path != "login.html" && path != "app.js" && path != "styles.css" && path != "premium.css" {
+	if path != "index.html" && path != "login.html" && path != "login-fabric.png" && path != "app.js" && path != "styles.css" && path != "premium.css" {
 		http.NotFound(w, r)
 		return
 	}
@@ -639,6 +1021,8 @@ func staticHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript")
 	} else if strings.HasSuffix(path, ".css") {
 		w.Header().Set("Content-Type", "text/css")
+	} else if strings.HasSuffix(path, ".png") {
+		w.Header().Set("Content-Type", "image/png")
 	} else {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	}
@@ -658,6 +1042,9 @@ func securityHeaders(next http.Handler) http.Handler {
 
 func main() {
 	initializeInfrastructure()
+	controllerContext, stopController := context.WithCancel(context.Background())
+	defer stopController()
+	startKubernetesReconciler(controllerContext)
 	if err := initializeAuth(); err != nil {
 		fmt.Printf("Authentication initialization failed: %v\n", err)
 	} else if authEnabled() {
@@ -667,20 +1054,24 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	siteID := strings.TrimSpace(os.Getenv("OPENMYCELIUM_SITE_ID"))
+	if siteID == "" {
+		siteID = "OM-LOCAL"
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]string{"status": "healthy", "edition": "developer"})
+		writeJSON(w, 200, map[string]string{"status": "healthy", "edition": "developer", "siteId": siteID})
 	})
 	mux.HandleFunc("/api/v1/ready", func(w http.ResponseWriter, r *http.Request) {
 		if database == nil || database.Ping(r.Context()) != nil {
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not ready", "dependency": "postgres"})
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not ready", "dependency": "postgres", "siteId": siteID})
 			return
 		}
 		if eventBus == nil || !eventBus.IsConnected() {
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not ready", "dependency": "nats"})
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not ready", "dependency": "nats", "siteId": siteID})
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ready", "siteId": siteID})
 	})
 	mux.HandleFunc("/api/v1/auth/status", authStatusHandler)
 	mux.HandleFunc("/api/v1/auth/login", loginHandler)
@@ -688,25 +1079,47 @@ func main() {
 	mux.HandleFunc("/api/v1/auth/me", meHandler)
 	mux.HandleFunc("/api/v1/auth/logout", logoutHandler)
 	mux.HandleFunc("/api/v1/discovery/scan", requireOperator(scanHandler))
-	mux.HandleFunc("/api/v1/discovery/import", importHostHandler)
+	mux.HandleFunc("/api/v1/discovery/import", requireAgentOrOperator(importHostHandler))
 	mux.HandleFunc("/api/v1/clusters", requireOperator(clustersHandler))
 	mux.HandleFunc("/api/v1/clusters/", requireOperator(clusterResourceHandler))
+	mux.HandleFunc("/api/v1/workspaces", requireOperator(workspacesHandler))
+	mux.HandleFunc("/api/v1/workspaces/", requireOperator(workspaceResourceHandler))
 	mux.HandleFunc("/api/v1/pools", requireOperator(managedPoolsHandler))
 	mux.HandleFunc("/api/v1/pools/", requireOperator(poolResourceHandler))
 	mux.HandleFunc("/api/v1/queues", requireOperator(queuesHandler))
 	mux.HandleFunc("/api/v1/queues/", requireOperator(queueResourceHandler))
+	mux.HandleFunc("/api/v1/fabric/capabilities", requireOperator(fabricCapabilitiesHandler))
+	mux.HandleFunc("/api/v1/fabric/plans", requireOperator(fabricPlansHandler))
+	mux.HandleFunc("/api/v1/fabric/plans/", requireOperator(fabricPlanResourceHandler))
 	mux.HandleFunc("/api/v1/integrations", requireOperator(integrationsHandler))
 	mux.HandleFunc("/api/v1/integrations/", requireOperator(integrationResourceHandler))
+	mux.HandleFunc("/api/v1/agents", requireOperator(agentsHandler))
+	mux.HandleFunc("/api/v1/agents/", requireOperator(agentResourceHandler))
+	mux.HandleFunc("/api/v1/agent-flows", requireOperator(agentFlowsHandler))
+	mux.HandleFunc("/api/v1/agent-flows/", requireOperator(agentFlowResourceHandler))
+	mux.HandleFunc("/api/v1/agent-runs", requireOperator(agentRunsHandler))
+	mux.HandleFunc("/api/v1/agent-runs/", requireOperator(agentRunResourceHandler))
+	mux.HandleFunc("/api/v1/agent-tools", requireOperator(agentToolsHandler))
+	mux.HandleFunc("/api/v1/agent-memory", requireOperator(agentMemoryHandler))
+	mux.HandleFunc("/api/v1/agent-approvals", requireOperator(agentApprovalsHandler))
+	mux.HandleFunc("/api/v1/agent-evaluations", requireOperator(agentEvaluationsHandler))
+	mux.HandleFunc("/api/v1/agent-orchestration", requireOperator(agentOrchestrationHandler))
 	mux.HandleFunc("/api/v1/users", requireAdmin(usersHandler))
 	mux.HandleFunc("/api/v1/users/", requireAdmin(userResourceHandler))
 	mux.HandleFunc("/api/v1/audit", requireAdmin(auditEventsHandler))
 	mux.HandleFunc("/api/v1/observability/summary", requireAuth(observabilityHandler))
+	mux.HandleFunc("/api/v1/operations/mlops", requireAuth(mlopsHandler))
+	mux.HandleFunc("/api/v1/operations/aiops", requireAuth(aiopsHandler))
 	mux.HandleFunc("/metrics", metricsHandler)
 	mux.HandleFunc("/api/v1/workloads", requireOperator(workloadsHandler))
 	mux.HandleFunc("/api/v1/workloads/", requireOperator(workloadActionHandler))
 	mux.HandleFunc("/api/v1/workflows", requireOperator(workflowsHandler))
 	mux.HandleFunc("/api/v1/settings", requireAdmin(settingsHandler))
 	mux.HandleFunc("/api/v1/models", requireAuth(modelsHandler))
+	mux.HandleFunc("/api/v1/model-catalog", requireOperator(modelCatalogHandler))
+	mux.HandleFunc("/api/v1/model-catalog/", requireOperator(modelCatalogResourceHandler))
+	mux.HandleFunc("/api/v1/model-catalog-sync/ollama", requireOperator(syncOllamaCatalogHandler))
+	mux.HandleFunc("/api/v1/manifests/", requireOperator(manifestDeploymentHandler))
 	mux.HandleFunc("/api/v1/inference/deploy", requireOperator(deployInferenceHandler))
 	mux.HandleFunc("/api/v1/inference/generate", requireAuth(generateHandler))
 	mux.HandleFunc("/", staticHandler)
