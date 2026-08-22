@@ -43,6 +43,12 @@ spec:
               value: {{ .Values.config.cookieSecure | quote }}
             - name: OLLAMA_BASE_URL
               value: {{ .Values.config.ollamaBaseUrl | quote }}
+            {{- if .Values.hetccl.enabled }}
+            - name: HETCCL_COORDINATOR_SERVICE
+              value: "{{ include "openmycelium.fullname" . }}-hetccl.{{ .Release.Namespace }}.svc.cluster.local"
+            - name: HETCCL_COORDINATOR_PORT
+              value: {{ .Values.hetccl.port | quote }}
+            {{- end }}
           envFrom:
             - secretRef:
                 name: {{ include "openmycelium.fullname" . }}

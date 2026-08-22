@@ -3,6 +3,11 @@
 .go-cache
 .cache-go-*
 .docker-codex
+.openmycelium
+__pycache__
+*.pyc
+*.egg-info
+runtime/hetccl/build
 .openmycelium-state.json
 data
 *.log

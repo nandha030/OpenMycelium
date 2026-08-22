@@ -14,12 +14,29 @@ config:
   cookieSecure: true
   ollamaBaseUrl: http://ollama.openmycelium.svc.cluster.local:11434
 
+hetccl:
+  enabled: true
+  image:
+    repository: openmycelium/hetccl
+    tag: 0.1.0
+    pullPolicy: IfNotPresent
+  port: 29500
+  timeoutSeconds: 120
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
+
 secrets:
   databaseUrl: ""
   natsUrl: ""
   bootstrapAdminEmail: ""
   bootstrapAdminPassword: ""
+  clusterCredentialKey: ""
   metricsToken: ""
+  agentToken: ""
 
 resources:
   requests:

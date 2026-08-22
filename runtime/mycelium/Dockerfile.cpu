@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+
+ARG TORCH_VERSION=2.5.1
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libgomp1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==${TORCH_VERSION}"
+
+WORKDIR /opt/openmycelium
+COPY runtime ./runtime
+ENV PYTHONPATH=/opt/openmycelium \
+    PYTHONUNBUFFERED=1
+
+RUN useradd --create-home --uid 10001 mycelium
+USER 10001
+
+ENTRYPOINT ["python", "-m", "runtime.mycelium.smoke"]

@@ -11,31 +11,84 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 type Cluster struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Endpoint     string    `json:"endpoint"`
-	Type         string    `json:"type"`
-	Status       string    `json:"status"`
-	Nodes        int       `json:"nodes"`
-	ReadyNodes   int       `json:"readyNodes"`
-	Accelerators int       `json:"accelerators"`
-	Version      string    `json:"version"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Endpoint      string    `json:"endpoint"`
+	Type          string    `json:"type"`
+	Status        string    `json:"status"`
+	Nodes         int       `json:"nodes"`
+	ReadyNodes    int       `json:"readyNodes"`
+	Accelerators  int       `json:"accelerators"`
+	Version       string    `json:"version"`
+	Namespace     string    `json:"namespace,omitempty"`
+	StorageClass  string    `json:"storageClass,omitempty"`
+	Authenticated bool      `json:"authenticated"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
 type ManagedPool struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Vendor    string    `json:"vendor"`
-	Runtime   string    `json:"runtime"`
-	Policy    string    `json:"policy"`
-	Selector  string    `json:"selector"`
-	Enabled   bool      `json:"enabled"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	Vendor          string    `json:"vendor"`
+	Runtime         string    `json:"runtime"`
+	Policy          string    `json:"policy"`
+	Selector        string    `json:"selector"`
+	ResourceName    string    `json:"resourceName,omitempty"`
+	SharingMode     string    `json:"sharingMode"`
+	SliceProfile    string    `json:"sliceProfile,omitempty"`
+	SharingReplicas int       `json:"sharingReplicas"`
+	Enabled         bool      `json:"enabled"`
+	NodeCount       int       `json:"nodeCount"`
+	ClusterCount    int       `json:"clusterCount"`
+	Capacity        int64     `json:"capacity"`
+	Allocatable     int64     `json:"allocatable"`
+	Available       int64     `json:"available"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"createdAt"`
+}
+
+type NodeAccelerator struct {
+	Resource    string `json:"resource"`
+	Vendor      string `json:"vendor"`
+	Runtime     string `json:"runtime"`
+	Model       string `json:"model,omitempty"`
+	Capacity    int64  `json:"capacity"`
+	Allocatable int64  `json:"allocatable"`
+	Available   int64  `json:"available"`
+}
+
+type ClusterNode struct {
+	ClusterID         string            `json:"clusterId"`
+	ClusterName       string            `json:"clusterName"`
+	Name              string            `json:"name"`
+	Ready             bool              `json:"ready"`
+	Schedulable       bool              `json:"schedulable"`
+	Roles             []string          `json:"roles"`
+	InternalIP        string            `json:"internalIp"`
+	OS                string            `json:"os"`
+	Architecture      string            `json:"architecture"`
+	KernelVersion     string            `json:"kernelVersion"`
+	ContainerRuntime  string            `json:"containerRuntime"`
+	KubeletVersion    string            `json:"kubeletVersion"`
+	CPUCapacity       string            `json:"cpuCapacity"`
+	CPUAllocatable    string            `json:"cpuAllocatable"`
+	CPUAvailable      string            `json:"cpuAvailable"`
+	MemoryCapacity    string            `json:"memoryCapacity"`
+	MemoryAllocatable string            `json:"memoryAllocatable"`
+	MemoryAvailable   string            `json:"memoryAvailable"`
+	PodCapacity       int64             `json:"podCapacity"`
+	RunningPods       int               `json:"runningPods"`
+	Accelerators      []NodeAccelerator `json:"accelerators"`
+	Fabric            NodeFabricStatus  `json:"fabric"`
+	Labels            map[string]string `json:"labels"`
+	Taints            []string          `json:"taints"`
+	InventoryWarning  string            `json:"inventoryWarning,omitempty"`
+	UpdatedAt         time.Time         `json:"updatedAt"`
 }
 
 type Queue struct {
@@ -57,13 +110,47 @@ type Integration struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+func validExtendedResourceName(value string) bool {
+	parts := strings.SplitN(value, "/", 2)
+	return len(parts) == 2 && parts[0] != "" && parts[1] != "" && parts[0] != "kubernetes.io" && !strings.HasSuffix(parts[0], ".kubernetes.io") && len(validation.IsQualifiedName(value)) == 0
+}
+
+func validKubernetesQualifiedName(value string) bool {
+	return value != "" && len(validation.IsQualifiedName(value)) == 0
+}
+
 var resourceSchema = []string{
 	`CREATE TABLE IF NOT EXISTS clusters (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, endpoint TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL, nodes INTEGER NOT NULL DEFAULT 0, accelerators INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
 	`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS ready_nodes INTEGER NOT NULL DEFAULT 0`,
 	`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS kubeconfig BYTEA NOT NULL DEFAULT ''::bytea`,
+	`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS namespace TEXT NOT NULL DEFAULT 'openmycelium-workloads'`,
+	`ALTER TABLE clusters ADD COLUMN IF NOT EXISTS storage_class TEXT NOT NULL DEFAULT ''`,
+	`CREATE TABLE IF NOT EXISTS cluster_nodes (cluster_id TEXT NOT NULL REFERENCES clusters(id) ON DELETE CASCADE, name TEXT NOT NULL, inventory JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY(cluster_id,name))`,
+	`CREATE INDEX IF NOT EXISTS cluster_nodes_updated_idx ON cluster_nodes(updated_at DESC)`,
 	`CREATE TABLE IF NOT EXISTS accelerator_pools (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, vendor TEXT NOT NULL, runtime TEXT NOT NULL, policy TEXT NOT NULL, selector TEXT NOT NULL DEFAULT '', enabled BOOLEAN NOT NULL DEFAULT true, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	`ALTER TABLE accelerator_pools ADD COLUMN IF NOT EXISTS resource_name TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE accelerator_pools ADD COLUMN IF NOT EXISTS sharing_mode TEXT NOT NULL DEFAULT 'exclusive'`,
+	`ALTER TABLE accelerator_pools ADD COLUMN IF NOT EXISTS slice_profile TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE accelerator_pools ADD COLUMN IF NOT EXISTS sharing_replicas INTEGER NOT NULL DEFAULT 1`,
 	`CREATE TABLE IF NOT EXISTS queues (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, priority INTEGER NOT NULL, accelerator_quota INTEGER NOT NULL, memory_quota_gb INTEGER NOT NULL, preemption_enabled BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
 	`CREATE TABLE IF NOT EXISTS integrations (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, type TEXT NOT NULL, target TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'configured', created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	`CREATE TABLE IF NOT EXISTS fabric_plans (id TEXT PRIMARY KEY, name TEXT NOT NULL, cluster_id TEXT NOT NULL REFERENCES clusters(id) ON DELETE CASCADE, request JSONB NOT NULL, plan JSONB NOT NULL, status TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	`CREATE INDEX IF NOT EXISTS fabric_plans_cluster_idx ON fabric_plans(cluster_id,created_at DESC)`,
+	`CREATE TABLE IF NOT EXISTS fabric_profiles (id TEXT PRIMARY KEY, name TEXT NOT NULL, cluster_id TEXT NOT NULL REFERENCES clusters(id) ON DELETE CASCADE, profile JSONB NOT NULL, source TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	`CREATE INDEX IF NOT EXISTS fabric_profiles_cluster_idx ON fabric_profiles(cluster_id,updated_at DESC)`,
+	`CREATE TABLE IF NOT EXISTS execution_plans (id TEXT PRIMARY KEY, name TEXT NOT NULL, cluster_id TEXT NOT NULL REFERENCES clusters(id) ON DELETE CASCADE, request JSONB NOT NULL, plan JSONB NOT NULL, status TEXT NOT NULL, executable BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	`CREATE INDEX IF NOT EXISTS execution_plans_cluster_idx ON execution_plans(cluster_id,created_at DESC)`,
+	`CREATE TABLE IF NOT EXISTS lab_assets (id TEXT PRIMARY KEY, kind TEXT NOT NULL, name TEXT NOT NULL, status TEXT NOT NULL, payload JSONB NOT NULL, created_by TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE(kind,name))`,
+	`CREATE INDEX IF NOT EXISTS lab_assets_kind_idx ON lab_assets(kind,updated_at DESC)`,
+	`CREATE TABLE IF NOT EXISTS model_artifacts (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, description TEXT NOT NULL DEFAULT '', source_type TEXT NOT NULL, framework TEXT NOT NULL DEFAULT '', format TEXT NOT NULL DEFAULT '', license TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	`CREATE TABLE IF NOT EXISTS model_versions (id TEXT PRIMARY KEY, model_id TEXT NOT NULL REFERENCES model_artifacts(id) ON DELETE CASCADE, version TEXT NOT NULL, source_uri TEXT NOT NULL, digest TEXT NOT NULL DEFAULT '', size_bytes BIGINT NOT NULL DEFAULT 0, quantization TEXT NOT NULL DEFAULT '', parameters_b DOUBLE PRECISION NOT NULL DEFAULT 0, runtime TEXT NOT NULL DEFAULT 'custom', status TEXT NOT NULL DEFAULT 'registered', metadata JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE(model_id,version))`,
+	`CREATE INDEX IF NOT EXISTS model_versions_model_idx ON model_versions(model_id,created_at DESC)`,
+	`CREATE TABLE IF NOT EXISTS model_aliases (model_id TEXT NOT NULL REFERENCES model_artifacts(id) ON DELETE CASCADE, alias TEXT NOT NULL, version_id TEXT NOT NULL REFERENCES model_versions(id) ON DELETE CASCADE, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY(model_id,alias))`,
+	`CREATE TABLE IF NOT EXISTS workspaces (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, organization TEXT NOT NULL, cluster_id TEXT NOT NULL REFERENCES clusters(id) ON DELETE CASCADE, namespace TEXT NOT NULL, queue TEXT NOT NULL DEFAULT 'default', storage_class TEXT NOT NULL DEFAULT '', cpu_quota TEXT NOT NULL DEFAULT '', memory_quota_gb INTEGER NOT NULL DEFAULT 0, accelerator_quota INTEGER NOT NULL DEFAULT 0, network_policy TEXT NOT NULL DEFAULT 'cluster-default', created_by TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE(cluster_id,namespace))`,
+	`CREATE INDEX IF NOT EXISTS workspaces_cluster_idx ON workspaces(cluster_id,namespace)`,
+	`CREATE TABLE IF NOT EXISTS workspace_releases (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE, name TEXT NOT NULL, source_type TEXT NOT NULL, source_ref TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, summary JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+	`CREATE INDEX IF NOT EXISTS workspace_releases_workspace_idx ON workspace_releases(workspace_id,created_at DESC)`,
 }
 
 func requireDatabase(w http.ResponseWriter) bool {
@@ -91,7 +178,7 @@ func clustersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet {
-		rows, err := database.Query(r.Context(), `SELECT id,name,endpoint,type,status,nodes,ready_nodes,accelerators,version,created_at,updated_at FROM clusters ORDER BY created_at DESC`)
+		rows, err := database.Query(r.Context(), `SELECT id,name,endpoint,type,status,nodes,ready_nodes,accelerators,version,namespace,storage_class,octet_length(kubeconfig)>0,created_at,updated_at FROM clusters ORDER BY created_at DESC`)
 		if err != nil {
 			writeJSON(w, 500, map[string]string{"error": "cannot list clusters"})
 			return
@@ -100,7 +187,7 @@ func clustersHandler(w http.ResponseWriter, r *http.Request) {
 		items := []Cluster{}
 		for rows.Next() {
 			var item Cluster
-			if rows.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Type, &item.Status, &item.Nodes, &item.ReadyNodes, &item.Accelerators, &item.Version, &item.CreatedAt, &item.UpdatedAt) == nil {
+			if rows.Scan(&item.ID, &item.Name, &item.Endpoint, &item.Type, &item.Status, &item.Nodes, &item.ReadyNodes, &item.Accelerators, &item.Version, &item.Namespace, &item.StorageClass, &item.Authenticated, &item.CreatedAt, &item.UpdatedAt) == nil {
 				items = append(items, item)
 			}
 		}
@@ -112,24 +199,63 @@ func clustersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		Name     string `json:"name"`
-		Endpoint string `json:"endpoint"`
-		Type     string `json:"type"`
+		Name         string `json:"name"`
+		Endpoint     string `json:"endpoint"`
+		Type         string `json:"type"`
+		Kubeconfig   string `json:"kubeconfig"`
+		Namespace    string `json:"namespace"`
+		StorageClass string `json:"storageClass"`
 	}
-	if decode(r, &input) != nil || strings.TrimSpace(input.Name) == "" || strings.TrimSpace(input.Endpoint) == "" {
-		writeJSON(w, 400, map[string]string{"error": "name and endpoint are required"})
+	if decode(r, &input) != nil || strings.TrimSpace(input.Name) == "" {
+		writeJSON(w, 400, map[string]string{"error": "cluster name is required"})
 		return
 	}
 	if input.Type == "" {
 		input.Type = "kubernetes"
 	}
-	item := Cluster{ID: "clu_" + randomToken(9), Name: strings.TrimSpace(input.Name), Endpoint: strings.TrimSpace(input.Endpoint), Type: input.Type, Status: "pending", CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
-	_, err := database.Exec(r.Context(), `INSERT INTO clusters(id,name,endpoint,type,status,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7)`, item.ID, item.Name, item.Endpoint, item.Type, item.Status, item.CreatedAt, item.UpdatedAt)
+	input.Endpoint = strings.TrimSpace(input.Endpoint)
+	input.Namespace = strings.TrimSpace(input.Namespace)
+	if input.Namespace == "" {
+		input.Namespace = defaultWorkloadNamespace
+	}
+	var credential []byte
+	var discoveredNodes []ClusterNode
+	item := Cluster{ID: "clu_" + randomToken(9), Name: strings.TrimSpace(input.Name), Endpoint: input.Endpoint, Type: input.Type, Status: "pending", Namespace: input.Namespace, StorageClass: strings.TrimSpace(input.StorageClass), CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
+	if input.Type == "kubernetes" {
+		if strings.TrimSpace(input.Kubeconfig) == "" {
+			writeJSON(w, 400, map[string]string{"error": "kubeconfig is required for an authenticated Kubernetes connection"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		result, probeErr := probeKubernetesClusterInventory(ctx, []byte(input.Kubeconfig), input.Endpoint, item.ID, item.Name)
+		cancel()
+		if probeErr != nil {
+			writeJSON(w, 400, map[string]string{"error": probeErr.Error()})
+			return
+		}
+		credential, probeErr = encryptClusterCredential([]byte(input.Kubeconfig))
+		if probeErr != nil {
+			writeJSON(w, 500, map[string]string{"error": probeErr.Error()})
+			return
+		}
+		probe := result.Cluster
+		item.Endpoint, item.Status, item.Nodes, item.ReadyNodes, item.Accelerators, item.Version, item.Authenticated = probe.Endpoint, probe.Status, probe.Nodes, probe.ReadyNodes, probe.Accelerators, probe.Version, true
+		discoveredNodes = result.Nodes
+	} else if item.Endpoint == "" {
+		writeJSON(w, 400, map[string]string{"error": "endpoint is required"})
+		return
+	}
+	_, err := database.Exec(r.Context(), `INSERT INTO clusters(id,name,endpoint,type,status,nodes,ready_nodes,accelerators,version,kubeconfig,namespace,storage_class,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, item.ID, item.Name, item.Endpoint, item.Type, item.Status, item.Nodes, item.ReadyNodes, item.Accelerators, item.Version, credential, item.Namespace, item.StorageClass, item.CreatedAt, item.UpdatedAt)
 	if err != nil {
 		writeJSON(w, 409, map[string]string{"error": "a cluster with that name already exists"})
 		return
 	}
-	auditRequest(r, "cluster.created", map[string]any{"cluster_id": item.ID, "name": item.Name})
+	if err = persistClusterNodes(r.Context(), item.ID, item.Name, discoveredNodes); err != nil {
+		_, _ = database.Exec(r.Context(), `DELETE FROM clusters WHERE id=$1`, item.ID)
+		writeJSON(w, 500, map[string]string{"error": "cluster connected but node inventory could not be stored"})
+		return
+	}
+	auditRequest(r, "cluster.created", map[string]any{"cluster_id": item.ID, "name": item.Name, "authenticated": item.Authenticated})
 	publishEvent("cluster.created", item)
 	writeJSON(w, 201, item)
 }
@@ -145,7 +271,28 @@ func clusterResourceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := parts[0]
+	if len(parts) == 2 && parts[1] == "refresh" && clusterCredentialsStatusHandler(w, r, id) {
+		return
+	}
+	if len(parts) == 2 && parts[1] == "nodes" && r.Method == http.MethodGet {
+		items, err := loadClusterNodes(r.Context(), id)
+		if err != nil {
+			writeJSON(w, 500, map[string]string{"error": "cannot load cluster node inventory"})
+			return
+		}
+		writeJSON(w, 200, map[string]any{"nodes": items})
+		return
+	}
 	if len(parts) == 1 && r.Method == http.MethodDelete {
+		state.RLock()
+		for _, workload := range state.Workloads {
+			if workload.ClusterID == id {
+				state.RUnlock()
+				writeJSON(w, 409, map[string]string{"error": "delete workloads assigned to this cluster before removing the cluster connection"})
+				return
+			}
+		}
+		state.RUnlock()
 		result, err := database.Exec(r.Context(), `DELETE FROM clusters WHERE id=$1`, id)
 		if err != nil {
 			writeJSON(w, 500, map[string]string{"error": "cannot delete cluster"})
@@ -177,7 +324,7 @@ func clusterResourceHandler(w http.ResponseWriter, r *http.Request) {
 			status = "degraded"
 		}
 		var item Cluster
-		err := database.QueryRow(r.Context(), `UPDATE clusters SET status=$1,nodes=$2,ready_nodes=$3,accelerators=$4,version=$5,updated_at=now() WHERE id=$6 RETURNING id,name,endpoint,type,status,nodes,ready_nodes,accelerators,version,created_at,updated_at`, status, input.Nodes, input.ReadyNodes, input.Accelerators, strings.TrimSpace(input.Version), id).Scan(&item.ID, &item.Name, &item.Endpoint, &item.Type, &item.Status, &item.Nodes, &item.ReadyNodes, &item.Accelerators, &item.Version, &item.CreatedAt, &item.UpdatedAt)
+		err := database.QueryRow(r.Context(), `UPDATE clusters SET status=$1,nodes=$2,ready_nodes=$3,accelerators=$4,version=$5,updated_at=now() WHERE id=$6 RETURNING id,name,endpoint,type,status,nodes,ready_nodes,accelerators,version,namespace,storage_class,octet_length(kubeconfig)>0,created_at,updated_at`, status, input.Nodes, input.ReadyNodes, input.Accelerators, strings.TrimSpace(input.Version), id).Scan(&item.ID, &item.Name, &item.Endpoint, &item.Type, &item.Status, &item.Nodes, &item.ReadyNodes, &item.Accelerators, &item.Version, &item.Namespace, &item.StorageClass, &item.Authenticated, &item.CreatedAt, &item.UpdatedAt)
 		if err != nil {
 			writeJSON(w, 404, map[string]string{"error": "cluster not found"})
 			return
@@ -195,7 +342,7 @@ func managedPoolsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet {
-		rows, err := database.Query(r.Context(), `SELECT id,name,vendor,runtime,policy,selector,enabled,created_at FROM accelerator_pools ORDER BY created_at DESC`)
+		rows, err := database.Query(r.Context(), `SELECT id,name,vendor,runtime,policy,selector,resource_name,sharing_mode,slice_profile,sharing_replicas,enabled,created_at FROM accelerator_pools ORDER BY created_at DESC`)
 		if err != nil {
 			writeJSON(w, 500, map[string]string{"error": "cannot list pools"})
 			return
@@ -204,11 +351,11 @@ func managedPoolsHandler(w http.ResponseWriter, r *http.Request) {
 		items := []ManagedPool{}
 		for rows.Next() {
 			var item ManagedPool
-			if rows.Scan(&item.ID, &item.Name, &item.Vendor, &item.Runtime, &item.Policy, &item.Selector, &item.Enabled, &item.CreatedAt) == nil {
+			if rows.Scan(&item.ID, &item.Name, &item.Vendor, &item.Runtime, &item.Policy, &item.Selector, &item.ResourceName, &item.SharingMode, &item.SliceProfile, &item.SharingReplicas, &item.Enabled, &item.CreatedAt) == nil {
 				items = append(items, item)
 			}
 		}
-		writeJSON(w, 200, map[string]any{"pools": items})
+		writeJSON(w, 200, map[string]any{"pools": enrichPoolCapacities(r.Context(), items)})
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -226,10 +373,39 @@ func managedPoolsHandler(w http.ResponseWriter, r *http.Request) {
 	if input.Policy == "" {
 		input.Policy = "compatible-runtime"
 	}
+	input.ResourceName = strings.TrimSpace(input.ResourceName)
+	input.SharingMode = strings.ToLower(strings.TrimSpace(input.SharingMode))
+	if input.SharingMode == "" {
+		input.SharingMode = "exclusive"
+	}
+	if input.SharingMode != "exclusive" && input.SharingMode != "mig" && input.SharingMode != "time-slicing" && input.SharingMode != "mps" && input.SharingMode != "device-plugin" {
+		writeJSON(w, 400, map[string]string{"error": "sharingMode must be exclusive, mig, time-slicing, mps, or device-plugin"})
+		return
+	}
+	if input.ResourceName != "" && !validExtendedResourceName(input.ResourceName) {
+		writeJSON(w, 400, map[string]string{"error": "resourceName must be a valid Kubernetes extended resource name"})
+		return
+	}
+	if input.SharingMode != "exclusive" && input.ResourceName == "" {
+		writeJSON(w, 400, map[string]string{"error": "shared and sliced pools require the exact resource name advertised by the device plugin"})
+		return
+	}
+	if input.SharingMode == "mig" && !strings.HasPrefix(input.ResourceName, "nvidia.com/mig-") {
+		writeJSON(w, 400, map[string]string{"error": "MIG pools require an nvidia.com/mig-* resource name"})
+		return
+	}
+	if input.SharingReplicas < 1 {
+		input.SharingReplicas = 1
+	}
+	if input.SharingReplicas > 128 {
+		writeJSON(w, 400, map[string]string{"error": "sharingReplicas cannot exceed 128"})
+		return
+	}
+	input.SliceProfile = strings.TrimSpace(input.SliceProfile)
 	input.ID = "pool_" + randomToken(9)
 	input.Enabled = true
 	input.CreatedAt = time.Now().UTC()
-	_, err := database.Exec(r.Context(), `INSERT INTO accelerator_pools(id,name,vendor,runtime,policy,selector,enabled,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, input.ID, input.Name, input.Vendor, input.Runtime, input.Policy, input.Selector, input.Enabled, input.CreatedAt)
+	_, err := database.Exec(r.Context(), `INSERT INTO accelerator_pools(id,name,vendor,runtime,policy,selector,resource_name,sharing_mode,slice_profile,sharing_replicas,enabled,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, input.ID, input.Name, input.Vendor, input.Runtime, input.Policy, input.Selector, input.ResourceName, input.SharingMode, input.SliceProfile, input.SharingReplicas, input.Enabled, input.CreatedAt)
 	if err != nil {
 		writeJSON(w, 409, map[string]string{"error": "a pool with that name already exists"})
 		return
@@ -633,9 +809,29 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	host := state.Host
 	workloads := append([]Workload(nil), state.Workloads...)
 	state.RUnlock()
-	statuses := map[string]int{"running": 0, "queued": 0, "stopped": 0, "failed": 0}
+	mlops := collectMLOps(r.Context())
+	schedulerCounts := map[string]int{}
+	gangWorkloads := 0
+	parallelWorkloads := 0
+	multiAcceleratorWorkloads := 0
 	for _, workload := range workloads {
-		statuses[workload.Status]++
+		if workload.Runtime != "kubernetes" {
+			continue
+		}
+		backend := workload.SchedulerBackend
+		if backend == "" {
+			backend = "kubernetes"
+		}
+		schedulerCounts[backend]++
+		if workload.GangMinAvailable > 1 {
+			gangWorkloads++
+		}
+		if workload.DesiredCount > 1 {
+			parallelWorkloads++
+		}
+		if int32(workload.Accelerators)*workload.DesiredCount > 1 {
+			multiAcceleratorWorkloads++
+		}
 	}
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
@@ -647,7 +843,251 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "openmycelium_accelerators %d\n", len(host.Accelerators))
 	fmt.Fprintln(w, "# HELP openmycelium_workloads Workloads by lifecycle status.")
 	fmt.Fprintln(w, "# TYPE openmycelium_workloads gauge")
-	for _, status := range []string{"running", "queued", "stopped", "failed"} {
-		fmt.Fprintf(w, "openmycelium_workloads{status=%q} %d\n", status, statuses[status])
+	for _, item := range mlops.WorkloadStatus {
+		fmt.Fprintf(w, "openmycelium_workloads{status=\"%s\"} %d\n", prometheusLabel(item.Label), item.Value)
 	}
+	fmt.Fprintln(w, "# HELP openmycelium_workload_kinds Workloads by execution kind.")
+	fmt.Fprintln(w, "# TYPE openmycelium_workload_kinds gauge")
+	for _, item := range mlops.WorkloadKinds {
+		fmt.Fprintf(w, "openmycelium_workload_kinds{kind=\"%s\"} %d\n", prometheusLabel(item.Label), item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_workload_runtimes Workloads by model or execution runtime.")
+	fmt.Fprintln(w, "# TYPE openmycelium_workload_runtimes gauge")
+	for _, item := range mlops.Runtimes {
+		fmt.Fprintf(w, "openmycelium_workload_runtimes{runtime=\"%s\"} %d\n", prometheusLabel(item.Label), item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_workload_schedulers Kubernetes workloads by scheduler backend.")
+	fmt.Fprintln(w, "# TYPE openmycelium_workload_schedulers gauge")
+	for _, item := range dimensions(schedulerCounts) {
+		fmt.Fprintf(w, "openmycelium_workload_schedulers{backend=\"%s\"} %d\n", prometheusLabel(item.Label), item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_gang_workloads Kubernetes workloads requiring simultaneous gang admission.")
+	fmt.Fprintln(w, "# TYPE openmycelium_gang_workloads gauge")
+	fmt.Fprintf(w, "openmycelium_gang_workloads %d\n", gangWorkloads)
+	fmt.Fprintln(w, "# HELP openmycelium_parallel_workloads Kubernetes workloads with more than one replica or worker.")
+	fmt.Fprintln(w, "# TYPE openmycelium_parallel_workloads gauge")
+	fmt.Fprintf(w, "openmycelium_parallel_workloads %d\n", parallelWorkloads)
+	fmt.Fprintln(w, "# HELP openmycelium_multi_accelerator_workloads Kubernetes workloads requesting more than one accelerator in aggregate.")
+	fmt.Fprintln(w, "# TYPE openmycelium_multi_accelerator_workloads gauge")
+	fmt.Fprintf(w, "openmycelium_multi_accelerator_workloads %d\n", multiAcceleratorWorkloads)
+	fmt.Fprintln(w, "# HELP openmycelium_workload_restarts Current cumulative container restart count across managed workloads.")
+	fmt.Fprintln(w, "# TYPE openmycelium_workload_restarts gauge")
+	fmt.Fprintf(w, "openmycelium_workload_restarts %v\n", mlops.Summary["workloadRestarts"])
+	fmt.Fprintln(w, "# HELP openmycelium_models Governed model artifacts.")
+	fmt.Fprintln(w, "# TYPE openmycelium_models gauge")
+	fmt.Fprintf(w, "openmycelium_models %v\n", mlops.Summary["models"])
+	fmt.Fprintln(w, "# HELP openmycelium_model_versions Governed model versions.")
+	fmt.Fprintln(w, "# TYPE openmycelium_model_versions gauge")
+	fmt.Fprintf(w, "openmycelium_model_versions %v\n", mlops.Summary["modelVersions"])
+	fmt.Fprintln(w, "# HELP openmycelium_model_storage_bytes Declared model artifact storage in bytes.")
+	fmt.Fprintln(w, "# TYPE openmycelium_model_storage_bytes gauge")
+	fmt.Fprintf(w, "openmycelium_model_storage_bytes %v\n", mlops.Summary["modelBytes"])
+	fmt.Fprintln(w, "# HELP openmycelium_workspaces Governed Kubernetes workspaces.")
+	fmt.Fprintln(w, "# TYPE openmycelium_workspaces gauge")
+	fmt.Fprintf(w, "openmycelium_workspaces %v\n", mlops.Summary["workspaces"])
+	fmt.Fprintln(w, "# HELP openmycelium_agents Governed agent definitions.")
+	fmt.Fprintln(w, "# TYPE openmycelium_agents gauge")
+	fmt.Fprintf(w, "openmycelium_agents %v\n", mlops.Summary["agents"])
+	fmt.Fprintln(w, "# HELP openmycelium_agent_runs Agent runs by lifecycle scope.")
+	fmt.Fprintln(w, "# TYPE openmycelium_agent_runs gauge")
+	fmt.Fprintf(w, "openmycelium_agent_runs{state=%q} %v\n", "all", mlops.Summary["agentRuns"])
+	fmt.Fprintf(w, "openmycelium_agent_runs{state=%q} %v\n", "active", mlops.Summary["activeAgentRuns"])
+	fmt.Fprintln(w, "# HELP openmycelium_agent_approvals_pending Agent runs waiting for human approval.")
+	fmt.Fprintln(w, "# TYPE openmycelium_agent_approvals_pending gauge")
+	fmt.Fprintf(w, "openmycelium_agent_approvals_pending %v\n", mlops.Summary["pendingAgentApprovals"])
+	fmt.Fprintln(w, "# HELP openmycelium_agent_evaluations Persisted agent evaluation results.")
+	fmt.Fprintln(w, "# TYPE openmycelium_agent_evaluations gauge")
+	fmt.Fprintf(w, "openmycelium_agent_evaluations %v\n", mlops.Summary["agentEvaluations"])
+
+	releaseCounts := map[string]int{}
+	fabricProfileCounts := map[string]int{}
+	executionPlanCounts := map[string]int{}
+	executionTransportCounts := map[string]int{}
+	myceliumObjectiveCounts := map[string]int{}
+	labAssetCounts := map[string]int{}
+	fabricNodeCounts := map[string]int{"qualified": 0, "rdma": 0, "total": 0}
+	userCounts := map[string]int{"active": 0, "inactive": 0}
+	activeSessions, auditEvents := 0, int64(0)
+	clusters := []aiopsCluster{}
+	if database != nil {
+		rows, err := database.Query(r.Context(), `SELECT status,count(*) FROM workspace_releases GROUP BY status`)
+		if err == nil {
+			for rows.Next() {
+				var status string
+				var count int
+				if rows.Scan(&status, &count) == nil {
+					releaseCounts[status] = count
+				}
+			}
+			rows.Close()
+		}
+		rows, err = database.Query(r.Context(), `SELECT active,count(*) FROM users GROUP BY active`)
+		if err == nil {
+			for rows.Next() {
+				var active bool
+				var count int
+				if rows.Scan(&active, &count) == nil {
+					if active {
+						userCounts["active"] = count
+					} else {
+						userCounts["inactive"] = count
+					}
+				}
+			}
+			rows.Close()
+		}
+		_ = database.QueryRow(r.Context(), `SELECT count(*) FROM sessions WHERE expires_at>now()`).Scan(&activeSessions)
+		_ = database.QueryRow(r.Context(), `SELECT count(*) FROM audit_events`).Scan(&auditEvents)
+		rows, err = database.Query(r.Context(), `SELECT id,name,status,nodes,ready_nodes,accelerators,updated_at FROM clusters ORDER BY name`)
+		if err == nil {
+			for rows.Next() {
+				var item aiopsCluster
+				if rows.Scan(&item.ID, &item.Name, &item.Status, &item.Nodes, &item.ReadyNodes, &item.Accelerators, &item.UpdatedAt) == nil {
+					clusters = append(clusters, item)
+				}
+			}
+			rows.Close()
+		}
+		rows, err = database.Query(r.Context(), `SELECT source,count(*) FROM fabric_profiles GROUP BY source`)
+		if err == nil {
+			for rows.Next() {
+				var label string
+				var count int
+				if rows.Scan(&label, &count) == nil {
+					fabricProfileCounts[label] = count
+				}
+			}
+			rows.Close()
+		}
+		rows, err = database.Query(r.Context(), `SELECT status,count(*) FROM execution_plans GROUP BY status`)
+		if err == nil {
+			for rows.Next() {
+				var label string
+				var count int
+				if rows.Scan(&label, &count) == nil {
+					executionPlanCounts[label] = count
+				}
+			}
+			rows.Close()
+		}
+		rows, err = database.Query(r.Context(), `SELECT COALESCE(plan->>'transport','unknown'),count(*) FROM execution_plans GROUP BY plan->>'transport'`)
+		if err == nil {
+			for rows.Next() {
+				var label string
+				var count int
+				if rows.Scan(&label, &count) == nil {
+					executionTransportCounts[label] = count
+				}
+			}
+			rows.Close()
+		}
+		rows, err = database.Query(r.Context(), `SELECT COALESCE(plan#>>'{optimization,objective}','unknown'),count(*) FROM execution_plans GROUP BY plan#>>'{optimization,objective}'`)
+		if err == nil {
+			for rows.Next() {
+				var label string
+				var count int
+				if rows.Scan(&label, &count) == nil {
+					myceliumObjectiveCounts[label] = count
+				}
+			}
+			rows.Close()
+		}
+		rows, err = database.Query(r.Context(), `SELECT kind,count(*) FROM lab_assets GROUP BY kind`)
+		if err == nil {
+			for rows.Next() {
+				var label string
+				var count int
+				if rows.Scan(&label, &count) == nil {
+					labAssetCounts[label] = count
+				}
+			}
+			rows.Close()
+		}
+		rows, err = database.Query(r.Context(), `SELECT inventory FROM cluster_nodes`)
+		if err == nil {
+			for rows.Next() {
+				var payload []byte
+				var node ClusterNode
+				if rows.Scan(&payload) == nil && json.Unmarshal(payload, &node) == nil {
+					fabricNodeCounts["total"]++
+					if node.Fabric.Qualified {
+						fabricNodeCounts["qualified"]++
+					}
+					if node.Fabric.RDMA {
+						fabricNodeCounts["rdma"]++
+					}
+				}
+			}
+			rows.Close()
+		}
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_workspace_releases Workspace releases by reconciled state.")
+	fmt.Fprintln(w, "# TYPE openmycelium_workspace_releases gauge")
+	for _, item := range dimensions(releaseCounts) {
+		fmt.Fprintf(w, "openmycelium_workspace_releases{status=\"%s\"} %d\n", prometheusLabel(item.Label), item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_users Platform users by account state.")
+	fmt.Fprintln(w, "# TYPE openmycelium_users gauge")
+	for _, status := range []string{"active", "inactive"} {
+		fmt.Fprintf(w, "openmycelium_users{status=%q} %d\n", status, userCounts[status])
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_active_sessions Current unexpired browser sessions.")
+	fmt.Fprintln(w, "# TYPE openmycelium_active_sessions gauge")
+	fmt.Fprintf(w, "openmycelium_active_sessions %d\n", activeSessions)
+	fmt.Fprintln(w, "# HELP openmycelium_audit_events_total Persisted audit events.")
+	fmt.Fprintln(w, "# TYPE openmycelium_audit_events_total counter")
+	fmt.Fprintf(w, "openmycelium_audit_events_total %d\n", auditEvents)
+	fmt.Fprintln(w, "# HELP openmycelium_cluster_nodes Kubernetes nodes by readiness.")
+	fmt.Fprintln(w, "# TYPE openmycelium_cluster_nodes gauge")
+	for _, cluster := range clusters {
+		fmt.Fprintf(w, "openmycelium_cluster_nodes{cluster=\"%s\",state=%q} %d\n", prometheusLabel(cluster.Name), "ready", cluster.ReadyNodes)
+		fmt.Fprintf(w, "openmycelium_cluster_nodes{cluster=\"%s\",state=%q} %d\n", prometheusLabel(cluster.Name), "not_ready", cluster.Nodes-cluster.ReadyNodes)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_fabric_nodes Persisted cluster nodes by communication-fabric capability.")
+	fmt.Fprintln(w, "# TYPE openmycelium_fabric_nodes gauge")
+	for _, capability := range []string{"total", "qualified", "rdma"} {
+		fmt.Fprintf(w, "openmycelium_fabric_nodes{capability=%q} %d\n", capability, fabricNodeCounts[capability])
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_fabric_profiles Persisted heterogeneous accelerator benchmark profiles by source.")
+	fmt.Fprintln(w, "# TYPE openmycelium_fabric_profiles gauge")
+	for _, item := range dimensions(fabricProfileCounts) {
+		fmt.Fprintf(w, "openmycelium_fabric_profiles{source=%q} %d\n", prometheusLabel(item.Label), item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_execution_plans Heterogeneous execution plans by admission status.")
+	fmt.Fprintln(w, "# TYPE openmycelium_execution_plans gauge")
+	for _, item := range dimensions(executionPlanCounts) {
+		fmt.Fprintf(w, "openmycelium_execution_plans{status=%q} %d\n", prometheusLabel(item.Label), item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_execution_plan_transports Heterogeneous execution plans by selected transport.")
+	fmt.Fprintln(w, "# TYPE openmycelium_execution_plan_transports gauge")
+	for _, item := range dimensions(executionTransportCounts) {
+		fmt.Fprintf(w, "openmycelium_execution_plan_transports{transport=%q} %d\n", prometheusLabel(item.Label), item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_mycelium_plans Mycelium execution plans by optimization objective.")
+	fmt.Fprintln(w, "# TYPE openmycelium_mycelium_plans gauge")
+	for _, item := range dimensions(myceliumObjectiveCounts) {
+		fmt.Fprintf(w, "openmycelium_mycelium_plans{algorithm=%q,version=%q,objective=%q} %d\n", myceliumAlgorithmName, myceliumAlgorithmVersion, prometheusLabel(item.Label), item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_lab_assets Saved virtual-lab evidence by artifact kind.")
+	fmt.Fprintln(w, "# TYPE openmycelium_lab_assets gauge")
+	for _, item := range dimensions(labAssetCounts) {
+		fmt.Fprintf(w, "openmycelium_lab_assets{kind=%q,evidence=%q} %d\n", prometheusLabel(item.Label), "simulated", item.Value)
+	}
+	fmt.Fprintln(w, "# HELP openmycelium_dependency_up Control-plane dependency connectivity.")
+	fmt.Fprintln(w, "# TYPE openmycelium_dependency_up gauge")
+	fmt.Fprintf(w, "openmycelium_dependency_up{dependency=%q} %d\n", "postgres", boolMetric(database != nil))
+	fmt.Fprintf(w, "openmycelium_dependency_up{dependency=%q} %d\n", "nats", boolMetric(eventBus != nil && eventBus.IsConnected()))
+}
+
+func prometheusLabel(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, "\n", `\n`)
+	return strings.ReplaceAll(value, `"`, `\"`)
+}
+
+func boolMetric(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
 }

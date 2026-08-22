@@ -1,0 +1,40 @@
+cmake_minimum_required(VERSION 3.24)
+project(openmycelium_hetccl LANGUAGES CXX)
+
+option(HETCCL_ENABLE_CUDA "Build the CUDA adapter" OFF)
+option(HETCCL_ENABLE_ROCM "Build the ROCm adapter" OFF)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+add_library(hetccl_host SHARED src/host_adapter.cpp)
+target_include_directories(hetccl_host PUBLIC include)
+set_target_properties(hetccl_host PROPERTIES OUTPUT_NAME "hetccl_host")
+set(HETCCL_INSTALL_TARGETS hetccl_host)
+
+if(HETCCL_ENABLE_CUDA)
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  add_library(hetccl_cuda SHARED src/cuda_adapter.cu)
+  target_include_directories(hetccl_cuda PUBLIC include)
+  target_link_libraries(hetccl_cuda PRIVATE CUDA::cudart)
+  set_target_properties(hetccl_cuda PROPERTIES CUDA_STANDARD 17 OUTPUT_NAME "hetccl_cuda")
+  list(APPEND HETCCL_INSTALL_TARGETS hetccl_cuda)
+endif()
+
+if(HETCCL_ENABLE_ROCM)
+  enable_language(HIP)
+  find_package(hip REQUIRED)
+  add_library(hetccl_rocm SHARED src/rocm_adapter.cpp)
+  target_include_directories(hetccl_rocm PUBLIC include)
+  target_link_libraries(hetccl_rocm PRIVATE hip::host)
+  set_source_files_properties(src/rocm_adapter.cpp PROPERTIES LANGUAGE HIP)
+  set_target_properties(hetccl_rocm PROPERTIES OUTPUT_NAME "hetccl_rocm")
+  list(APPEND HETCCL_INSTALL_TARGETS hetccl_rocm)
+endif()
+
+include(GNUInstallDirs)
+install(TARGETS ${HETCCL_INSTALL_TARGETS}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

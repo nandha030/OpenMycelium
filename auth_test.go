@@ -46,3 +46,26 @@ func TestDevelopmentModeAllowsRequests(t *testing.T) {
 		t.Fatalf("development mode request was unexpectedly blocked: %d", response.Code)
 	}
 }
+
+func TestHostImportRequiresAgentAuthentication(t *testing.T) {
+	t.Setenv("AUTH_MODE", "local")
+	t.Setenv("AGENT_TOKEN", "test-agent-token-that-is-long-and-random")
+	t.Setenv("STATE_PATH", t.TempDir()+"/state.json")
+	database = nil
+
+	handler := requireAgentOrOperator(importHostHandler)
+	body := `{"name":"test-host","cpu":"test-cpu","logicalCores":4,"memoryGB":8}`
+	unauthorized := httptest.NewRecorder()
+	handler(unauthorized, httptest.NewRequest(http.MethodPost, "/api/v1/discovery/import", strings.NewReader(body)))
+	if unauthorized.Code != http.StatusUnauthorized {
+		t.Fatalf("expected unauthenticated import to return 401, got %d", unauthorized.Code)
+	}
+
+	authorizedRequest := httptest.NewRequest(http.MethodPost, "/api/v1/discovery/import", strings.NewReader(body))
+	authorizedRequest.Header.Set("Authorization", "Bearer test-agent-token-that-is-long-and-random")
+	authorized := httptest.NewRecorder()
+	handler(authorized, authorizedRequest)
+	if authorized.Code != http.StatusCreated {
+		t.Fatalf("expected agent import to return 201, got %d: %s", authorized.Code, authorized.Body.String())
+	}
+}
