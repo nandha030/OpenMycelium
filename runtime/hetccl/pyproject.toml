@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openmycelium-hetccl"
-version = "0.1.0"
-description = "Portable heterogeneous collective runtime for OpenMycelium"
+version = "0.2.0"
+description = "Portable heterogeneous collective and inference runtime for OpenMycelium"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "Apache-2.0"}
 authors = [{name = "OpenMycelium contributors"}]
-keywords = ["collectives", "distributed", "GPU", "CUDA", "ROCm", "OpenMycelium"]
+keywords = ["collectives", "distributed", "GPU", "CUDA", "ROCm", "Metal", "vLLM", "OpenMycelium"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3",

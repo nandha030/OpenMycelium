@@ -1,0 +1,39 @@
+[
+  {
+    "node_id": "amd-prefill",
+    "runtime": "rocm",
+    "memory_mib": 65536,
+    "prefill_tokens_per_second": 1800,
+    "decode_tokens_per_second": 180,
+    "queue_ms": 8,
+    "network_mbps": 25000,
+    "network_latency_ms": 0.5,
+    "cost_per_hour": 1.8,
+    "capabilities": ["prefill", "kv-export"]
+  },
+  {
+    "node_id": "nvidia-decode",
+    "runtime": "cuda",
+    "memory_mib": 81920,
+    "prefill_tokens_per_second": 900,
+    "decode_tokens_per_second": 650,
+    "queue_ms": 4,
+    "network_mbps": 25000,
+    "network_latency_ms": 0.5,
+    "cost_per_hour": 2.5,
+    "capabilities": ["decode", "kv-import", "target-verify"]
+  },
+  {
+    "node_id": "apple-draft",
+    "runtime": "metal",
+    "memory_mib": 65536,
+    "prefill_tokens_per_second": 250,
+    "decode_tokens_per_second": 120,
+    "draft_tokens_per_second": 850,
+    "queue_ms": 2,
+    "network_mbps": 10000,
+    "network_latency_ms": 1.5,
+    "cost_per_hour": 0.4,
+    "capabilities": ["draft", "metal"]
+  }
+]

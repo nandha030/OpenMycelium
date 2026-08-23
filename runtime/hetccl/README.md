@@ -1,8 +1,9 @@
 # OpenMycelium HetCCL
 
-HetCCL is OpenMycelium's heterogeneous collective runtime package. Version
-`0.1.0` provides a functional, cross-platform host-staged AllReduce for Linux,
-Windows, and macOS plus a stable native adapter ABI for CUDA and ROCm.
+HetCCL is OpenMycelium's heterogeneous collective and inference runtime package.
+Version `0.2.0` provides a functional, cross-platform host-staged AllReduce,
+KV-cache transfer broker, HetRouter, Metal staging adapter, vLLM endpoint
+adapter, and speculative decoding coordinator.
 
 It does not create coherent memory between unrelated GPUs. Each device keeps
 its native memory allocation. The portable backend stages typed buffers in
@@ -85,6 +86,34 @@ The control plane supplies rank, world size, plan ID, and coordinator service.
 Choose **HetCCL portable TCP** in Mycelium Plan Studio, or use
 `--transport hetccl-tcp` in the OpenMycelium CLI. The separate `hetccl`
 transport name remains reserved for qualified device-direct execution.
+
+## Heterogeneous inference
+
+Inspect a standard vLLM or OpenAI-compatible endpoint:
+
+```bash
+hetccl vllm-check --url http://worker:8000 --model model-name --runtime cuda
+```
+
+Run the bounded reference KV-cache broker:
+
+```bash
+hetccl kv-serve --host 0.0.0.0 --port 29600 --max-mib 1024 --ttl 300
+```
+
+Plan inference from measured node and request JSON profiles:
+
+```bash
+hetccl inference-plan --nodes nodes.json --request request.json
+```
+
+Runnable sample profiles are provided in `examples/nodes.json` and
+`examples/request.json`. Their performance values are illustrative and are not
+hardware benchmark claims.
+
+The standard vLLM OpenAI API supports whole-request inference. Cross-vendor
+speculation requires the optional OpenMycelium propose/verify worker endpoints.
+See `docs/INFERENCE_FABRIC.md` for the protocol and current qualification limits.
 
 ## Qualification states
 

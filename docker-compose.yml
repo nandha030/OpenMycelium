@@ -35,7 +35,7 @@ services:
     build:
       context: .
       dockerfile: runtime/hetccl/Dockerfile
-    image: openmycelium/hetccl:0.1.0
+    image: openmycelium/hetccl:0.2.0
     command: ["serve", "--host", "0.0.0.0", "--port", "29500"]
     expose:
       - "29500"

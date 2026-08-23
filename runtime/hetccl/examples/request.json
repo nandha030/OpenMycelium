@@ -1,0 +1,10 @@
+{
+  "model": "example-13b",
+  "prompt_tokens": 2048,
+  "output_tokens": 256,
+  "model_memory_mib": 24000,
+  "kv_bytes_per_token": 524288,
+  "allow_disaggregation": true,
+  "allow_speculative": true,
+  "minimum_acceptance_rate": 0.7
+}

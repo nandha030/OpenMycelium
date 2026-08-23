@@ -20,7 +20,7 @@ This document distinguishes working product capabilities from adapters that stil
 - PostgreSQL-backed accelerator benchmark profiles covering model, precision, throughput, memory, P2P, and all-reduce measurements with measured/operator/imported provenance
 - Mycelium 1.0 heterogeneous optimization with memory-constrained minimax layer allocation, data/pipeline/ZeRO candidate scoring, throughput/balance/efficiency objectives, versioned decision traces, model-state estimates, and explicit ready/blocked admission
 - PyTorch Gloo CPU-forwarding reference adapter with pinned host buffers, global rank normalization, and CUDA/ROCm-compatible execution contracts
-- Installable HetCCL 0.1 alpha package with Windows/Linux/macOS discovery, sequence-safe typed TCP AllReduce, coordinator CLI/container/Helm deployment, fail-closed transport planning, PyTorch host-staging bridge, and native host/CUDA/ROCm adapter source
+- Installable HetCCL 0.2 alpha package with Windows/Linux/macOS discovery, sequence-safe typed TCP AllReduce, bounded checksummed KV-cache transfer, HetRouter inference placement, PyTorch MPS Metal staging, OpenAI-compatible/vLLM endpoint adapters, standards-correct speculative decoding, coordinator CLI/container/Helm deployment, fail-closed transport planning, PyTorch host-staging bridge, and native host/CUDA/ROCm adapter source
 - Persistent Mycelium Lab with isolated virtual NVIDIA/AMD/Intel/Apple/CPU topologies, planning benchmark catalogue, runtime image matrix, communication simulator, saved experiments, and hardware qualification gates
 - Functional CPU/Gloo correctness experiment image and Kubernetes dry-run manifest generation using the same serialized Mycelium execution contract as managed workloads
 - Lab model and dataset sizing for dense/MoE active parameters, quantization, KV cache, activations, optimizer state, approximate step FLOPs, dataset staging, and checkpoint retention
@@ -72,7 +72,7 @@ This document distinguishes working product capabilities from adapters that stil
 - Hypha native data-plane workers, MLIR dialect, CUDA/HIP/Level Zero/Metal transfer backends, UCX/RDMA kernels, framework tensor-storage adapters, checkpoint recovery, and automatic benchmark execution
 - Production HetCCL device-direct data plane: dynamic native plugin loading, hierarchical NCCL/RCCL execution, libibverbs transport, PyTorch ProcessGroup registration, resiliency, telemetry, and mixed-vendor hardware qualification; the current HetCCL alpha provides a functional centralized TCP reference path and native adapter SDK
 - Distributed training orchestration with framework-specific checkpoint, topology, precision, and failure-recovery contracts
-- vLLM, llama.cpp, TensorRT-LLM, TGI, MLX, OpenAI, Anthropic, and cloud GPU runtime adapters
+- Production model-specific vLLM paged-KV and MLX cache codecs, plus llama.cpp, TensorRT-LLM, TGI, OpenAI, Anthropic, and cloud GPU runtime adapters; HetCCL 0.2 currently provides OpenAI-compatible request serving and explicit propose/verify extension clients
 - OIDC discovery/login, Microsoft Entra ID group mapping, LDAP bind/search, SCIM provisioning, organizations, teams, and scoped service accounts
 - OpenTelemetry traces, centralized log aggregation, long-term utilization history, energy data, cloud cost ingestion, Alertmanager routing, and notification integrations
 - Temporal workflow-engine adapter for multi-day timers, resumable graph execution, cross-agent compensation, and distributed human tasks; the current release uses PostgreSQL state plus JetStream events

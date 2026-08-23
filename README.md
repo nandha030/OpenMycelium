@@ -16,6 +16,7 @@ It is designed for platform teams that need to operate inference, training, fine
 - [Problems solved and use cases](docs/USE_CASES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md)
+- [Heterogeneous inference fabric: HetRouter, KV-cache transfer, Metal, vLLM, and speculative decoding](docs/INFERENCE_FABRIC.md)
 - [Mycelium and HetCCL technical manuscript, formulas, architecture, market gap, and invention disclosure](docs/paper/OPENMYCELIUM_MYCELIUM_HETCCL_IEEE_MANUSCRIPT.md)
 - [Mycelium Lab and CPU/Gloo experiments](docs/MYCELIUM_LAB.md)
 - [Implemented features and roadmap](FEATURES.md)
@@ -180,7 +181,7 @@ OpenMycelium rejects a Kueue or Volcano submission when the corresponding schedu
 
 The **Memory & execution fabric** dashboard qualifies each connected node for RDMA, native collectives, GPUDirect or DirectGMA evidence, and optional cross-vendor transport adapters. PostgreSQL stores benchmark profiles and compiled execution plans. **Mycelium 1.0** groups available devices by vendor/runtime/model, performs memory-constrained minimax layer placement, evaluates admissible data/pipeline/ZeRO candidates, and scores throughput, balance, or performance-per-watt objectives. The persisted contract includes profile coverage, stage imbalance, memory feasibility, and an explainable decision trace.
 
-Within one vendor, the contract selects NCCL, RCCL, or oneCCL. Cross-vendor direct plans are blocked unless every selected node advertises RDMA and qualified native adapters. `gloo` remains an explicit PyTorch host-staging fallback. The installable `runtime/hetccl` package adds a sequence-safe TCP AllReduce coordinator, device discovery, transport planning, a PyTorch bridge, and build-gated host/CUDA/ROCm adapter implementations. Its TCP path is functional across CPU and vendor-specific GPU hosts, but it stages data through host memory; device-direct RDMA is still blocked pending physical qualification. A ready plan can be selected in Celium AI+ or passed with `--execution-plan`. Training, fine-tuning, and batch plans expand into indexed Jobs per vendor group, with exact extended-resource requests, qualified-node constraints, shared rendezvous metadata, and non-overlapping rank bases. Multi-group inference is rejected until a pipeline-serving adapter is available. See [Mycelium algorithm](docs/MYCELIUM_ALGORITHM.md), [HetCCL runtime](docs/HETCCL_RUNTIME.md), and [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md).
+Within one vendor, the contract selects NCCL, RCCL, or oneCCL. Cross-vendor direct plans are blocked unless every selected node advertises RDMA and qualified native adapters. `gloo` remains an explicit PyTorch host-staging fallback. The installable `runtime/hetccl` package adds a sequence-safe TCP AllReduce coordinator, device discovery, transport planning, a PyTorch bridge, build-gated host/CUDA/ROCm adapter implementations, and a 0.2 reference inference fabric with HetRouter, canonical KV-cache transfer, Metal staging, vLLM endpoint discovery, and speculative decoding. Its portable paths stage data through host memory; device-direct RDMA is still blocked pending physical qualification. A ready plan can be selected in Celium AI+ or passed with `--execution-plan`. Training, fine-tuning, and batch plans expand into indexed Jobs per vendor group, with exact extended-resource requests, qualified-node constraints, shared rendezvous metadata, and non-overlapping rank bases. The standalone inference adapters are functional, while the Kubernetes controller continues to reject multi-group inference until model-specific worker codecs and release reconciliation are connected. See [Mycelium algorithm](docs/MYCELIUM_ALGORITHM.md), [HetCCL runtime](docs/HETCCL_RUNTIME.md), [Heterogeneous inference fabric](docs/INFERENCE_FABRIC.md), and [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md).
 
 ### Vagrant k3s laptop integration
 
@@ -197,7 +198,7 @@ Run this from the OpenMycelium project directory:
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\agents\windows\connect-vagrant-k3s.ps1 `
-  -VagrantDirectory "C:\Users\Administrator\Documents\Codex\2026-08-06\can\outputs\k8s-vagrant-lite"
+  -VagrantDirectory "C:\path\to\k8s-vagrant-lite"
 ```
 
 Open **Clusters > Connect cluster**, enter `laptop-k3s`, leave the endpoint blank, and paste the generated kubeconfig. Use `openmycelium-workloads` as the namespace and `local-path` as the k3s StorageClass. Connection is rejected unless authentication and node listing succeed. The **Verify** control refreshes node readiness, version, and Kubernetes extended accelerator resources directly from the API.

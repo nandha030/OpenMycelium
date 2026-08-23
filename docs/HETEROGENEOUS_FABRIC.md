@@ -78,7 +78,7 @@ For PyTorch correctness testing, `runtime/mycelium` supplies a Gloo CPU-forwarde
 
 For a multi-group plan, the controller also injects `OPENMYCELIUM_EXECUTION_GROUP_ID`, `OPENMYCELIUM_EXECUTION_GROUP_SIZE`, `OPENMYCELIUM_RANK_BASE`, `OPENMYCELIUM_WORLD_SIZE`, and the indexed Job completion index. All group Jobs share the workload label and rendezvous Service, so lifecycle reconciliation, pod inspection, logs, deletion, and generated manifests remain one OpenMycelium workload.
 
-Multi-group inference plans are rejected at deployment until a pipeline-serving runtime adapter is configured. A generic serving container cannot be safely split across vendor groups merely by adding environment variables.
+Multi-group inference plans remain rejected by the Kubernetes controller until the HetCCL 0.2 inference adapters are connected to model-specific worker codecs and release reconciliation. A generic serving container cannot be safely split across vendor groups merely by adding environment variables.
 
 ## Research-inspired scope
 

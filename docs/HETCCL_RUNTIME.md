@@ -4,7 +4,7 @@ HetCCL is the data-plane counterpart to the Mycelium placement algorithm.
 Mycelium decides where ranks run and which transport evidence is admissible;
 HetCCL executes collective communication under that contract.
 
-## Implemented in 0.1.0
+## Implemented in 0.2.0
 
 - `openmycelium-hetccl` Python package and `hetccl` CLI
 - Windows, Linux, and macOS device/capability discovery
@@ -18,6 +18,14 @@ HetCCL executes collective communication under that contract.
 - explicit `hetccl-tcp` execution-plan transport, separate from direct `hetccl`
 - Docker coordinator image and hardened Kubernetes coordinator manifest
 - concurrent two-rank correctness and protocol-failure tests
+- bounded, authenticated, checksummed canonical KV-cache transfer broker
+- PyTorch MPS Metal host-staging adapter and MLX capability detection
+- OpenAI-compatible and vLLM serving adapters with explicit extension discovery
+- HetRouter whole-request, disaggregated prefill/decode, and speculative plans
+- distribution-preserving speculative acceptance and rejection sampling
+
+See [Heterogeneous inference fabric](INFERENCE_FABRIC.md) for the inference
+protocol, formulas, commands, and qualification boundary.
 
 ## Data path
 
