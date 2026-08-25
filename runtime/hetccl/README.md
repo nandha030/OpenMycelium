@@ -1,130 +1,133 @@
-# OpenMycelium HetCCL
+# openmycelium-hetccl
 
-HetCCL is OpenMycelium's heterogeneous collective and inference runtime package.
-Version `0.2.0` provides a functional, cross-platform host-staged AllReduce,
-KV-cache transfer broker, HetRouter, Metal staging adapter, vLLM endpoint
-adapter, and speculative decoding coordinator.
+Qualified cross-vendor communication runtime: move tensors between an **NVIDIA
+CUDA** device and an **AMD ROCm** device, with every direction byte-verified
+before it is permitted.
 
-It does not create coherent memory between unrelated GPUs. Each device keeps
-its native memory allocation. The portable backend stages typed buffers in
-host memory and exchanges them through a checked TCP coordinator. Native
-adapters provide device allocation, asynchronous copies, events, and local
-reduction kernels; direct RDMA transport remains blocked until it is qualified
-on real hardware.
-
-## Install
-
-Windows PowerShell:
-
-```powershell
-cd runtime\hetccl
-.\install.ps1
-hetccl doctor
+```
+NVIDIA VRAM --cudaMemcpyAsync--> pinned host --TCP--> pinned host --hipMemcpyAsync--> AMD VRAM
 ```
 
-Linux or macOS:
+**Version 0.2.0a1 — alpha.** Read the limitations before relying on anything here.
 
-```bash
-cd runtime/hetccl
-chmod +x install.sh
-./install.sh
-hetccl doctor
+## What this is
+
+A point-to-point transport plus two collectives, with a qualification gate in
+front of them. NCCL and RCCL remain responsible for all vendor-local
+communication; this package only bridges between vendors.
+
+| Capability | State |
+|---|---|
+| CUDA↔ROCm host-staged point-to-point transport | verified both directions |
+| Capability discovery and qualification ledger | verified |
+| Dynamic tensor framing (8 dtypes, dynamic shapes) | verified |
+| Timeout, failure, and epoch fencing | verified |
+| Pipeline activation transfer | verified |
+| Broadcast (root on either vendor) | verified |
+| All-gather (rank-ordered, no root) | verified |
+| Connection multiplexing with concurrent collective IDs | verified over a live socket |
+| Diagnostics and qualification CLI | included |
+
+## What this is **not**
+
+* **Not unified VRAM.** The two cards remain separate memory domains. Nothing
+  here makes 16 GB + 16 GB addressable as 32 GB.
+* **Not production ready.** Alpha, on one measured machine.
+* **Not an all-reduce.** Cross-vendor reduction semantics — dtype, operation
+  order, and numerical tolerance — are undefined here and deliberately omitted.
+* **Not a model runner.** No checkpoint loading, batching, or KV-cache
+  management.
+
+## Known limitations
+
+**UCX direct receive into ROCm memory is disabled on WSL/DXG.** On the DXG path
+a `hipMalloc` pointer is not CPU-accessible — a direct load or store faults.
+UCX's `uct_rocm_copy_ep_put_short` stores from the CPU, and the generic eager
+unpack `memcpy`s, so both fault. `hetccl.qualification` therefore routes ROCm
+receives through host staging and refuses UCX direct receive. CUDA is
+unaffected because `uct_cuda_copy` uses `cuMemcpyAsync`.
+
+**Single-rank NCCL/RCCL groups are degenerate.** On a machine with one GPU per
+vendor, vendor-local collectives have a single participant. Results validate
+orchestration and cross-vendor routing, not multi-rank vendor-local behaviour.
+Every collective report carries a `degeneracy` note stating this.
+
+**ROCm PyTorch on WSL may need a provisional patch.** ROCm PyTorch wheels bundle
+an HSA runtime that does not enumerate the GPU on the DXG path. Replacing it
+with the system runtime works but produces a mixed-runtime configuration that
+neither AMD nor PyTorch supports. See `rocm_torch_patch.sh` — it records hashes,
+keeps a restorable backup, checks ABI compatibility, and runs a real kernel
+before declaring success. A `pip install --upgrade torch` silently reverts it.
+
+## Qualified hardware and runtime tuple
+
+Measured on:
+
+| | |
+|---|---|
+| NVIDIA GPU | GeForce RTX 5060 Ti, driver 591.86 |
+| AMD GPU | Radeon RX 9060 XT (gfx1200) |
+| ROCm | 7.2.0 (WSL DXG path, no `/dev/kfd`) |
+| Windows | 10.0.26200.9168, Adrenalin 26.8.1 |
+| WSL kernel | 6.18.33.2-microsoft-standard-WSL2 |
+| Distro | Ubuntu 24.04 |
+
+Other hardware is **unqualified** until you run the qualification yourself.
+
+## Install and verify
+
+```sh
+python -m venv /tmp/hetccl-clean
+. /tmp/hetccl-clean/bin/activate
+pip install openmycelium_hetccl-0.2.0a1-py3-none-any.whl
+
+# Build the native components (no CUDA/ROCm toolkit needed; dlopen at run time)
+python -c "import hetccl, os; print(os.path.join(os.path.dirname(hetccl.__file__), 'native'))"
+sh <that path>/build.sh /tmp/hetccl-bin
+export OM_BRIDGE_BIN=/tmp/hetccl-bin/bridge
+export OM_PROBE_BIN=/tmp/hetccl-bin/host_access_probe
+
+hetccl diagnose
+hetccl qualify --direction cuda-to-rocm
+hetccl qualify --direction rocm-to-cuda
+hetccl smoke-test
 ```
 
-Build the host native adapter with CMake:
+`hetccl qualify` **reads** the ledger; it does not create one. Produce records
+with the qualification runner, which transfers with payload CRC enabled and
+records the platform tuple only if the run is byte-verified:
 
-```bash
-HETCCL_BUILD_NATIVE=1 ./install.sh
+```sh
+python runtime/bridge/qualify_direction.py --send cuda --recv rocm
+python runtime/bridge/qualify_direction.py --send rocm --recv cuda
 ```
 
-On a CUDA build host, add `HETCCL_ENABLE_CUDA=1`. On a ROCm build host, add
-`HETCCL_ENABLE_ROCM=1`. Build CUDA and ROCm adapters in their respective
-vendor images; a single compiler image is not required.
+Qualification is **per direction**. The measured failure mode was asymmetric —
+receive into ROCm memory faulted while ROCm as a source worked — so qualifying
+`rocm->cuda` says nothing about `cuda->rocm`.
 
-## Functional two-rank test
+## Wire protocol
 
-Terminal 1:
+**Frozen as of 0.2.0a1.** Two protocols share the link with distinct magic
+values so neither can be parsed as the other:
 
-```bash
-hetccl serve --host 0.0.0.0 --port 29500
-```
+| Protocol | Magic | Version |
+|---|---|---|
+| Activation (point-to-point) | `XMC1` | 1 |
+| Collective (broadcast, all-gather) | `OMC2` | 1 |
 
-Terminal 2:
+Incompatible frame changes must increment the version. `negotiate()` refuses a
+mismatch with a clear message and has **no downgrade path** — a newer build
+talking to an older one fails visibly rather than guessing at a layout.
 
-```bash
-hetccl allreduce --rank 0 --world-size 2 --group smoke 1 2 3
-```
+## Tuning
 
-Terminal 3:
+Defaults come from measurement, not preference: **2 slots**, **4 MiB chunks**,
+payload CRC **off** in production (it cost 3.3× throughput). The 2–8 MiB range
+is this platform's *qualified profile*, not a universal optimum — PCIe topology,
+NUMA layout, and bare metal versus WSL all move it. A chunk outside the profile
+is permitted with `allow_unqualified_chunk=True` and should be requalified.
 
-```bash
-hetccl allreduce --rank 1 --world-size 2 --group smoke 10 20 30
-```
+## Licence
 
-Both ranks return `[11.0, 22.0, 33.0]`.
-
-## Python API
-
-```python
-from hetccl import CollectiveConfig, HetCCLCollective
-
-collective = HetCCLCollective(
-    CollectiveConfig(rank=rank, world_size=world_size, host="coordinator")
-)
-reduced = collective.all_reduce([1.0, 2.0], dtype="f64")
-```
-
-OpenMycelium workloads normally consume the environment contract directly:
-
-```python
-from hetccl import HetCCLCollective
-
-collective = HetCCLCollective()
-```
-
-The control plane supplies rank, world size, plan ID, and coordinator service.
-Choose **HetCCL portable TCP** in Mycelium Plan Studio, or use
-`--transport hetccl-tcp` in the OpenMycelium CLI. The separate `hetccl`
-transport name remains reserved for qualified device-direct execution.
-
-## Heterogeneous inference
-
-Inspect a standard vLLM or OpenAI-compatible endpoint:
-
-```bash
-hetccl vllm-check --url http://worker:8000 --model model-name --runtime cuda
-```
-
-Run the bounded reference KV-cache broker:
-
-```bash
-hetccl kv-serve --host 0.0.0.0 --port 29600 --max-mib 1024 --ttl 300
-```
-
-Plan inference from measured node and request JSON profiles:
-
-```bash
-hetccl inference-plan --nodes nodes.json --request request.json
-```
-
-Runnable sample profiles are provided in `examples/nodes.json` and
-`examples/request.json`. Their performance values are illustrative and are not
-hardware benchmark claims.
-
-The standard vLLM OpenAI API supports whole-request inference. Cross-vendor
-speculation requires the optional OpenMycelium propose/verify worker endpoints.
-See `docs/INFERENCE_FABRIC.md` for the protocol and current qualification limits.
-
-## Qualification states
-
-- `ready`: the portable TCP path has functional tests.
-- `detected-unqualified`: hardware or an SDK was found, but that node has not
-  passed correctness, stress, failure, and performance qualification.
-- `qualified`: an operator-provided hardware qualification record permits the
-  optimized path.
-- `blocked-until-qualified`: HetCCL refuses to infer safety from device presence.
-
-The current release is an alpha reference runtime. Production-scale direct
-GPU communication still requires native plugin loading, NCCL/RCCL local
-collective integration, libibverbs transport, framework registration, and
-mixed-vendor hardware qualification.
+Apache-2.0. See `LICENSE` and `NOTICE`.

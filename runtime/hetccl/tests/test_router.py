@@ -36,5 +36,28 @@ class RouterTests(unittest.TestCase):
         self.assertEqual([item.node_id for item in route.assignments], ["amd", "m5", "nvidia"])
 
 
+    def test_rejects_node_that_cannot_hold_the_kv_cache(self):
+        # 16 GiB node, 8 GiB model, and a 32 GiB KV cache: 40 GiB is required.
+        nodes = [InferenceNode("small-gpu", "cuda", 16384, 1000, 100, network_mbps=10000)]
+        request = InferenceRequest("kv-bomb", 32768, 128, 8192, 1048576)
+        with self.assertRaises(ValueError):
+            HetRouter().plan(request, nodes)
+
+    def test_places_request_on_the_node_that_holds_model_and_kv_cache(self):
+        # Both nodes hold the model; only the larger one also holds the 2 GiB KV cache.
+        nodes = [
+            InferenceNode("too-small", "cuda", 9216, 4000, 400, network_mbps=10000),
+            InferenceNode("large", "rocm", 65536, 1000, 100, network_mbps=10000),
+        ]
+        request = InferenceRequest("model", 2048, 128, 8192, 1048576, allow_disaggregation=False)
+        route = HetRouter().plan(request, nodes)
+        self.assertEqual([item.node_id for item in route.assignments], ["large"])
+
+    def test_kv_cache_is_counted_against_resident_memory(self):
+        request = InferenceRequest("model", 1024, 0, 8192, 1048576)
+        self.assertEqual(request.kv_cache_mib(1024), 1024)
+        self.assertEqual(request.resident_mib(1024), 9216)
+
+
 if __name__ == "__main__":
     unittest.main()

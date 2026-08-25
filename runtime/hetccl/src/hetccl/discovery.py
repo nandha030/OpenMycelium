@@ -10,6 +10,8 @@ import subprocess
 from dataclasses import asdict, dataclass
 from typing import Callable
 
+from .amd import discover_amd
+
 
 @dataclass(frozen=True)
 class Device:
@@ -30,10 +32,17 @@ class CapabilityReport:
     devices: tuple[Device, ...]
     adapters: dict[str, str]
     transports: dict[str, str]
+    # Hardware that is present but not usable as compute capacity, such as an
+    # AMD card with only a display driver. Kept out of `devices` so the planner
+    # never mistakes it for an accelerator it can reduce on.
+    display_adapters: tuple[Device, ...] = ()
+    host_processor: dict[str, object] | None = None
+    notes: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
         payload["devices"] = [asdict(device) for device in self.devices]
+        payload["display_adapters"] = [asdict(device) for device in self.display_adapters]
         return payload
 
 
@@ -43,9 +52,24 @@ def discover_capabilities(run: Callable[..., subprocess.CompletedProcess[str]] =
     devices.extend(_discover_nvidia(run))
     if any(device.runtime == "cuda" for device in devices):
         adapters["cuda"] = "detected-unqualified"
-    devices.extend(_discover_amd(run))
+    amd = discover_amd(run)
+    display_adapters: list[Device] = []
+    for accelerator in amd.accelerators:
+        entry = Device(
+            "amd",
+            accelerator.runtime,
+            accelerator.name,
+            accelerator.index,
+            accelerator.memory_mib,
+            accelerator.driver,
+            accelerator.architecture,
+        )
+        # Only a ROCm stack that actually answered earns a place in `devices`.
+        (devices if accelerator.compute_ready else display_adapters).append(entry)
     if any(device.runtime == "rocm" for device in devices):
         adapters["rocm"] = "detected-unqualified"
+    elif display_adapters:
+        adapters["rocm"] = "display-only"
     devices.extend(_discover_intel(run))
     if any(device.runtime == "oneapi" for device in devices):
         adapters["oneapi"] = "detected-unqualified"
@@ -65,6 +89,9 @@ def discover_capabilities(run: Callable[..., subprocess.CompletedProcess[str]] =
         devices=tuple(devices),
         adapters=adapters,
         transports=transports,
+        display_adapters=tuple(display_adapters),
+        host_processor=amd.processor.to_dict() if amd.processor else None,
+        notes=amd.notes,
     )
 
 
@@ -87,25 +114,6 @@ def _discover_nvidia(run: Callable[..., subprocess.CompletedProcess[str]]) -> li
         if len(parts) < 4:
             continue
         devices.append(Device("nvidia", "cuda", parts[1], _safe_int(parts[0], len(devices)), _safe_int(parts[2]), parts[3], parts[4] if len(parts) > 4 else ""))
-    return devices
-
-
-def _discover_amd(run: Callable[..., subprocess.CompletedProcess[str]]) -> list[Device]:
-    output = _command(run, ["rocm-smi", "--showproductname", "--showmeminfo", "vram", "--showdriverversion", "--json"])
-    if not output:
-        return []
-    try:
-        payload = json.loads(output)
-    except json.JSONDecodeError:
-        return []
-    devices: list[Device] = []
-    for index, (_, details) in enumerate(sorted(payload.items())):
-        if not isinstance(details, dict):
-            continue
-        name = str(details.get("Card series", details.get("Card model", "AMD accelerator")))
-        memory_bytes = _first_number(details, "VRAM Total Memory (B)", "VRAM Total Used Memory (B)")
-        driver = str(details.get("Driver version", ""))
-        devices.append(Device("amd", "rocm", name, index, memory_bytes // (1024 * 1024), driver))
     return devices
 
 
@@ -159,10 +167,3 @@ def _safe_int(value: object, default: int = 0) -> int:
         return int(float(str(value).strip()))
     except ValueError:
         return default
-
-
-def _first_number(payload: dict[str, object], *keys: str) -> int:
-    for key in keys:
-        if key in payload:
-            return _safe_int(payload[key])
-    return 0

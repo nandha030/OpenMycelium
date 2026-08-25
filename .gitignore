@@ -17,3 +17,10 @@ runtime/hetccl/dist/
 .openmycelium-state.json
 .openmycelium/
 data/
+
+# Release build artifacts. Wheels embed timestamps and are not byte-reproducible,
+# so hashes are recorded in the release notes rather than committed alongside them.
+dist/
+
+# One-off diagnostics kept locally; not part of the reproducibility set.
+scripts/scratch/

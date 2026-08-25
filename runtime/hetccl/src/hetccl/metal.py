@@ -43,8 +43,13 @@ class MetalAdapter:
     """
 
     def __init__(self, torch_module: Any = None):
-        self._torch = None if torch_module is False else torch_module
-        if self._torch is None:
+        # `False` explicitly disables PyTorch so the byte fallback can be
+        # exercised; `None` means autodetect. Collapsing the two made
+        # `torch_module=False` silently import torch anyway, so the fallback
+        # path was only reachable on a machine that happened to lack torch.
+        self._torch_disabled = torch_module is False
+        self._torch = None if self._torch_disabled else torch_module
+        if self._torch is None and not self._torch_disabled:
             try:
                 self._torch = importlib.import_module("torch")
             except ImportError:

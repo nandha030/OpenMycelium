@@ -1,0 +1,32 @@
+openmycelium-hetccl
+Copyright (c) OpenMycelium contributors
+
+Licensed under the Apache License, Version 2.0 (the "License").
+You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+-------------------------------------------------------------------------------
+THIRD-PARTY NOTICES
+-------------------------------------------------------------------------------
+
+This package has no bundled third-party source and no required runtime
+dependencies. It contains no NVIDIA, AMD, or UCX code.
+
+Vendor runtimes are resolved with dlopen at run time and are NOT redistributed:
+
+  NVIDIA CUDA Runtime (libcudart)     NVIDIA Software Licence Agreement
+  NVIDIA CUDA Driver  (libcuda)       NVIDIA Software Licence Agreement
+  AMD ROCm / HIP      (libamdhip64)   MIT (ROCm components vary; see AMD)
+  AMD HSA runtime     (libhsa-runtime64)  NCSA Open Source Licence
+
+Users must obtain those runtimes from their vendors under the vendors' terms.
+
+Optional extras, installed only if requested and not redistributed here:
+
+  PyTorch    BSD-3-Clause
+  NumPy      BSD-3-Clause
+
+Interoperability references, used as specification only; no code was copied:
+
+  UCX / UCC          BSD-3-Clause      https://github.com/openucx/ucx
+  NCCL               BSD-3-Clause      https://github.com/NVIDIA/nccl
+  RCCL               MIT               https://github.com/ROCm/rccl

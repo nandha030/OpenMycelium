@@ -48,6 +48,13 @@ class InferenceRequest:
         if not 0 < self.minimum_acceptance_rate <= 1:
             raise ValueError("minimum_acceptance_rate must be in (0, 1]")
 
+    def kv_cache_mib(self, tokens: int) -> float:
+        return tokens * self.kv_bytes_per_token / (1024 * 1024)
+
+    def resident_mib(self, tokens: int) -> float:
+        """Memory a node must hold: model weights plus the KV cache for `tokens`."""
+        return self.model_memory_mib + self.kv_cache_mib(tokens)
+
 
 @dataclass(frozen=True)
 class StageAssignment:
@@ -106,9 +113,17 @@ class HetRouter:
                 and draft.node_id != target.node_id
                 and draft.draft_tokens_per_second > 0
             )
-        return min(routes, key=lambda route: (route.cost_score, route.estimated_latency_ms, route.mode))
+        feasible = [route for route in routes if route is not None]
+        if not feasible:
+            raise ValueError(
+                "no route holds the model and its KV cache in node memory: "
+                f"{request.resident_mib(request.prompt_tokens + request.output_tokens):.0f} MiB required"
+            )
+        return min(feasible, key=lambda route: (route.cost_score, route.estimated_latency_ms, route.mode))
 
-    def _single(self, request: InferenceRequest, node: InferenceNode) -> InferenceRoute:
+    def _single(self, request: InferenceRequest, node: InferenceNode) -> InferenceRoute | None:
+        if not _holds(node, request, request.prompt_tokens + request.output_tokens):
+            return None
         prefill = _duration(request.prompt_tokens, node.prefill_tokens_per_second)
         decode = _duration(request.output_tokens, node.decode_tokens_per_second)
         compute = prefill + decode
@@ -122,7 +137,9 @@ class HetRouter:
             ("model and KV cache remain on one node", "no cross-vendor cache transfer is required"),
         )
 
-    def _disaggregated(self, request: InferenceRequest, prefill: InferenceNode, decode: InferenceNode) -> InferenceRoute:
+    def _disaggregated(self, request: InferenceRequest, prefill: InferenceNode, decode: InferenceNode) -> InferenceRoute | None:
+        if not _holds(prefill, request, request.prompt_tokens) or not _holds(decode, request, request.prompt_tokens + request.output_tokens):
+            return None
         prefill_ms = _duration(request.prompt_tokens, prefill.prefill_tokens_per_second)
         decode_ms = _duration(request.output_tokens, decode.decode_tokens_per_second)
         cache_bytes = request.prompt_tokens * request.kv_bytes_per_token
@@ -140,7 +157,9 @@ class HetRouter:
             ("KV cache is canonicalized and transferred once after prefill", "decode remains local after handoff"),
         )
 
-    def _speculative(self, request: InferenceRequest, draft: InferenceNode, target: InferenceNode) -> InferenceRoute:
+    def _speculative(self, request: InferenceRequest, draft: InferenceNode, target: InferenceNode) -> InferenceRoute | None:
+        if not _holds(target, request, request.prompt_tokens + request.output_tokens):
+            return None
         prefill = _duration(request.prompt_tokens, target.prefill_tokens_per_second)
         draft_ms = _duration(request.output_tokens, draft.draft_tokens_per_second)
         verification_tokens = request.output_tokens * (1.0 - 0.5 * request.minimum_acceptance_rate)
@@ -167,7 +186,9 @@ class HetRouter:
         prefill: InferenceNode,
         draft: InferenceNode,
         target: InferenceNode,
-    ) -> InferenceRoute:
+    ) -> InferenceRoute | None:
+        if not _holds(prefill, request, request.prompt_tokens) or not _holds(target, request, request.prompt_tokens + request.output_tokens):
+            return None
         prefill_ms = _duration(request.prompt_tokens, prefill.prefill_tokens_per_second)
         draft_ms = _duration(request.output_tokens, draft.draft_tokens_per_second)
         verification_tokens = request.output_tokens * (1.0 - 0.5 * request.minimum_acceptance_rate)
@@ -207,6 +228,11 @@ class HetRouter:
         latency = compute_ms + queue_ms + transfer_ms
         score = latency + hourly_cost * self.cost_weight
         return InferenceRoute(mode, assignments, latency, compute_ms, queue_ms, transfer_ms, score, reasons)
+
+
+def _holds(node: InferenceNode, request: InferenceRequest, tokens: int) -> bool:
+    """Whether `node` can hold the model weights and the KV cache for `tokens`."""
+    return node.memory_mib >= request.resident_mib(tokens)
 
 
 def _duration(tokens: float, tokens_per_second: float) -> float:

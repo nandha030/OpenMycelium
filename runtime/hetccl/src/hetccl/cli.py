@@ -139,7 +139,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
             values = dict(item)
             values["capabilities"] = tuple(values.get("capabilities", ()))
             nodes.append(InferenceNode(**values))
-        route = HetRouter().plan(InferenceRequest(**raw_request), nodes)
+        try:
+            route = HetRouter().plan(InferenceRequest(**raw_request), nodes)
+        except ValueError as error:
+            raise SystemExit(str(error))
         print(json.dumps(route.to_dict(), indent=2, sort_keys=True))
         return 0
     return 2
