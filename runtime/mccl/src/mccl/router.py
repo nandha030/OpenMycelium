@@ -80,8 +80,13 @@ class InferenceRoute:
         return payload
 
 
-class HetRouter:
-    """Choose a feasible inference route using measured node profiles."""
+class MRouter:
+    """Choose a feasible inference route using measured node profiles.
+
+    Named MRouter to match MCCL and MHub. The former name is still exported
+    below, because it was a public symbol of a released package and removing
+    it outright would break somebody's import for no benefit.
+    """
 
     def __init__(self, cost_weight_ms_per_dollar_hour: float = 100):
         if cost_weight_ms_per_dollar_hour < 0:
@@ -242,3 +247,9 @@ def _duration(tokens: float, tokens_per_second: float) -> float:
 def _transfer_ms(payload_bytes: int, source: InferenceNode, destination: InferenceNode) -> float:
     bandwidth = min(source.network_mbps, destination.network_mbps) * 1_000_000 / 8
     return source.network_latency_ms + destination.network_latency_ms + payload_bytes / bandwidth * 1000
+
+
+#: Deprecated. `HetRouter` was exported by openmycelium-mccl 0.2.0a2, which is
+#: frozen into the v0.1.0 release, so the name stays importable. New code
+#: should use MRouter.
+HetRouter = MRouter

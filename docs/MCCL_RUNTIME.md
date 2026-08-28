@@ -21,7 +21,7 @@ MCCL executes collective communication under that contract.
 - bounded, authenticated, checksummed canonical KV-cache transfer broker
 - PyTorch MPS Metal host-staging adapter and MLX capability detection
 - OpenAI-compatible and vLLM serving adapters with explicit extension discovery
-- HetRouter whole-request, disaggregated prefill/decode, and speculative plans
+- MRouter whole-request, disaggregated prefill/decode, and speculative plans
 - distribution-preserving speculative acceptance and rejection sampling
 
 See [Heterogeneous inference fabric](INFERENCE_FABRIC.md) for the inference

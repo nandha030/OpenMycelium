@@ -13,7 +13,7 @@ from .collective import CollectiveConfig, MCCLCollective
 from .discovery import discover_capabilities
 from .kvcache import KVCacheBroker
 from .planner import plan_collective
-from .router import HetRouter, InferenceNode, InferenceRequest
+from .router import MRouter, InferenceNode, InferenceRequest
 from .server import Coordinator
 from .serving import VLLMServingAdapter
 
@@ -140,7 +140,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
             values["capabilities"] = tuple(values.get("capabilities", ()))
             nodes.append(InferenceNode(**values))
         try:
-            route = HetRouter().plan(InferenceRequest(**raw_request), nodes)
+            route = MRouter().plan(InferenceRequest(**raw_request), nodes)
         except ValueError as error:
             raise SystemExit(str(error))
         print(json.dumps(route.to_dict(), indent=2, sort_keys=True))

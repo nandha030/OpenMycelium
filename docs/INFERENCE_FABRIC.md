@@ -9,7 +9,7 @@ a canonical transfer representation at an explicit boundary.
 
 ```mermaid
 flowchart LR
-    Request["Inference request"] --> Router["HetRouter cost planner"]
+    Request["Inference request"] --> Router["MRouter cost planner"]
     Router --> Whole["Whole-request route"]
     Router --> Split["Disaggregated prefill/decode"]
     Router --> Spec["Cross-vendor speculative route"]
@@ -24,9 +24,9 @@ flowchart LR
     Verify --> VLLM
 ```
 
-## HetRouter
+## MRouter
 
-HetRouter evaluates four modes:
+MRouter evaluates four modes:
 
 1. `whole-request` keeps model state and KV cache on one node.
 2. `disaggregated-prefill-decode` transfers a canonical KV cache once.

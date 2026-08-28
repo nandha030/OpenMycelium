@@ -21,7 +21,7 @@ sys.path.insert(0, _HERE)
 from control import (CONTROL_DIR, list_records,  # noqa: E402
                      remove_if_matches, request_stop)
 
-VERSION = "0.2.0a4"
+VERSION = "0.2.0a5"
 
 
 def _age(seconds: float) -> str:

@@ -1,6 +1,6 @@
 import unittest
 
-from mccl.router import HetRouter, InferenceNode, InferenceRequest
+from mccl.router import MRouter, InferenceNode, InferenceRequest
 
 
 class RouterTests(unittest.TestCase):
@@ -10,7 +10,7 @@ class RouterTests(unittest.TestCase):
             InferenceNode("nvidia", "cuda", 32000, 100, 1000, network_mbps=10000),
         ]
         request = InferenceRequest("model", 1000, 100, 16000, 16384)
-        route = HetRouter().plan(request, nodes)
+        route = MRouter().plan(request, nodes)
         self.assertEqual(route.mode, "disaggregated-prefill-decode")
         self.assertEqual([item.node_id for item in route.assignments], ["amd", "nvidia"])
 
@@ -20,7 +20,7 @@ class RouterTests(unittest.TestCase):
             InferenceNode("target", "cuda", 64000, 500, 100, network_mbps=10000),
         ]
         request = InferenceRequest("model", 1000, 100, 32000, 1024, allow_disaggregation=False, allow_speculative=True, minimum_acceptance_rate=0.9)
-        route = HetRouter().plan(request, nodes)
+        route = MRouter().plan(request, nodes)
         self.assertEqual(route.mode, "cross-vendor-speculative")
         self.assertEqual(route.assignments[1].node_id, "m5")
 
@@ -31,7 +31,7 @@ class RouterTests(unittest.TestCase):
             InferenceNode("m5", "metal", 64000, 250, 120, draft_tokens_per_second=850, network_mbps=10000),
         ]
         request = InferenceRequest("model", 2048, 256, 24000, 524288, allow_disaggregation=True, allow_speculative=True, minimum_acceptance_rate=0.7)
-        route = HetRouter().plan(request, nodes)
+        route = MRouter().plan(request, nodes)
         self.assertEqual(route.mode, "disaggregated-speculative")
         self.assertEqual([item.node_id for item in route.assignments], ["amd", "m5", "nvidia"])
 
@@ -41,7 +41,7 @@ class RouterTests(unittest.TestCase):
         nodes = [InferenceNode("small-gpu", "cuda", 16384, 1000, 100, network_mbps=10000)]
         request = InferenceRequest("kv-bomb", 32768, 128, 8192, 1048576)
         with self.assertRaises(ValueError):
-            HetRouter().plan(request, nodes)
+            MRouter().plan(request, nodes)
 
     def test_places_request_on_the_node_that_holds_model_and_kv_cache(self):
         # Both nodes hold the model; only the larger one also holds the 2 GiB KV cache.
@@ -50,7 +50,7 @@ class RouterTests(unittest.TestCase):
             InferenceNode("large", "rocm", 65536, 1000, 100, network_mbps=10000),
         ]
         request = InferenceRequest("model", 2048, 128, 8192, 1048576, allow_disaggregation=False)
-        route = HetRouter().plan(request, nodes)
+        route = MRouter().plan(request, nodes)
         self.assertEqual([item.node_id for item in route.assignments], ["large"])
 
     def test_kv_cache_is_counted_against_resident_memory(self):
@@ -61,3 +61,38 @@ class RouterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestBranding(unittest.TestCase):
+    """The rename must not break an existing import, or advertise the old name.
+
+    The previous attempt listed HetRouter in __all__ without importing it, so
+    `from mccl import *` raised AttributeError. Every test imported from
+    mccl.router directly and none of them noticed.
+    """
+
+    def test_package_root_exports_mrouter(self):
+        import mccl
+        self.assertTrue(hasattr(mccl, "MRouter"))
+        self.assertIn("MRouter", mccl.__all__)
+
+    def test_legacy_name_is_still_importable(self):
+        from mccl import HetRouter
+        from mccl.router import HetRouter as FromModule
+        from mccl.router import MRouter
+        self.assertIs(HetRouter, MRouter)
+        self.assertIs(FromModule, MRouter)
+
+    def test_legacy_name_is_not_advertised(self):
+        import mccl
+        self.assertNotIn("HetRouter", mccl.__all__)
+
+    def test_star_import_succeeds_and_omits_the_legacy_name(self):
+        namespace: dict = {}
+        exec("from mccl import *", namespace)      # noqa: S102
+        self.assertIn("MRouter", namespace)
+        self.assertNotIn("HetRouter", namespace)
+
+    def test_version_is_the_renamed_release(self):
+        import mccl
+        self.assertEqual(mccl.__version__, "0.2.0a3")

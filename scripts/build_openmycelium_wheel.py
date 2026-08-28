@@ -23,8 +23,8 @@ import tempfile
 from typing import List
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = "0.2.0a4"
-MCCL_PIN = "openmycelium-mccl==0.2.0a2"
+VERSION = "0.2.0a5"
+MCCL_PIN = "openmycelium-mccl==0.2.0a3"
 
 #: Runtime subtrees the CLI needs. `mccl` is deliberately absent: it ships as
 #: its own distribution and is depended on by version, not vendored.
