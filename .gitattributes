@@ -1,3 +1,10 @@
 *.docx binary
 *.pdf binary
 *.png binary
+
+# Windows batch must reach the disk with CRLF. An LF-only .cmd made batch label
+# resolution fail intermittently once already -- `rm` broke while `models`
+# worked. Today this happens to work because Windows clones default to
+# core.autocrlf=true; this states it so it does not depend on the cloner's
+# configuration.
+*.cmd text eol=crlf
