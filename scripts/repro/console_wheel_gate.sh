@@ -2,7 +2,11 @@
 # The acceptance gate: the console driving real dual-GPU inference from an
 # installed wheel, on the qualified RTX 5060 Ti and RX 9060 XT.
 set -uo pipefail
-WHEEL=/mnt/c/Users/User/Documents/Open_Mycelium/dist/openmycelium-0.2.0a2-py3-none-any.whl
+_here=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)
+REPO=${OM_REPO:-$(cd "$_here/../.." 2>/dev/null && pwd)}
+DIST=${OM_DIST:-$REPO/dist}
+WHEEL="$DIST/openmycelium-0.2.0a5-py3-none-any.whl"
+MCCL="$DIST/openmycelium_mccl-0.2.0a3-py3-none-any.whl"
 OM=/opt/om/venv
 PORT=11501
 MODEL=Mistral-Nemo-Instruct-2407
@@ -16,9 +20,19 @@ check() {
 }
 
 echo "  == install the wheel =="
-"$OM/bin/pip" install -q --upgrade --force-reinstall --no-deps "$WHEEL" > /tmp/inst.log 2>&1
+"$OM/bin/pip" install -q --upgrade --force-reinstall --no-deps "$MCCL" "$WHEEL" > /tmp/inst.log 2>&1
 check "installed" $?
 openmycelium version 2>/dev/null | head -3 | sed 's/^/    /'
+
+echo
+echo "  == the port must be free before we claim anything =="
+if ss -ltn 2>/dev/null | grep -q ":$PORT "; then
+  echo "    port $PORT is already in use; a stale console would answer for us"
+  ss -ltnp 2>/dev/null | grep ":$PORT " | sed "s/^/      /"
+  echo "    refusing to run a gate against a process this script did not start"
+  exit 2
+fi
+check "port $PORT is free" $?
 
 echo
 echo "  == the console starts from the installed entry point =="
@@ -30,6 +44,8 @@ for _ in $(seq 1 30); do
   curl -sf -m 3 "http://127.0.0.1:$PORT/api/workloads" >/dev/null 2>&1 && { READY=0; break; }
 done
 check "console reachable on 127.0.0.1:$PORT" $READY
+kill -0 "$CONSOLE" 2>/dev/null
+check "the console we started is the one still running" $?
 
 echo "    assets served from inside the package:"
 for a in / /assets/app.js /assets/styles.css; do

@@ -1,0 +1,7 @@
+{
+  "version": "0.2.0a5",
+  "requiresDist": [
+    "openmycelium-mccl==0.2.0a3"
+  ],
+  "pinVerified": true
+}

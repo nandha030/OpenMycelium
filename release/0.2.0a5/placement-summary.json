@@ -1,0 +1,35 @@
+{
+  "boundaryAfterLayer": 19,
+  "transport": "host-staged-xvendor",
+  "activationBytesPerToken": 10240,
+  "tensorCounts": [
+    181,
+    182
+  ],
+  "totalTensors": 363,
+  "overlap": 0,
+  "stages": [
+    {
+      "role": "cuda",
+      "runtime": "cuda",
+      "layers": [
+        0,
+        19
+      ],
+      "weightBytes": 12247777280,
+      "budgetBytes": 15032385536,
+      "deviceIdentity": "nvidia:device-0"
+    },
+    {
+      "role": "rocm",
+      "runtime": "rocm",
+      "layers": [
+        20,
+        39
+      ],
+      "weightBytes": 12247787520,
+      "budgetBytes": 15032385536,
+      "deviceIdentity": "amd:device-0"
+    }
+  ]
+}
