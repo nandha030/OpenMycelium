@@ -35,7 +35,7 @@
   "stages": [
     {
       "budgetBytes": 15032385536,
-      "deviceIdentity": "nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033",
+      "deviceIdentity": "nvidia:device-0",
       "holdsEmbedding": true,
       "holdsLMHead": false,
       "identityConfidence": "strong",
@@ -252,7 +252,7 @@
     },
     {
       "budgetBytes": 15032385536,
-      "deviceIdentity": "amd:pci-0000:04:00.0",
+      "deviceIdentity": "amd:device-0",
       "holdsEmbedding": false,
       "holdsLMHead": true,
       "identityConfidence": "slot-stable",
