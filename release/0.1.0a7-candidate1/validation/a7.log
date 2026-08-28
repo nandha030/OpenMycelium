@@ -1,0 +1,92 @@
+0.1.0a7 validation 2026-08-28T08:22:52+00:00 in om-clean2
+
+  == install the frozen 0.1.0a7 wheel ==
+  [PASS] installed
+  [PASS] installed content equals the frozen 0.1.0a7 build
+
+  == step 1  the actual distribution is discovered ==
+    cuda_python          /var/lib/openmycelium/state/env/cuda/bin/python  discovered(provisioned)
+    rocm_python          /var/lib/openmycelium/state/env/rocm/bin/python  discovered(provisioned)
+    state_dir            /var/lib/openmycelium/state                      discovered
+    wsl_distro           om-clean2                                        discovered(WSL_DISTRO_NAME)
+  [PASS] wsl_distro resolves to om-clean2, this distribution
+  [PASS] and records WSL_DISTRO_NAME as the source
+  [PASS] no silent Ubuntu-24.04 default
+  [PASS] the provisioned CUDA environment is discovered
+  [PASS] the provisioned ROCm environment is discovered
+
+  == step 2  the missing system runtime produces the intended refusal ==
+    == rocm environment ==
+      location       /var/lib/openmycelium/state/env/rocm
+      environment    already present
+      installing     torch==2.10.0 from https://download.pytorch.org/whl/rocm7.0, then 4 packages from PyPI (this takes a while)
+      packages       installed
+      ROCm Python packages installed   yes  (torch 2.10.0+rocm7.0)
+      ROCm WSL system runtime          no 
+      ROCm GPU operation qualified     no 
+        active HSA runtime   /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so
+          flavour            kfd  (pip-shipped)
+          sha256             1afa806f27d4164c734af57b8c8dd4bf
+  
+      ROCm Python packages are installed, but the AMD ROCm-for-WSL
+      system runtime is missing. OpenMycelium will not add system
+      repositories automatically. Install the supported ROCm WSL
+      runtime, then rerun `openmycelium provision`.
+  
+      AMD's documented procedure adds an apt repository and installs
+      system-wide packages, which needs root and can affect software
+      other than OpenMycelium. Read it before running it:
+        https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/install-radeon.html
+        https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/legacywsl/install-pytorch.html
+  
+      In outline, and subject to those pages:
+        1. install AMD's amdgpu-install package for this Ubuntu release
+        2. amdgpu-install --usecase=wsl,rocm --no-dkms
+  
+        3. put the WSL runtime where torch will load it, keeping a backup:
+             cp /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.orig
+             cp /opt/rocm/lib/libhsa-runtime64.so.1 /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so
+  
+        4. openmycelium provision        (reruns safely; installs nothing
+                                          that is already present)
+  
+  [PASS] provision refuses rather than reporting success
+  [PASS] reports ROCm Python packages as installed
+  [PASS] reports the WSL system runtime as missing
+  [PASS] reports the GPU operation as unqualified
+  [PASS] names the active HSA runtime flavour as kfd
+  [PASS] states that it will not add system repositories automatically
+  [PASS] cites AMD's official documentation
+  [PASS] the CUDA environment is recognised as already usable on the same run
+
+  == doctor says the same thing ==
+  
+    openmycelium doctor
+  
+    [PASS] cuda   NVIDIA GeForce RTX 5060 Ti   15.93 GiB, 14.80 free  (torch 2.11.0+cu128, cuda build)
+    [FAIL] rocm   no GPU: unavailable
+  
+    ROCm prerequisites
+      ROCm Python packages installed   yes  (torch 2.10.0+rocm7.0)
+      ROCm WSL system runtime          no 
+      ROCm GPU operation qualified     no 
+        active HSA runtime   /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so
+          flavour            kfd  (pip-shipped)
+          sha256             1afa806f27d4164c734af57b8c8dd4bf
+  
+      ROCm Python packages are installed, but the AMD ROCm-for-WSL
+      system runtime is missing. OpenMycelium will not add system
+      repositories automatically. Install the supported ROCm WSL
+      runtime, then rerun `openmycelium provision`.
+  
+      AMD's documented procedure adds an apt repository and installs
+      system-wide packages, which needs root and can affect software
+      other than OpenMycelium. Read it before running it:
+        https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/install-radeon.html
+        https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/legacywsl/install-pytorch.html
+  
+      In outline, and subject to those pages:
+  [PASS] doctor separates the three ROCm states
+  [PASS] doctor no longer reports a hard-coded model store
+
+  0 check(s) failed

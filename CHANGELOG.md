@@ -5,7 +5,7 @@
 - Added persistent virtual topologies, planning benchmark profiles, runtime image contracts, model and dataset sizing, communication estimates, qualification gates, and saved experiment evidence.
 - Added a CPU/Gloo all-reduce correctness probe, reference CPU image, and generated Kubernetes Job and rendezvous Service handoff to the governed manifest dry-run workflow.
 - Added lab audit and NATS events, Prometheus metrics, and Grafana evidence visibility.
-- Kept virtual accelerator profiles isolated from physical capacity and forced unqualified HetCCL and device-direct plans to remain non-executable.
+- Kept virtual accelerator profiles isolated from physical capacity and forced unqualified MCCL and device-direct plans to remain non-executable.
 
 ## Mycelium heterogeneous optimizer
 
@@ -13,7 +13,7 @@
 - Added per-vendor CUDA, ROCm, and oneAPI worker-image overrides while preserving one global rank and rendezvous contract.
 - Added a PyTorch/Gloo CPU-forwarded reference adapter with pinned host staging and a distributed launcher for functional mixed-vendor testing.
 - Added Mycelium dashboard controls, execution-plan traces, CLI arguments, Prometheus metrics, a Grafana panel, documentation, and regression tests.
-- Kept HetCCL and device-direct transports fail-closed until native adapters and RDMA paths are qualified on every selected node.
+- Kept MCCL and device-direct transports fail-closed until native adapters and RDMA paths are qualified on every selected node.
 
 All notable OpenMycelium changes are documented in this file.
 

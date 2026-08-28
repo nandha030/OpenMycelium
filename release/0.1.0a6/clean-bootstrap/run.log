@@ -1,0 +1,1 @@
+  placement refused: expected exactly one cuda device, found 0; multi-device selection needs an explicit device selector

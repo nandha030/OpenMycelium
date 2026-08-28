@@ -1,0 +1,18 @@
+[STARTING] launching ROCm stage (second half of the model)
+[LOADING_ROCM] rocm=LOADING_ROCM  cuda=STARTING
+[LOADING_CUDA] ROCm stage bound; launching CUDA stage
+[LOADING_CUDA] rocm=READY (11680 MiB)  cuda=LOADING_CUDA
+[QUALIFYING] rocm=READY (11680 MiB)  cuda=QUALIFYING (11680 MiB)
+[QUALIFYING] transport connected; warming both runtimes (first BF16 kernels are slow to select)
+[QUALIFYING] runtimes warmed in 2.5 s
+[READY] rocm=READY (11680 MiB)  cuda=READY (11680 MiB)
+
+  ready in 21s -- weights stay loaded until you exit
+    CUDA  11680 MiB   ROCm  11680 MiB
+  greedy decoding, up to 24 new tokens
+  type a prompt; /help for commands, /bye to exit
+
+> Sure, I'd be happy to help, but I'll need a bit more context. Could you please tell me what
+  [24 tokens, TTFT 197 ms, 11.24 tok/s]
+
+> 

@@ -1,0 +1,27 @@
+{
+  "running": [],
+  "stale": [
+    {
+      "baseUrl": "http://0.0.0.0:11500/v1",
+      "boot_id": "995a3b9e-0dd6-4b13-9984-3e824fb443ee",
+      "command": "serve",
+      "httpPort": 11500,
+      "manifest_digest": "83306b39b5845dc66354bafece515bd9343844370632ea6c769166a845f45b17",
+      "model": "/var/lib/openmycelium/models/Mistral-Nemo-Instruct-2407",
+      "model_name": "Mistral-Nemo-Instruct-2407",
+      "pid": 813,
+      "placement_id": "pl-86bbfe00bc294133",
+      "port": 11500,
+      "run_id": "63f35f2c-7bef-4117-ac21-280c3881a27b",
+      "schema": 1,
+      "start_ticks": 658828,
+      "started_at": 1787917714.9789507,
+      "state": "READY",
+      "work_dir": "/opt/openmycelium/serve",
+      "workers": {},
+      "_path": "/var/lib/openmycelium/state/run/63f35f2c-7bef-4117-ac21-280c3881a27b.json",
+      "_alive": false,
+      "_ageSeconds": 2678.1
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "bootId": "e65a26d3-3b3e-4e7a-844c-480fa908242a",
+  "boundaryAfterLayer": 19,
+  "cudaEnvironment": {
+    "packageCount": 54,
+    "packageListSha256": "fe28426ca0fc2f9a99338ca5b44a9762a9e62df373d5c46a512ccc8f26879455",
+    "torch": "2.11.0+cu128"
+  },
+  "hsaRuntimeFlavor": "dxcore",
+  "hsaRuntimeSha256": "83bedf380844ae17f12ab231f2abb69a6cc91c90a5d9adafbe74875aafadd819",
+  "hsaRuntimeSource": "system-provided",
+  "installedContentSha256": "b430eff6e79cd56b30841716431014c7b566942704b8e4c1df5c9336ad43981a",
+  "mcclActivationProtocol": 1,
+  "mcclCollectiveProtocol": 1,
+  "mcclVersion": "0.2.0a2",
+  "openmycelium": "0.1.0a8",
+  "placementDigest": "91978e6c37ec439af0d4dd477cd126bc6382eb21e7802ab13769ec5e30994d2c",
+  "rocmEnvironment": {
+    "packageCount": 36,
+    "packageListSha256": "5012f481755378d502aea6b4bc5a532e66287daf97f2f40de61554cd97fd4cce",
+    "torch": "2.10.0+rocm7.0"
+  },
+  "rocmSystemVersion": "7.2.0",
+  "tensorCounts": [
+    181,
+    182
+  ],
+  "transport": "host-staged-xvendor",
+  "uptimeSeconds": 962,
+  "wslDistro": "om-clean2"
+}

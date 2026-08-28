@@ -1,0 +1,102 @@
+{
+  "_evidence": {
+    "captured_by": "mccl diagnose (openmycelium-mccl 0.2.0a1)",
+    "captured_on": "DESKTOP-DTHF5UD",
+    "note": "Records what one machine measured. Any other host is unqualified until it runs the qualification itself; see docs/evidence/README.md.",
+    "scope": "MACHINE-SPECIFIC EVIDENCE, NOT A PORTABLE CLAIM"
+  },
+  "gpus": {
+    "cuda": "NVIDIA GeForce RTX 5060 Ti",
+    "rocm": "AMD Radeon RX 9060 XT"
+  },
+  "host": {
+    "machine": "x86_64",
+    "release": "6.18.33.2-microsoft-standard-WSL2",
+    "system": "Linux"
+  },
+  "hostAccess": {
+    "cuda": {
+      "allocated": true,
+      "available": true,
+      "host_accessible": false,
+      "host_load_ok": false,
+      "host_store_ok": false
+    },
+    "rocm": {
+      "allocated": true,
+      "available": true,
+      "host_accessible": false,
+      "host_load_ok": false,
+      "host_store_ok": false
+    }
+  },
+  "knownLimitations": [
+    "UCX direct receive into ROCm device memory is DISABLED on the WSL DXG path: uct_rocm_copy stores from the CPU into memory that is not host-accessible and faults. Host staging is the only qualified receive path for ROCm here.",
+    "Vendor-local NCCL/RCCL groups of a single rank are degenerate; collective results validate orchestration and cross-vendor routing only, not multi-rank vendor-local behaviour.",
+    "A ROCm PyTorch wheel on WSL may need a provisional HSA runtime patch (see runtime/bridge/rocm_torch_patch.sh). That configuration is unsupported by AMD and PyTorch.",
+    "No unified VRAM. The two cards remain separate memory domains."
+  ],
+  "package": {
+    "name": "openmycelium-mccl",
+    "version": "0.2.0a1"
+  },
+  "protocol": {
+    "activationProtocol": 1,
+    "collectiveProtocol": 1,
+    "transport": "host-staged-xvendor"
+  },
+  "qualifiedDirections": [
+    "cuda->rocm",
+    "rocm->cuda"
+  ],
+  "receivePolicy": {
+    "cuda": {
+      "direct_receive_permitted": true,
+      "reasons": [
+        "cuda device memory faulted on host store and load",
+        "transport receive into cuda memory was verified byte-for-byte"
+      ],
+      "receive_vendor": "cuda",
+      "transport": "ucx-direct"
+    },
+    "rocm": {
+      "direct_receive_permitted": false,
+      "reasons": [
+        "rocm device memory faulted on host store and load",
+        "transport receive into rocm memory failed correctness testing",
+        "staging through pinned host memory is the only qualified path"
+      ],
+      "receive_vendor": "rocm",
+      "transport": "mccl-tcp-host-staged"
+    }
+  },
+  "transport": {
+    "collective": false,
+    "defaults": {
+      "chunkBytes": 4194304,
+      "framingLimits": [
+        4096,
+        1073741824
+      ],
+      "qualifiedChunkRange": [
+        2097152,
+        8388608
+      ],
+      "slots": 2,
+      "verifyPayload": false
+    },
+    "kind": "point-to-point",
+    "notes": [
+      "device memory is never exposed to the wire; only vendor adapters touch it",
+      "UCX receive into ROCm memory stays disabled on the DXG path",
+      "collectives are layered above this transport, not provided by it"
+    ],
+    "operations": [
+      "send",
+      "recv",
+      "activation"
+    ],
+    "stagesThroughPinnedHost": true,
+    "transport": "host-staged-xvendor"
+  }
+}

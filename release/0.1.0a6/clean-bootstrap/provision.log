@@ -1,0 +1,38 @@
+
+  == host ==
+    platform       Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+    distribution   Ubuntu 24.04.4 LTS
+    WSL            True
+    /dev/dxg       True   (WSL GPU paravirtualisation)
+    /dev/kfd       False   (absent under WSL; expected)
+    nvidia-smi     True  ['NVIDIA GeForce RTX 5060 Ti']
+
+  == configuration ==
+  configuration file  (none found)
+  cuda_python          (unset)                                          default
+  rocm_python          (unset)                                          default
+  model_store          /var/lib/openmycelium/models                     default
+  state_dir            /var/lib/openmycelium/state                      default
+  ledger               /var/lib/openmycelium/xvendor_qualification.json default
+  wsl_distro           Ubuntu-24.04                                     default
+
+  == cuda environment ==
+    location       /var/lib/openmycelium/state/env/cuda
+    environment    created
+    installing     torch==2.11.0 from https://download.pytorch.org/whl/cu128, then 4 packages from PyPI (this takes a while)
+    packages       installed
+    GPU operation  NVIDIA GeForce RTX 5060 Ti matmul finite
+
+  == rocm environment ==
+    location       /var/lib/openmycelium/state/env/rocm
+    environment    created
+    installing     torch==2.10.0 from https://download.pytorch.org/whl/rocm7.0, then 4 packages from PyPI (this takes a while)
+    packages       installed
+    GPU operation  FAILED: {'available': False, 'matmulFinite': False, 'name': '', 'runtime': 'rocm', 'torch': '2.10.0+rocm7.0'}
+
+  == not provisioned ==
+    rocm: GPU operation failed
+
+    rerun after fixing the cause; existing working environments
+    are never removed unless --clean is given.
+

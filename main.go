@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,13 +27,23 @@ import (
 var ui embed.FS
 
 type Accelerator struct {
-	ID        string `json:"id"`
-	Vendor    string `json:"vendor"`
-	Model     string `json:"model"`
-	Runtime   string `json:"runtime"`
-	Memory    string `json:"memory"`
-	Health    string `json:"health"`
-	Simulated bool   `json:"simulated"`
+	ID      string `json:"id"`
+	Vendor  string `json:"vendor"`
+	Model   string `json:"model"`
+	Runtime string `json:"runtime"`
+	Memory  string `json:"memory"`
+	// MemoryMiB is the machine-readable capacity. Host agents must report the
+	// true 64-bit size; Win32_VideoController.AdapterRAM saturates at 4 GiB and
+	// is not an acceptable source.
+	MemoryMiB int `json:"memoryMiB,omitempty"`
+	// MemorySource records where the capacity came from, so an operator can
+	// tell a measured value from a capped one.
+	MemorySource string `json:"memorySource,omitempty"`
+	// ComputeReady is true only when the vendor runtime answered on the host.
+	// A card with only a display driver is inventory, not capacity.
+	ComputeReady bool   `json:"computeReady"`
+	Health       string `json:"health"`
+	Simulated    bool   `json:"simulated"`
 }
 type HostProfile struct {
 	Name         string        `json:"name"`
@@ -319,7 +330,8 @@ func hostAccelerators() []Accelerator {
 		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 			parts := strings.Split(line, ",")
 			if len(parts) == 2 {
-				found = append(found, Accelerator{ID: "nvidia-" + strings.ReplaceAll(strings.TrimSpace(parts[0]), " ", "-"), Vendor: "NVIDIA", Model: strings.TrimSpace(parts[0]), Runtime: "cuda", Memory: strings.TrimSpace(parts[1]) + " MiB", Health: "healthy"})
+				memoryMiB, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+				found = append(found, Accelerator{ID: "nvidia-" + strings.ReplaceAll(strings.TrimSpace(parts[0]), " ", "-"), Vendor: "NVIDIA", Model: strings.TrimSpace(parts[0]), Runtime: "cuda", Memory: strings.TrimSpace(parts[1]) + " MiB", MemoryMiB: memoryMiB, MemorySource: "nvidia-smi", ComputeReady: true, Health: "healthy"})
 			}
 		}
 	}
@@ -327,12 +339,12 @@ func hostAccelerators() []Accelerator {
 		out, _ := exec.Command(path, "--showproductname").Output()
 		for _, line := range strings.Split(string(out), "\n") {
 			if strings.Contains(line, "Card series") {
-				found = append(found, Accelerator{ID: "amd-" + fmt.Sprint(len(found)), Vendor: "AMD", Model: strings.TrimSpace(strings.Split(line, ":")[len(strings.Split(line, ":"))-1]), Runtime: "rocm", Memory: "reported by ROCm", Health: "healthy"})
+				found = append(found, Accelerator{ID: "amd-" + fmt.Sprint(len(found)), Vendor: "AMD", Model: strings.TrimSpace(strings.Split(line, ":")[len(strings.Split(line, ":"))-1]), Runtime: "rocm", Memory: "reported by ROCm", MemorySource: "rocm-smi", ComputeReady: true, Health: "healthy"})
 			}
 		}
 	}
 	if runtime.GOOS == "darwin" {
-		found = append(found, Accelerator{ID: "apple-uma", Vendor: "Apple", Model: "Apple Silicon GPU / Neural Engine", Runtime: "metal,coreml", Memory: "shared unified memory", Health: "detected"})
+		found = append(found, Accelerator{ID: "apple-uma", Vendor: "Apple", Model: "Apple Silicon GPU / Neural Engine", Runtime: "metal,coreml", Memory: "shared unified memory", MemorySource: "darwin", ComputeReady: true, Health: "detected"})
 	}
 	return found
 }

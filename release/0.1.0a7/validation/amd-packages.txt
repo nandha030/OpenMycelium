@@ -1,0 +1,2 @@
+hsa-runtime-rocr4wsl-amdgpu:amd64 25.30.13-2281980.24.04
+rocm-core 7.2.0.70200-43~24.04

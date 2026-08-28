@@ -1,0 +1,14 @@
+{
+  "cuda": {
+    "name": "NVIDIA GeForce RTX 5060 Ti",
+    "torch": "2.11.0+cu128",
+    "totalBytes": 17102864384
+  },
+  "rocm": {
+    "name": "AMD Radeon RX 9060 XT",
+    "torch": "2.10.0+rocm7.0",
+    "totalBytes": 16974905344
+  },
+  "kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "distribution": "Ubuntu 24.04.4 LTS"
+}

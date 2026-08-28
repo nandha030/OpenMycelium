@@ -1,0 +1,10 @@
+
+  Mistral-Nemo-Instruct-2407: 363 tensors, 40 layers
+    model-00001-of-00005.safetensors               4.53 GiB  ok
+    model-00002-of-00005.safetensors               4.57 GiB  ok
+    model-00003-of-00005.safetensors               4.57 GiB  ok
+    model-00004-of-00005.safetensors               4.57 GiB  ok
+    model-00005-of-00005.safetensors               4.57 GiB  ok
+
+  PASS: every shard matches its declared length
+

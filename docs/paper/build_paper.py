@@ -38,11 +38,11 @@ from reportlab.platypus import (
 
 
 ROOT = Path(__file__).resolve().parent
-SOURCE = ROOT / "OPENMYCELIUM_MYCELIUM_HETCCL_IEEE_MANUSCRIPT.md"
+SOURCE = ROOT / "OPENMYCELIUM_MYCELIUM_MCCL_IEEE_MANUSCRIPT.md"
 ASSETS = ROOT / "assets"
 ARTIFACTS = ROOT / "artifacts"
-OUTPUT = ARTIFACTS / "OpenMycelium_Mycelium_HetCCL_IEEE_Manuscript.docx"
-PDF_OUTPUT = ARTIFACTS / "OpenMycelium_Mycelium_HetCCL_IEEE_Manuscript.pdf"
+OUTPUT = ARTIFACTS / "OpenMycelium_Mycelium_MCCL_IEEE_Manuscript.docx"
+PDF_OUTPUT = ARTIFACTS / "OpenMycelium_Mycelium_MCCL_IEEE_Manuscript.pdf"
 
 # compact_reference_guide preset, resolved exactly from the document skill.
 PAGE_MARGIN_IN = 1.0
@@ -593,7 +593,7 @@ def draw_architecture():
         (110, 160, 1690, 285, "Experience and governance", "Dashboard  |  CLI/API/MCP  |  Workspaces  |  RBAC  |  Audit  |  Model and release registry", "#EAF3FF", "#0B73E0"),
         (110, 320, 1690, 465, "Mycelium control plane", "Evidence graph  →  memory feasibility  →  minimax placement  →  candidate scoring  →  immutable execution contract", "#E8F6F2", "#087F6B"),
         (110, 500, 1690, 655, "Kubernetes execution plane", "Per-vendor indexed Jobs and services  |  global ranks  |  rendezvous  |  storage  |  lifecycle reconciliation", "#F6F2EA", "#9A6500"),
-        (110, 690, 1690, 900, "Communication and hardware", "HetCCL contract: portable TCP/Gloo today; qualified native and RDMA progression", "#F3F0FA", "#7055B8"),
+        (110, 690, 1690, 900, "Communication and hardware", "MCCL contract: portable TCP/Gloo today; qualified native and RDMA progression", "#F3F0FA", "#7055B8"),
     ]
     for x1, y1, x2, y2, heading, text, fill, accent in layers:
         draw.rounded_rectangle((x1, y1, x2, y2), radius=20, fill=fill, outline=accent, width=3)
@@ -705,7 +705,7 @@ def build_pdf():
     cell = ParagraphStyle("OMCell", parent=body, fontSize=7.5, leading=9, spaceAfter=0, alignment=TA_LEFT)
     cell_head = ParagraphStyle("OMCellHead", parent=cell, fontName=bold, textColor=colors.HexColor("#13212B"))
 
-    doc = SimpleDocTemplate(str(PDF_OUTPUT), pagesize=letter, leftMargin=1 * inch, rightMargin=1 * inch, topMargin=0.8 * inch, bottomMargin=0.72 * inch, title="OpenMycelium Mycelium and HetCCL Manuscript", author="OpenMycelium Project")
+    doc = SimpleDocTemplate(str(PDF_OUTPUT), pagesize=letter, leftMargin=1 * inch, rightMargin=1 * inch, topMargin=0.8 * inch, bottomMargin=0.72 * inch, title="OpenMycelium Mycelium and MCCL Manuscript", author="OpenMycelium Project")
 
     def page_furniture(canvas, document):
         canvas.saveState()
@@ -847,9 +847,9 @@ def main():
     render_markdown(document, bullet_id, decimal_id)
     audit_document(document)
     document.core_properties.title = "OpenMycelium: Evidence-Gated Heterogeneous AI Placement and Collective Execution"
-    document.core_properties.subject = "Mycelium algorithm, HetCCL architecture, market gap, business use cases, and invention disclosure"
+    document.core_properties.subject = "Mycelium algorithm, MCCL architecture, market gap, business use cases, and invention disclosure"
     document.core_properties.author = "OpenMycelium Project"
-    document.core_properties.keywords = "heterogeneous GPU, Kubernetes, distributed training, HetCCL, Mycelium"
+    document.core_properties.keywords = "heterogeneous GPU, Kubernetes, distributed training, MCCL, Mycelium"
     document.core_properties.comments = "Engineering preprint. Not legal advice or an official IEEE template."
     document.save(OUTPUT)
     build_pdf()

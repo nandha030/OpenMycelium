@@ -1,0 +1,47 @@
+
+  openmycelium doctor
+
+  [PASS] cuda   NVIDIA GeForce RTX 5060 Ti   15.93 GiB, 14.80 free  (torch 2.11.0+cu128, cuda build)
+  [FAIL] rocm   no GPU: unavailable
+
+  ROCm prerequisites
+    ROCm Python packages installed   yes  (torch 2.10.0+rocm7.0)
+    ROCm WSL system runtime          no 
+    ROCm GPU operation qualified     no 
+      active HSA runtime   /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so
+        flavour            kfd  (pip-shipped)
+        sha256             1afa806f27d4164c734af57b8c8dd4bf
+
+    ROCm Python packages are installed, but the AMD ROCm-for-WSL
+    system runtime is missing. OpenMycelium will not add system
+    repositories automatically. Install the supported ROCm WSL
+    runtime, then rerun `openmycelium provision`.
+
+    AMD's documented procedure adds an apt repository and installs
+    system-wide packages, which needs root and can affect software
+    other than OpenMycelium. Read it before running it:
+      https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/install-radeon.html
+      https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/legacywsl/install-pytorch.html
+
+    In outline, and subject to those pages:
+      1. install AMD's amdgpu-install package for this Ubuntu release
+      2. amdgpu-install --usecase=wsl,rocm --no-dkms
+
+      3. put the WSL runtime where torch will load it, keeping a backup:
+           cp /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.orig
+           cp /opt/rocm/lib/libhsa-runtime64.so.1 /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so
+
+      4. openmycelium provision        (reruns safely; installs nothing
+                                        that is already present)
+
+    Nothing above is executed for you. Step 3 modifies a file inside an
+    installed package, so a later `pip install --upgrade torch` will put
+    the incompatible runtime back; provision detects that and says so.
+
+  [PASS] wsl    /dev/dxg present
+  [PASS] models 1 imported, 905.8 GiB free on the Linux filesystem
+         - Mistral-Nemo-Instruct-2407
+  [WARN] ledger /var/lib/openmycelium/xvendor_qualification.json absent
+
+  1 check(s) failed
+

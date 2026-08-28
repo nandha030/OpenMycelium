@@ -1,0 +1,13 @@
+  [PASS] GET /v1/models lists the served model  ['Mistral-Nemo-Instruct-2407']
+  [PASS] non-streaming completion returns content  'Ready'
+  [PASS] usage carries all three token counts  {'prompt_tokens': 9, 'completion_tokens': 2, 'total_tokens': 11}
+  [PASS] finish_reason is set  stop
+  [PASS] stream delivered multiple chunks  27 chunks
+  [PASS] stream terminated with [DONE]
+  [PASS] stream_options.include_usage produced a usage chunk
+  [PASS] streamed text is non-empty  "Here's the count in a few different languages:\n\n1. **English"
+  [PASS] multi-turn context is carried  'Your favorite color is green.'
+  [PASS] a sampling request is refused rather than silently ignored  HTTP 400
+  [PASS] a second concurrent request is rejected with 429  [429, 200]
+
+  0 API check(s) failed

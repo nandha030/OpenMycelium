@@ -4,16 +4,16 @@ Mycelium Lab is the pre-hardware design and evidence workspace for heterogeneous
 
 ## Available without accelerator hardware
 
-- Persistent virtual topology assets with device count, memory, compute, bandwidth, power, cost, NIC, NUMA, RDMA, GPUDirect, DirectGMA, HetCCL, and fault assumptions
+- Persistent virtual topology assets with device count, memory, compute, bandwidth, power, cost, NIC, NUMA, RDMA, GPUDirect, DirectGMA, MCCL, and fault assumptions
 - Built-in planning envelopes for common accelerators plus isolated benchmark JSON imports
 - Mycelium 1.0 plan compilation across data, pipeline, and ZeRO candidates
 - Dense and MoE sizing for total and active weights, KV cache, activations, optimizer state, checkpoint retention, dataset staging, and approximate step FLOPs
-- CPU-forwarded, HetCCL, and device-direct communication estimates with explicit evidence labels
+- CPU-forwarded, MCCL, and device-direct communication estimates with explicit evidence labels
 - Vendor runtime image contracts and saved qualification state
 - Persistent experiment results, audit events, NATS events, Prometheus metrics, and a Grafana evidence panel
 - A functional CPU/Gloo correctness path that generates Kubernetes YAML for the existing preview, policy, server dry-run, and apply workflow
 
-Virtual profiles are planning evidence only. They never appear in cluster inventory, pool capacity, or scheduler admission. HetCCL and device-direct plans stay blocked until measured hardware qualification is attached.
+Virtual profiles are planning evidence only. They never appear in cluster inventory, pool capacity, or scheduler admission. MCCL and device-direct plans stay blocked until measured hardware qualification is attached.
 
 ## Run a CPU/Gloo experiment
 
@@ -45,7 +45,7 @@ When physical devices are available, replace planning envelopes with measured pr
 - Tensor allocation and framework smoke tests
 - Point-to-point bandwidth and latency
 - All-reduce correctness across sizes and ranks
-- RDMA, peer-memory, GPUDirect, DirectGMA, HetCCL, or device-direct evidence as applicable
+- RDMA, peer-memory, GPUDirect, DirectGMA, MCCL, or device-direct evidence as applicable
 - Failure injection, restart, checkpoint recovery, and numerical parity
 - Soak, power, thermal, and cost measurements
 

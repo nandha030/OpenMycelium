@@ -1,0 +1,25 @@
+gate7 2026-08-28T08:29:05+00:00
+
+  == inventory ==
+  [PASS] version
+  [PASS] fabric list
+  [PASS] model list
+  [PASS] model inspect
+  [PASS] model verify
+
+  == placement ==
+  [PASS] plan
+  [PASS] exclusive 181/182 ownership
+
+  == one-shot generation across both vendors ==
+  [PASS] openmycelium run
+  [PASS] the run reported a pipeline boundary
+
+  == multi-turn chat ==
+  [PASS] openmycelium chat
+
+  == no leftovers ==
+  [FAIL] no orphan workers
+  [PASS] ps
+
+  1 check(s) failed in step 7

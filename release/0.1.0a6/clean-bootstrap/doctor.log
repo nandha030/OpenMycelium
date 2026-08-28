@@ -1,0 +1,11 @@
+
+  openmycelium doctor
+
+  [FAIL] cuda   interpreter missing: 
+  [FAIL] rocm   interpreter missing: 
+  [PASS] wsl    /dev/dxg present
+  [WARN] models /opt/models does not exist yet
+  [WARN] ledger /opt/xvendor_qualification.json absent
+
+  2 check(s) failed
+

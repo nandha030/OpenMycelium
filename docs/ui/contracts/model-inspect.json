@@ -1,0 +1,9 @@
+{
+  "architecture": "MistralForCausalLM",
+  "bytes": 24525497357,
+  "dtype": "bfloat16",
+  "hidden": 5120,
+  "layers": 40,
+  "onWindowsMount": false,
+  "path": "/var/lib/openmycelium/models/Mistral-Nemo-Instruct-2407"
+}

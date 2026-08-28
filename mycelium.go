@@ -46,11 +46,11 @@ func myceliumTransportPenalty(transport string, heterogeneous bool) float64 {
 	switch transport {
 	case "gloo", "cpu-forwarding":
 		return 0.35
-	case "hetccl-tcp":
+	case "mccl-tcp":
 		return 0.32
 	case "device-direct":
 		return 0.12
-	case "hetccl":
+	case "mccl":
 		return 0.10
 	default:
 		return 0.40
@@ -152,7 +152,7 @@ func myceliumCandidates(request ExecutionPlanRequest, groups []ExecutionGroup, t
 		name: "heterogeneous-pipeline", penalty: basePenalty,
 		contract: ParallelContract{Pipeline: pipeline, Tensor: 1, Data: int(math.Max(1, float64(deviceCount/pipeline))), Expert: 1, Zero: request.ZeroStage, Mode: "heterogeneous-pipeline"},
 	}}
-	if transport == "hetccl" || transport == "hetccl-tcp" || transport == "device-direct" {
+	if transport == "mccl" || transport == "mccl-tcp" || transport == "device-direct" {
 		mode := "heterogeneous-data"
 		if request.ZeroStage > 0 {
 			mode = "heterogeneous-zero"

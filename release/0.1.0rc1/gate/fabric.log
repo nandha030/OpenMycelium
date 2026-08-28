@@ -1,0 +1,26 @@
+
+  Mycelium Fabric -- 2 accelerator(s)
+
+  nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033
+    NVIDIA GeForce RTX 5060 Ti     cuda 2.11.0+cu128
+    memory      15.93 GiB total, 14.80 GiB free
+    identity    from uuid (strong)
+    pci         00000000:01:00.0
+    arch        NVIDIA GeForce RTX 5060 Ti
+    power       14.1 W of 180 W (nvidia-smi)
+
+  amd:pci-0000:04:00.0
+    AMD Radeon RX 9060 XT          rocm 2.10.0+rocm7.0
+    memory      15.81 GiB total, 15.73 GiB free
+    identity    from pci (slot-stable)
+    pci         0000:04:00.0
+    arch        gfx1200
+    power       unavailable (unavailable)
+    note        UUID reported by the ROCm runtime is not stable across processes and is recorded for evidence only; identity is the PCI bus
+    note        power telemetry unavailable under WSL: rocm-smi needs the amdgpu kernel module, and WSL exposes /dev/dxg instead
+
+  aggregate   31.74 GiB across amd, nvidia  (cross-vendor)
+
+  Aggregate model capacity via pipeline parallelism, not a unified
+  address space: each runtime keeps its own memory space.
+

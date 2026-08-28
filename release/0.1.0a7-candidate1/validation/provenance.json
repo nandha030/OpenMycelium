@@ -1,0 +1,52 @@
+{
+  "configFile": null,
+  "configuration": {
+    "cuda_python": {
+      "source": "discovered(provisioned)",
+      "value": "/var/lib/openmycelium/state/env/cuda/bin/python"
+    },
+    "ledger": {
+      "source": "default",
+      "value": "/var/lib/openmycelium/xvendor_qualification.json"
+    },
+    "model_store": {
+      "source": "discovered",
+      "value": "/var/lib/openmycelium/models"
+    },
+    "rocm_python": {
+      "source": "discovered(provisioned)",
+      "value": "/var/lib/openmycelium/state/env/rocm/bin/python"
+    },
+    "state_dir": {
+      "source": "discovered",
+      "value": "/var/lib/openmycelium/state"
+    },
+    "wsl_distro": {
+      "source": "discovered(WSL_DISTRO_NAME)",
+      "value": "om-clean2"
+    }
+  },
+  "eventSchemaVersion": 1,
+  "gitCommit": null,
+  "hsaRuntime": {
+    "bytes": 3703265,
+    "dxcoreReferences": 0,
+    "flavor": "kfd",
+    "kfdReferences": 2,
+    "path": "/var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so",
+    "sha256": "1afa806f27d4164c734af57b8c8dd4bf1a578702036908a45fd23d43412c5659",
+    "source": "pip-shipped",
+    "systemRuntimePresent": false
+  },
+  "installedContentSha256": "2fbc932050edab6a182be929b816d9eaa357c75d97a6f43056eb03a4a327d6ea",
+  "mcclActivationProtocol": 1,
+  "mcclCollectiveProtocol": 1,
+  "mcclVersion": "0.2.0a2",
+  "openmycelium": "0.1.0a7",
+  "packageLocation": "/opt/om/venv/lib/python3.12/site-packages/openmycelium",
+  "placementSchemaVersion": 1,
+  "python": "3.12.3",
+  "pythonExecutable": "/opt/om/venv/bin/python3",
+  "pythonFiles": 46,
+  "transport": "host-staged-xvendor"
+}

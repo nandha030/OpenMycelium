@@ -1,0 +1,182 @@
+{
+  "allLengthsEqual": true,
+  "byteExactAfter": true,
+  "byteExactBefore": true,
+  "deterministicOutput": true,
+  "endedByEos": 0,
+  "generatedLengths": [
+    64
+  ],
+  "identity": {
+    "eosTokenId": 2,
+    "fixMistralRegex": true,
+    "model": "Mistral-Nemo-Instruct-2407",
+    "modelBytes": 24525497357,
+    "modelFiles": 17,
+    "modelFingerprintScheme": "om-model-fingerprint-1",
+    "modelPath": "/var/lib/openmycelium/models/Mistral-Nemo-Instruct-2407",
+    "modelSha256": "f3298db2f04eb440bc235a9709fb120e38a72758ae5e2b14bbefcad552ada966",
+    "promptIdsSha256": "0ff751e80550d7ac1e623c1a3c8051bd65ad976213f92fcefac11a9a10f276bc",
+    "promptTokenCount": 35,
+    "templatedChars": 199,
+    "tokenizerIdentity": "41356c55024d7285fbd00d4196f5b6683c673faf027e6f79e9fc2fbe0530cbb4"
+  },
+  "maxTokens": 64,
+  "method": "one fresh server process per session; server load timed and excluded; one warm-up request discarded; one measured request, streamed so the first content token is timed rather than inferred. decode = (generated - 1) / (last token - first token). end-to-end = generated / (request start -> response complete). No p95: five observations do not support one.",
+  "placementExclusiveAll": true,
+  "prompt": "Describe how a pipeline-parallel inference runtime divides a transformer model across two accelerators from different vendors, and explain what has to cross the boundary between them.",
+  "sessions": [
+    {
+      "decodeTokS": 11.085940867544318,
+      "decodeWindowS": 5.682873537999967,
+      "endToEndTokS": 10.949347384200104,
+      "finishReason": "length",
+      "generatedTokens": 64,
+      "hitEos": false,
+      "outputChars": 324,
+      "outputSha256": "b054c78e787f7396f725ee7ddac96cc2f4a24a6f4c621363c3cad53fe354d8a5",
+      "placementCounts": [
+        181,
+        182
+      ],
+      "placementExclusive": true,
+      "promptTokens": 35,
+      "serverLoadS": 24.02,
+      "session": 1,
+      "totalS": 5.845097224000028,
+      "ttftMs": 142.08660600002077
+    },
+    {
+      "decodeTokS": 11.023628277571245,
+      "decodeWindowS": 5.714996769999971,
+      "endToEndTokS": 10.888895911092483,
+      "finishReason": "length",
+      "generatedTokens": 64,
+      "hitEos": false,
+      "outputChars": 324,
+      "outputSha256": "b054c78e787f7396f725ee7ddac96cc2f4a24a6f4c621363c3cad53fe354d8a5",
+      "placementCounts": [
+        181,
+        182
+      ],
+      "placementExclusive": true,
+      "promptTokens": 35,
+      "serverLoadS": 26.02,
+      "session": 2,
+      "totalS": 5.877547230000005,
+      "ttftMs": 142.1201560000327
+    },
+    {
+      "decodeTokS": 11.240792686783104,
+      "decodeWindowS": 5.604586949999998,
+      "endToEndTokS": 11.09783109768562,
+      "finishReason": "length",
+      "generatedTokens": 64,
+      "hitEos": false,
+      "outputChars": 324,
+      "outputSha256": "b054c78e787f7396f725ee7ddac96cc2f4a24a6f4c621363c3cad53fe354d8a5",
+      "placementCounts": [
+        181,
+        182
+      ],
+      "placementExclusive": true,
+      "promptTokens": 35,
+      "serverLoadS": 26.01,
+      "session": 3,
+      "totalS": 5.766892597000037,
+      "ttftMs": 142.0045160000427
+    },
+    {
+      "decodeTokS": 11.208853725102378,
+      "decodeWindowS": 5.620556887000021,
+      "endToEndTokS": 11.067301153381685,
+      "finishReason": "length",
+      "generatedTokens": 64,
+      "hitEos": false,
+      "outputChars": 324,
+      "outputSha256": "b054c78e787f7396f725ee7ddac96cc2f4a24a6f4c621363c3cad53fe354d8a5",
+      "placementCounts": [
+        181,
+        182
+      ],
+      "placementExclusive": true,
+      "promptTokens": 35,
+      "serverLoadS": 26.01,
+      "session": 4,
+      "totalS": 5.782800984000005,
+      "ttftMs": 141.98512899997695
+    },
+    {
+      "decodeTokS": 10.979176169328687,
+      "decodeWindowS": 5.738135451000062,
+      "endToEndTokS": 10.843051244494012,
+      "finishReason": "length",
+      "generatedTokens": 64,
+      "hitEos": false,
+      "outputChars": 324,
+      "outputSha256": "b054c78e787f7396f725ee7ddac96cc2f4a24a6f4c621363c3cad53fe354d8a5",
+      "placementCounts": [
+        181,
+        182
+      ],
+      "placementExclusive": true,
+      "promptTokens": 35,
+      "serverLoadS": 26.01,
+      "session": 5,
+      "totalS": 5.902397633000078,
+      "ttftMs": 143.99332599998615
+    }
+  ],
+  "summary": {
+    "decodeTokS": {
+      "max": 11.240792686783104,
+      "median": 11.085940867544318,
+      "min": 10.979176169328687,
+      "values": [
+        11.085940867544318,
+        11.023628277571245,
+        11.240792686783104,
+        11.208853725102378,
+        10.979176169328687
+      ]
+    },
+    "endToEndTokS": {
+      "max": 11.09783109768562,
+      "median": 10.949347384200104,
+      "min": 10.843051244494012,
+      "values": [
+        10.949347384200104,
+        10.888895911092483,
+        11.09783109768562,
+        11.067301153381685,
+        10.843051244494012
+      ]
+    },
+    "serverLoadS": {
+      "max": 26.02,
+      "median": 26.01,
+      "min": 24.02,
+      "values": [
+        24.02,
+        26.02,
+        26.01,
+        26.01,
+        26.01
+      ]
+    },
+    "ttftMs": {
+      "max": 143.99332599998615,
+      "median": 142.08660600002077,
+      "min": 141.98512899997695,
+      "values": [
+        142.08660600002077,
+        142.1201560000327,
+        142.0045160000427,
+        141.98512899997695,
+        143.99332599998615
+      ]
+    }
+  },
+  "transportQualification": "The transport was byte-exact qualified immediately before and after the performance campaign. Full-payload hashing was disabled during timed sessions to avoid contaminating performance. The five sessions produced identical output, providing deterministic functional consistency but not per-session byte-level transport proof.",
+  "version": "0.1.0a8"
+}

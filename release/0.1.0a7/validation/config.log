@@ -1,0 +1,17 @@
+
+  resolved configuration
+  configuration file  (none found)
+  cuda_python          /var/lib/openmycelium/state/env/cuda/bin/python  discovered(provisioned)
+  rocm_python          /var/lib/openmycelium/state/env/rocm/bin/python  discovered(provisioned)
+  model_store          /var/lib/openmycelium/models                     discovered
+  state_dir            /var/lib/openmycelium/state                      discovered
+  ledger               /var/lib/openmycelium/xvendor_qualification.json discovered
+  wsl_distro           om-clean2                                        discovered(WSL_DISTRO_NAME)
+
+  configuration files are looked for in this order:
+    /root/.config/openmycelium/config.toml               absent
+    /root/.openmycelium.toml                             absent
+    /etc/openmycelium/config.toml                        absent
+
+  precedence: command line > environment > file > discovery > default
+

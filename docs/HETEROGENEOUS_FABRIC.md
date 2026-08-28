@@ -37,7 +37,7 @@ OpenMycelium consumes existing node labels; it does not install or impersonate t
 openmycelium.io/rdma=ready
 openmycelium.io/gpudirect=ready
 openmycelium.io/directgma=ready
-openmycelium.io/hetccl=enabled
+openmycelium.io/mccl=enabled
 openmycelium.io/device-direct=enabled
 ```
 
@@ -78,12 +78,12 @@ For PyTorch correctness testing, `runtime/mycelium` supplies a Gloo CPU-forwarde
 
 For a multi-group plan, the controller also injects `OPENMYCELIUM_EXECUTION_GROUP_ID`, `OPENMYCELIUM_EXECUTION_GROUP_SIZE`, `OPENMYCELIUM_RANK_BASE`, `OPENMYCELIUM_WORLD_SIZE`, and the indexed Job completion index. All group Jobs share the workload label and rendezvous Service, so lifecycle reconciliation, pod inspection, logs, deletion, and generated manifests remain one OpenMycelium workload.
 
-Multi-group inference plans remain rejected by the Kubernetes controller until the HetCCL 0.2 inference adapters are connected to model-specific worker codecs and release reconciliation. A generic serving container cannot be safely split across vendor groups merely by adding environment variables.
+Multi-group inference plans remain rejected by the Kubernetes controller until the MCCL 0.2 inference adapters are connected to model-specific worker codecs and release reconciliation. A generic serving container cannot be safely split across vendor groups merely by adding environment variables.
 
 ## Research-inspired scope
 
-- **HetHub-style capability**: model-aware profiling and heterogeneous layer/microbatch allocation.
-- **HetCCL-style capability**: a transport-adapter boundary for cross-vendor collectives, with strict prerequisite checks.
+- **MHub-style capability**: model-aware profiling and heterogeneous layer/microbatch allocation.
+- **MCCL-style capability**: a transport-adapter boundary for cross-vendor collectives, with strict prerequisite checks.
 - **Joint AMD-NVIDIA training**: explicit mixed CUDA/ROCm planning, pipeline-oriented fallback, and device-specific profile weighting.
 
 The public papers inform this architecture. Their results are not represented as bundled production runtimes or reproduced benchmark claims.

@@ -1,0 +1,33 @@
+
+  == host ==
+    platform       Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+    distribution   Ubuntu 24.04.4 LTS
+    WSL            True
+    /dev/dxg       True   (WSL GPU paravirtualisation)
+    /dev/kfd       False   (absent under WSL; expected)
+    nvidia-smi     True  ['NVIDIA GeForce RTX 5060 Ti']
+
+  == configuration ==
+  configuration file  (none found)
+  cuda_python          (unset)                                          default
+  rocm_python          (unset)                                          default
+  model_store          /var/lib/openmycelium/models                     default
+  state_dir            /var/lib/openmycelium/state                      default
+  ledger               /var/lib/openmycelium/xvendor_qualification.json default
+  wsl_distro           Ubuntu-24.04                                     default
+
+  == cuda environment ==
+    location       /var/lib/openmycelium/state/env/cuda
+    environment    would create /var/lib/openmycelium/state/env/cuda
+    installing     torch==2.11.0 from https://download.pytorch.org/whl/cu128, then 4 packages from PyPI (this takes a while)
+    packages       would install ['torch==2.11.0'] from https://download.pytorch.org/whl/cu128, then ['transformers==5.15.1', 'tokenizers==0.22.2', 'safetensors', 'numpy'] from PyPI
+
+  == rocm environment ==
+    location       /var/lib/openmycelium/state/env/rocm
+    environment    would create /var/lib/openmycelium/state/env/rocm
+    installing     torch==2.10.0 from https://download.pytorch.org/whl/rocm7.0, then 4 packages from PyPI (this takes a while)
+    packages       would install ['torch==2.10.0'] from https://download.pytorch.org/whl/rocm7.0, then ['transformers==5.15.1', 'tokenizers==0.22.2', 'safetensors', 'numpy'] from PyPI
+
+
+  next:  openmycelium doctor
+

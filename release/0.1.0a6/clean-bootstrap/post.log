@@ -1,0 +1,37 @@
+post-provision 2026-08-28T04:27:15+00:00
+
+  == G1  installed packages and their source index ==
+  cuda: 54 packages
+      torch==2.11.0+cu128
+  rocm: 36 packages
+      torch==2.10.0+rocm7.0
+  [PASS] CUDA environment holds torch 2.11.0+cu128 from the vendor index
+  [PASS] ROCm environment holds torch 2.10.0+rocm7.0 from the vendor index
+  [PASS] cuda environment holds transformers 5.15.1 from PyPI
+  [PASS] rocm environment holds transformers 5.15.1 from PyPI
+
+  == G2  each environment drives its own GPU ==
+    cuda
+      torch         2.11.0+cu128
+      build         cuda (hip None, cuda 12.8)
+      device        NVIDIA GeForce RTX 5060 Ti
+      memory        15.93 GiB total, 14.80 GiB free
+      bf16 matmul   finite=True on cuda:0 mean|x|=25.500
+      allocated     14811136 bytes
+    rocm
+      torch         2.10.0+rocm7.0
+      build         rocm (hip 7.0.51831, cuda None)
+      device        
+      memory        0.00 GiB total, 0.00 GiB free
+      bf16 matmul   finite=False on None mean|x|=0.000
+      allocated     0 bytes
+
+      PROBLEM: rocm: expected an AMD card, got ''
+      PROBLEM: rocm: expected model 9060, got ''
+      PROBLEM: rocm: the matmul did not run on the device
+      PROBLEM: rocm: the bf16 matmul was not finite
+  [PASS] CUDA environment qualified (real BF16 on the device, CUDA build)
+  [FAIL] ROCm environment qualified (real BF16 on the device, HIP build)
+  [FAIL] device identities match the expected cards, no fallback
+
+  2 check(s) failed in G1-G2

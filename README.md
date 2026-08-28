@@ -1,23 +1,104 @@
 # OpenMycelium
 
-An installable control-plane foundation for discovering compute, governing logical accelerator pools, and operating AI workloads across local hosts and clusters. The interface is designed as a quiet, premium operations workspace: real data, explicit state, compact controls, and no fabricated infrastructure.
+Run one model across GPUs from different vendors.
 
-See [FEATURES.md](FEATURES.md) for the implemented capability matrix and the remaining production roadmap.
+**v0.1.0 Technical Preview** aggregates model capacity across one NVIDIA CUDA
+GPU and one AMD ROCm GPU. It does not create unified VRAM. Validated on Windows
+11 with WSL2, RTX 5060 Ti 16 GB, RX 9060 XT 16 GB, and
+Mistral-Nemo-Instruct-2407: a 22.84 GiB checkpoint running on two 16 GiB cards,
+181/182 exclusive tensor ownership, byte-exact cross-vendor transfer, 11.09
+tok/s median decode.
+
+## Two components, at different maturities
+
+**OpenMycelium Node Runtime** — the Python execution engine: CUDA/ROCm
+execution, model partitioning, MCCL cross-vendor transport, an
+OpenAI-compatible API, a local operator console, and hardware telemetry.
+**Hardware-qualified**, and what v0.1.0 ships.
+
+**MHub Control Plane** — the Go platform: users, clusters, policies, queues,
+scheduling, Kubernetes and fleet management. Substantial working code with
+tests, **but it has never invoked the Node Runtime**. Treat it as
+implemented-not-integrated until an authenticated Node Agent API connects the
+two and one workload executes end to end.
+
+[FEATURES.md](FEATURES.md) classifies every capability as hardware-qualified,
+integrated, implemented, or roadmap. Read it before relying on anything here.
+
+## Platform support
+
+| Platform | Node Runtime | MHub Control Plane |
+|---|---|---|
+| Windows 11 + WSL2 | **Validated** | Installable, not connected to a runtime |
+| Native Linux | Experimental, unqualified | Installable, not connected to a runtime |
+| macOS | **Unsupported** — CUDA and ROCm cannot coexist there | Installable, not connected to a runtime |
+
+macOS is unsupported for a structural reason, not an untested one: the runtime
+needs one CUDA and one ROCm device in the same machine, and no Mac can present
+that pair. Apple Metal execution is roadmap. To use OpenMycelium from a Mac,
+run the runtime on a machine with both GPUs and connect to its
+OpenAI-compatible API. See [PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md).
+
+## Install and run, in short
+
+On the machine with both GPUs, inside WSL2 or Linux:
+
+```bash
+python3 -m venv /opt/openmycelium/venv
+/opt/openmycelium/venv/bin/pip install openmycelium_mccl-*.whl openmycelium-*.whl
+export PATH=/opt/openmycelium/venv/bin:$PATH
+
+# AMD ROCm-for-WSL system components are a manual prerequisite on WSL.
+# See docs/OPERATIONS.md before this step.
+openmycelium provision          # builds both GPU environments, proves each one
+openmycelium doctor             # every precondition, before loading 22 GB
+
+openmycelium model import /path/to/Mistral-Nemo-Instruct-2407
+openmycelium plan  --model Mistral-Nemo-Instruct-2407
+openmycelium run   --model Mistral-Nemo-Instruct-2407 --prompt "..."
+openmycelium serve --model Mistral-Nemo-Instruct-2407    # OpenAI API on 11500
+openmycelium console                                     # operator UI on 11501
+
+openmycelium ps                 # what is running
+openmycelium stop               # graceful shutdown
+```
+
+From Windows, `openmycelium.cmd` runs the same commands through WSL. Keep the
+window open: WSL2 stops its VM when the last client disconnects, so closing it
+unloads the model.
+
+Full instructions, including configuration and maintenance:
+[OPERATIONS.md](docs/OPERATIONS.md).
+
+## What v0.1.0 does not do
+
+Greedy decoding only; sampling parameters are refused rather than ignored. One
+request at a time. One NVIDIA and one AMD GPU per pipeline — multi-AMD is not
+qualified. Single node. One model family validated. No TLS, no background
+service, no training. Manual installation of AMD ROCm-for-WSL system components
+is required. See [LIMITATIONS.md](docs/LIMITATIONS.md).
 
 ## Why OpenMycelium
 
-AI infrastructure is fragmented across GPU vendors, CPUs, local runtimes, Kubernetes distributions, model stores, schedulers, and agent frameworks. OpenMycelium provides one vendor-neutral control plane for discovering that capacity, planning model fit, governing placement, deploying workloads, and observing their real lifecycle without replacing the underlying CUDA, ROCm, Metal, Kubernetes, or model-runtime technologies.
+AI infrastructure is fragmented across GPU vendors, CPUs, local runtimes, Kubernetes distributions, model stores, schedulers, and agent frameworks. The long-term aim is one vendor-neutral control plane for discovering that capacity, planning model fit, governing placement, deploying workloads, and observing their real lifecycle without replacing the underlying CUDA, ROCm, Metal, Kubernetes, or model-runtime technologies.
 
-It is designed for platform teams that need to operate inference, training, fine-tuning, containers, models, and agentic systems across local machines and clusters with consistent identity, policy, auditability, and telemetry.
+That is the direction, not the current state. What exists today is a qualified single-node dual-vendor runtime, and a control plane that does not yet drive it.
 
 ## Documentation
 
-- [Installation and operations](docs/INSTALLATION.md)
+- [Platform support: Windows, Linux, macOS](docs/PLATFORM_SUPPORT.md)
+- [Operating the runtime: install, configure, run, maintain, stop](docs/OPERATIONS.md)
+- [Installing v0.1.0](docs/INSTALL.md)
+- [Hardware matrix: qualified and explicitly unqualified](docs/HARDWARE_MATRIX.md)
+- [Limitations](docs/LIMITATIONS.md)
+- [Rollback and uninstall](docs/ROLLBACK.md)
+- [Security notes](docs/SECURITY.md)
+- [Control-plane installation (MHub, not integrated)](docs/INSTALLATION.md)
 - [Problems solved and use cases](docs/USE_CASES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md)
-- [Heterogeneous inference fabric: HetRouter, KV-cache transfer, Metal, vLLM, and speculative decoding](docs/INFERENCE_FABRIC.md)
-- [Mycelium and HetCCL technical manuscript, formulas, architecture, market gap, and invention disclosure](docs/paper/OPENMYCELIUM_MYCELIUM_HETCCL_IEEE_MANUSCRIPT.md)
+- [Heterogeneous inference fabric: MRouter, KV-cache transfer, Metal, vLLM, and speculative decoding](docs/INFERENCE_FABRIC.md)
+- [Mycelium and MCCL technical manuscript, formulas, architecture, market gap, and invention disclosure](docs/paper/OPENMYCELIUM_MYCELIUM_MCCL_IEEE_MANUSCRIPT.md)
 - [Mycelium Lab and CPU/Gloo experiments](docs/MYCELIUM_LAB.md)
 - [Implemented features and roadmap](FEATURES.md)
 - [Authentication and security](AUTHENTICATION.md)
@@ -179,9 +260,24 @@ OpenMycelium rejects a Kueue or Volcano submission when the corresponding schedu
 
 ### Mycelium heterogeneous execution planning
 
+For the local NVIDIA + AMD inference alpha, the Scheduler can be inspected
+before loading either GPU:
+
+```powershell
+.\openmycelium.cmd fabric list
+.\openmycelium.cmd plan --model mistral-nemo --output /opt/openmycelium/placement.json
+.\openmycelium.cmd chat --model mistral-nemo
+```
+
+`plan` issues one digest-protected placement with exact model ownership and
+stable Fabric identities. `run` and `chat` issue the same contract internally;
+both workers validate it and do not independently choose a split. This is
+aggregated schedulable capacity across separate CUDA and ROCm memory spaces,
+not coherent or unified VRAM.
+
 The **Memory & execution fabric** dashboard qualifies each connected node for RDMA, native collectives, GPUDirect or DirectGMA evidence, and optional cross-vendor transport adapters. PostgreSQL stores benchmark profiles and compiled execution plans. **Mycelium 1.0** groups available devices by vendor/runtime/model, performs memory-constrained minimax layer placement, evaluates admissible data/pipeline/ZeRO candidates, and scores throughput, balance, or performance-per-watt objectives. The persisted contract includes profile coverage, stage imbalance, memory feasibility, and an explainable decision trace.
 
-Within one vendor, the contract selects NCCL, RCCL, or oneCCL. Cross-vendor direct plans are blocked unless every selected node advertises RDMA and qualified native adapters. `gloo` remains an explicit PyTorch host-staging fallback. The installable `runtime/hetccl` package adds a sequence-safe TCP AllReduce coordinator, device discovery, transport planning, a PyTorch bridge, build-gated host/CUDA/ROCm adapter implementations, and a 0.2 reference inference fabric with HetRouter, canonical KV-cache transfer, Metal staging, vLLM endpoint discovery, and speculative decoding. Its portable paths stage data through host memory; device-direct RDMA is still blocked pending physical qualification. A ready plan can be selected in Celium AI+ or passed with `--execution-plan`. Training, fine-tuning, and batch plans expand into indexed Jobs per vendor group, with exact extended-resource requests, qualified-node constraints, shared rendezvous metadata, and non-overlapping rank bases. The standalone inference adapters are functional, while the Kubernetes controller continues to reject multi-group inference until model-specific worker codecs and release reconciliation are connected. See [Mycelium algorithm](docs/MYCELIUM_ALGORITHM.md), [HetCCL runtime](docs/HETCCL_RUNTIME.md), [Heterogeneous inference fabric](docs/INFERENCE_FABRIC.md), and [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md).
+Within one vendor, the contract selects NCCL, RCCL, or oneCCL. Cross-vendor direct plans are blocked unless every selected node advertises RDMA and qualified native adapters. `gloo` remains an explicit PyTorch host-staging fallback. The installable `runtime/mccl` package adds a sequence-safe TCP AllReduce coordinator, device discovery, transport planning, a PyTorch bridge, build-gated host/CUDA/ROCm adapter implementations, and a 0.2 reference inference fabric with MRouter planning, canonical KV-cache transfer, Metal staging, vLLM endpoint discovery, and speculative decoding. Its portable paths stage data through host memory; device-direct RDMA is still blocked pending physical qualification. A ready plan can be selected in Celium AI+ or passed with `--execution-plan`. Training, fine-tuning, and batch plans expand into indexed Jobs per vendor group, with exact extended-resource requests, qualified-node constraints, shared rendezvous metadata, and non-overlapping rank bases. The standalone inference adapters are functional, while the Kubernetes controller continues to reject multi-group inference until model-specific worker codecs and release reconciliation are connected. See [Mycelium platform layers](docs/MYCELIUM_PLATFORM_LAYERS.md), [Mycelium algorithm](docs/MYCELIUM_ALGORITHM.md), [MCCL runtime](docs/MCCL_RUNTIME.md), [Heterogeneous inference fabric](docs/INFERENCE_FABRIC.md), and [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md).
 
 ### Vagrant k3s laptop integration
 

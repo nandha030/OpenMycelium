@@ -14,10 +14,10 @@ config:
   cookieSecure: true
   ollamaBaseUrl: http://ollama.openmycelium.svc.cluster.local:11434
 
-hetccl:
+mccl:
   enabled: true
   image:
-    repository: openmycelium/hetccl
+    repository: openmycelium/mccl
     tag: 0.2.0
     pullPolicy: IfNotPresent
   port: 29500
