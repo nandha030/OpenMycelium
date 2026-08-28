@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# The acceptance gate: the console driving real dual-GPU inference from an
+# installed wheel, on the qualified RTX 5060 Ti and RX 9060 XT.
+set -uo pipefail
+WHEEL=/mnt/c/Users/User/Documents/Open_Mycelium/dist/openmycelium-0.2.0a2-py3-none-any.whl
+OM=/opt/om/venv
+PORT=11501
+MODEL=Mistral-Nemo-Instruct-2407
+FAIL=0
+export PATH="$OM/bin:$PATH"
+unset PYTHONPATH
+cd /root || exit 1
+check() {
+  if [ "$2" = "0" ]; then printf '  [PASS] %s\n' "$1"
+  else printf '  [FAIL] %s\n' "$1"; FAIL=$((FAIL+1)); fi
+}
+
+echo "  == install the wheel =="
+"$OM/bin/pip" install -q --upgrade --force-reinstall --no-deps "$WHEEL" > /tmp/inst.log 2>&1
+check "installed" $?
+openmycelium version 2>/dev/null | head -3 | sed 's/^/    /'
+
+echo
+echo "  == the console starts from the installed entry point =="
+openmycelium console --port "$PORT" > /tmp/w.out 2> /tmp/w.err &
+CONSOLE=$!
+READY=1
+for _ in $(seq 1 30); do
+  sleep 1
+  curl -sf -m 3 "http://127.0.0.1:$PORT/api/workloads" >/dev/null 2>&1 && { READY=0; break; }
+done
+check "console reachable on 127.0.0.1:$PORT" $READY
+
+echo "    assets served from inside the package:"
+for a in / /assets/app.js /assets/styles.css; do
+  printf '      %-18s HTTP %s\n' "$a" \
+    "$(curl -s -o /dev/null -w '%{http_code}' -m 10 "http://127.0.0.1:$PORT$a")"
+done
+
+echo
+echo "  == gate, then one real run on both GPUs =="
+curl -s -m 240 -o /tmp/g.json "http://127.0.0.1:$PORT/api/run/gate?model=$MODEL"
+"$OM/bin/python" -c "
+import json,sys; g=json.load(open('/tmp/g.json'))
+for x in g['gates']: print(f'      {\"ok \" if x[\"ok\"] else \"NO \"}{x[\"label\"]}')
+for a in (g.get('expectedAllocation') or []):
+    print(f'      {a[\"role\"]:<5} layers {a[\"layers\"][0]}-{a[\"layers\"][-1]}  '
+          f'{a[\"weightBytes\"]/(1<<30):.2f} GiB on {a[\"deviceIdentity\"][:28]}')
+sys.exit(0 if g['canRun'] else 1)"
+check "gate permits the run" $?
+
+( curl -sN -m 400 "http://127.0.0.1:$PORT/api/run/events" > /tmp/sse.txt ) &
+SSE=$!
+sleep 1
+curl -s -m 30 -X POST "http://127.0.0.1:$PORT/api/run/start" \
+  -H 'Content-Type: application/json' \
+  -d "{\"model\":\"$MODEL\",\"prompt\":\"Explain cross-vendor GPU inference in one sentence.\",\"maxNewTokens\":24}" \
+  -o /tmp/start.json > /dev/null
+"$OM/bin/python" -c "
+import json,sys; d=json.load(open('/tmp/start.json')); sys.exit(0 if d.get('runId') else 1)"
+check "run accepted" $?
+for _ in $(seq 1 120); do
+  sleep 3
+  grep -qE '\"kind\": ?\"finished\"' /tmp/sse.txt 2>/dev/null && break
+done
+kill "$SSE" 2>/dev/null
+
+"$OM/bin/python" - <<'PY'
+import json
+result = None
+kinds = {}
+for line in open("/tmp/sse.txt", errors="ignore"):
+    if line.startswith("data: "):
+        try:
+            e = json.loads(line[6:])
+        except ValueError:
+            continue
+        kinds[e.get("kind")] = kinds.get(e.get("kind"), 0) + 1
+        if e.get("kind") == "result":
+            result = e.get("result")
+print("      events: " + ", ".join(f"{k}={v}" for k, v in sorted(kinds.items())))
+if result:
+    r = result.get("result") or {}
+    t = r.get("generatedTokens")
+    print(f"      TTFT {r.get('ttftMs')} ms · decode {r.get('decodeTokensPerSecond')} tok/s "
+          f"· {len(t) if isinstance(t, list) else t} tokens")
+    print(f"      text {(r.get('text') or '')[:64]!r}")
+PY
+grep -qE '\"kind\": ?\"finished\"' /tmp/sse.txt
+check "streamed through to completion" $?
+
+echo
+echo "  == idle and released =="
+sleep 4
+ORPHANS=$(pgrep -fc pipeline_run 2>/dev/null); ORPHANS=${ORPHANS:-0}
+[ "$ORPHANS" = "0" ]; check "zero orphan workers" $?
+curl -s -m 60 "http://127.0.0.1:$PORT/api/residency" -o /tmp/res.json
+"$OM/bin/python" -c "
+import json
+for d in json.load(open('/tmp/res.json'))['devices']:
+    print(f'      {d[\"vendor\"]:<5} {d[\"usedMiB\"]:>6} MiB of {d[\"totalMiB\"]}')"
+
+kill "$CONSOLE" 2>/dev/null; wait "$CONSOLE" 2>/dev/null
+[ "$(stat -c%s /tmp/w.out)" = "0" ]
+check "stdout clean, diagnostics on stderr" $?
+printf '\n  %d check(s) failed\n' "$FAIL"
+exit "$FAIL"

@@ -1,0 +1,35 @@
+{
+  "configFile": "",
+  "settings": {
+    "cuda_python": {
+      "origin": "provisioned",
+      "source": "discovered",
+      "value": "/var/lib/openmycelium/state/env/cuda/bin/python"
+    },
+    "ledger": {
+      "origin": "",
+      "source": "discovered",
+      "value": "/var/lib/openmycelium/xvendor_qualification.json"
+    },
+    "model_store": {
+      "origin": "",
+      "source": "discovered",
+      "value": "/var/lib/openmycelium/models"
+    },
+    "rocm_python": {
+      "origin": "provisioned",
+      "source": "discovered",
+      "value": "/var/lib/openmycelium/state/env/rocm/bin/python"
+    },
+    "state_dir": {
+      "origin": "",
+      "source": "discovered",
+      "value": "/var/lib/openmycelium/state"
+    },
+    "wsl_distro": {
+      "origin": "WSL_DISTRO_NAME",
+      "source": "discovered",
+      "value": "om-clean2"
+    }
+  }
+}

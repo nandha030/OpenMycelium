@@ -13,7 +13,7 @@ import runpy
 import sys
 from typing import Dict, List, Tuple
 
-VERSION = "0.1.0"
+VERSION = "0.2.0a4"
 
 #: subcommand -> (module file under runtime/, implicit first argument)
 COMMANDS: Dict[str, Tuple[str, str]] = {
@@ -31,6 +31,7 @@ COMMANDS: Dict[str, Tuple[str, str]] = {
     "version": ("cli/lifecycle.py", "version"),
     "provision": ("cli/provision.py", ""),
     "config":  ("cli/config_cli.py", ""),
+    "console": ("cli/console.py", ""),
 }
 
 #: Convenience spellings, expanded before dispatch.
@@ -65,6 +66,7 @@ USAGE = """
     openmycelium run --model MODEL --prompt "..."
     openmycelium chat --model MODEL        loads once, then prompt freely
     openmycelium serve --model MODEL       OpenAI-compatible API on 11500
+    openmycelium console                   local operator console on 11501
 
   Lifecycle
     openmycelium ps                        running runtimes

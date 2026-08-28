@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenMycelium Console</title>
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <img class="brand-logo" src="/assets/openmycelium-logo.png" alt="" aria-hidden="true">
+    <span>OpenMycelium <span class="muted">console</span></span>
+  </div>
+  <div class="bar-right">
+    <span id="capacity" class="capacity"></span>
+    <span id="conn" class="pill pill-idle">connecting</span>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab is-active" data-screen="overview" role="tab">Overview</button>
+  <button class="tab" data-screen="fabric"  role="tab">Fabric</button>
+  <button class="tab" data-screen="models"  role="tab">Models</button>
+  <button class="tab" data-screen="plan"    role="tab">Plan</button>
+  <button class="tab" data-screen="run"     role="tab">Run</button>
+  <button class="tab" data-screen="runtime" role="tab">Runtime &amp; evidence</button>
+</nav>
+
+<main>
+  <!-- ---------------------------------------------------------- overview -->
+  <section id="overview" class="screen is-active">
+    <div class="grid">
+      <article class="card span2">
+        <h2>Readiness</h2>
+        <p class="hint">Every precondition, checked before anything loads 22 GiB.</p>
+        <div id="checks" class="checks"><p class="muted">checking…</p></div>
+      </article>
+      <article class="card">
+        <h2>Accelerators</h2>
+        <div id="overview-devices"><p class="muted">…</p></div>
+        <p id="capacity-note" class="note"></p>
+      </article>
+      <article class="card">
+        <h2>ROCm prerequisite</h2>
+        <p class="hint">Three states that are easy to confuse.</p>
+        <div id="rocm-states"><p class="muted">…</p></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ fabric -->
+  <section id="fabric" class="screen">
+    <div class="head-row">
+      <h2>Discovered accelerators</h2>
+      <button id="refresh-fabric" class="btn btn-quiet">Re-probe</button>
+    </div>
+    <p class="hint">Identity is what makes a placement reproducible. NVIDIA is
+      keyed on UUID; AMD on PCI location, because the ROCm UUID is not stable.</p>
+    <div id="fabric-list" class="grid"><p class="muted">…</p></div>
+  </section>
+
+  <!-- ------------------------------------------------------------ models -->
+  <section id="models" class="screen">
+    <h2>Models</h2>
+    <p class="hint">List, inspect and verify. This release does not pull,
+      import or remove — use the CLI for that.</p>
+    <div id="model-list" class="grid"><p class="muted">…</p></div>
+    <div id="verify-out"></div>
+  </section>
+
+  <!-- -------------------------------------------------------------- plan -->
+  <section id="plan" class="screen">
+    <div class="head-row">
+      <h2>Placement</h2>
+      <select id="plan-model" class="select"></select>
+    </div>
+    <p class="hint">The authoritative split, compiled by the same planner a run
+      uses. Nothing is launched.</p>
+    <div id="plan-out"><p class="muted">select a model</p></div>
+  </section>
+
+  <!-- --------------------------------------------------------------- run -->
+  <section id="run" class="screen">
+    <h2>One-shot inference</h2>
+    <div class="grid">
+      <article class="card span2">
+        <div class="field">
+          <label for="run-model">Model</label>
+          <select id="run-model" class="select"></select>
+        </div>
+        <div class="field">
+          <label for="run-prompt">Prompt</label>
+          <textarea id="run-prompt" rows="3"
+            placeholder="Explain cross-vendor GPU inference in one sentence."></textarea>
+        </div>
+        <div class="field inline">
+          <label for="run-tokens">Max new tokens</label>
+          <input id="run-tokens" type="number" value="64" min="1" max="512">
+        </div>
+        <div class="actions">
+          <button id="btn-gate"  class="btn btn-quiet">Check gates</button>
+          <button id="btn-start" class="btn" disabled>Start run</button>
+          <button id="btn-stop"  class="btn btn-danger" disabled>Stop</button>
+        </div>
+      </article>
+      <article class="card">
+        <h3>Gates</h3>
+        <p class="hint">All four must pass.</p>
+        <div id="gates"><p class="muted">not checked</p></div>
+      </article>
+    </div>
+
+    <article class="card" id="alloc-card" hidden>
+      <h3>Expected GPU allocation</h3>
+      <p class="hint">Shown before anything starts. A run occupies both cards;
+        the runtime serves one request at a time.</p>
+      <div id="alloc"></div>
+    </article>
+
+    <div class="grid">
+      <article class="card span2">
+        <h3>Output</h3>
+        <pre id="run-output" class="stream">—</pre>
+      </article>
+      <article class="card">
+        <h3>Metrics</h3>
+        <div id="run-metrics"><p class="muted">—</p></div>
+      </article>
+    </div>
+
+    <article class="card">
+      <h3>Worker events</h3>
+      <pre id="run-events" class="stream small">—</pre>
+    </article>
+  </section>
+
+  <!-- ----------------------------------------------------------- runtime -->
+  <section id="runtime" class="screen">
+    <div class="grid">
+      <article class="card">
+        <h2>Workloads</h2>
+        <div id="workloads"><p class="muted">…</p></div>
+      </article>
+      <article class="card">
+        <h2>VRAM residency</h2>
+        <p class="hint">Used to confirm a stop actually released memory.</p>
+        <div id="residency"><p class="muted">…</p></div>
+      </article>
+      <article class="card span2">
+        <h2>Provenance</h2>
+        <p class="hint">What is installed, and where it came from.</p>
+        <div id="provenance"><p class="muted">…</p></div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span id="schema" class="muted"></span>
+  <span class="muted">Loopback only. No authentication in this release.</span>
+</footer>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

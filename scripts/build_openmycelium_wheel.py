@@ -23,7 +23,7 @@ import tempfile
 from typing import List
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = "0.1.0"
+VERSION = "0.2.0a4"
 MCCL_PIN = "openmycelium-mccl==0.2.0a2"
 
 #: Runtime subtrees the CLI needs. `mccl` is deliberately absent: it ships as
@@ -56,7 +56,9 @@ openmycelium = "openmycelium.launcher:main"
 packages = ["openmycelium"]
 
 [tool.setuptools.package-data]
-openmycelium = ["runtime/**/*.py", "runtime/**/*.json", "runtime/**/*.md"]
+openmycelium = ["runtime/**/*.py", "runtime/**/*.json", "runtime/**/*.md",
+                "runtime/**/*.html", "runtime/**/*.css", "runtime/**/*.js",
+                "runtime/**/*.png"]
 """
 
 README = """# openmycelium

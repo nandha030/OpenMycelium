@@ -1,0 +1,147 @@
+
+  == host ==
+    platform       Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+    distribution   Ubuntu 24.04.4 LTS
+    WSL            True
+    /dev/dxg       True   (WSL GPU paravirtualisation)
+    /dev/kfd       False   (absent under WSL; expected)
+    nvidia-smi     True  ['NVIDIA GeForce RTX 5060 Ti']
+
+  == configuration ==
+  configuration file  (none found)
+  cuda_python          /var/lib/openmycelium/state/env/cuda/bin/python  discovered(provisioned)
+  rocm_python          /var/lib/openmycelium/state/env/rocm/bin/python  discovered(provisioned)
+  model_store          /var/lib/openmycelium/models                     discovered
+  state_dir            /var/lib/openmycelium/state                      discovered
+  ledger               /var/lib/openmycelium/xvendor_qualification.json discovered
+  wsl_distro           om-clean2                                        discovered(WSL_DISTRO_NAME)
+
+  == cuda environment ==
+    location       /var/lib/openmycelium/state/env/cuda
+    already usable NVIDIA GeForce RTX 5060 Ti (torch 2.11.0+cu128)
+
+  == rocm environment ==
+    location       /var/lib/openmycelium/state/env/rocm
+    already usable AMD Radeon RX 9060 XT (torch 2.10.0+rocm7.0)
+
+{
+  "host": {
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "isWsl": true,
+    "distro": "Ubuntu 24.04.4 LTS",
+    "dxg": true,
+    "kfd": false,
+    "nvidiaSmi": true,
+    "nvidiaGpus": [
+      "NVIDIA GeForce RTX 5060 Ti"
+    ]
+  },
+  "environments": {
+    "cuda": {
+      "python": "/var/lib/openmycelium/state/env/cuda/bin/python",
+      "status": "already-usable",
+      "available": true,
+      "matmulFinite": true,
+      "name": "NVIDIA GeForce RTX 5060 Ti",
+      "runtime": "cuda",
+      "torch": "2.11.0+cu128"
+    },
+    "rocm": {
+      "python": "/var/lib/openmycelium/state/env/rocm/bin/python",
+      "status": "already-usable",
+      "available": true,
+      "matmulFinite": true,
+      "name": "AMD Radeon RX 9060 XT",
+      "runtime": "rocm",
+      "torch": "2.10.0+rocm7.0"
+    },
+    "rocmPrerequisite": {
+      "rocmPython": "/var/lib/openmycelium/state/env/rocm/bin/python",
+      "dxgPresent": true,
+      "kfdPresent": false,
+      "systemRocmPresent": true,
+      "packagesInstalled": true,
+      "systemRuntimeAvailable": true,
+      "gpuQualified": true,
+      "isWsl": true,
+      "torch": "2.10.0+rocm7.0",
+      "hip": "7.0.51831",
+      "torchLibDir": "/var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib",
+      "identity": {
+        "wslDistro": "om-clean2",
+        "rocmPython": "/var/lib/openmycelium/state/env/rocm/bin/python",
+        "stateDir": "/var/lib/openmycelium/state",
+        "torchVersion": "2.10.0+rocm7.0",
+        "torchLibSha256": "c13a873d6444aa9c32d846feaa888de2108a5ed3c15f8a1b7708c5742a894e81",
+        "rocmSystemVersion": "7.2.0",
+        "amdPciId": 4,
+        "deviceName": "AMD Radeon RX 9060 XT"
+      },
+      "activeHsaRuntime": {
+        "path": "/var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.1",
+        "flavor": "dxcore",
+        "kfdReferences": 1,
+        "dxcoreReferences": 2,
+        "bytes": 1439536,
+        "sha256": "83bedf380844ae17f12ab231f2abb69a6cc91c90a5d9adafbe74875aafadd819",
+        "source": "system-provided"
+      },
+      "systemHsaRuntime": {
+        "path": "/opt/rocm-7.2.0/lib/libhsa-runtime64.so.1.18.70200",
+        "flavor": "dxcore",
+        "kfdReferences": 1,
+        "dxcoreReferences": 2,
+        "bytes": 1439536,
+        "sha256": "83bedf380844ae17f12ab231f2abb69a6cc91c90a5d9adafbe74875aafadd819"
+      },
+      "deviceName": "AMD Radeon RX 9060 XT",
+      "state": "qualified"
+    },
+    "rocmLastQualified": {
+      "rocmPython": "/var/lib/openmycelium/state/env/rocm/bin/python",
+      "dxgPresent": true,
+      "kfdPresent": false,
+      "systemRocmPresent": true,
+      "packagesInstalled": true,
+      "systemRuntimeAvailable": true,
+      "gpuQualified": true,
+      "isWsl": true,
+      "torch": "2.10.0+rocm7.0",
+      "hip": "7.0.51831",
+      "torchLibDir": "/var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib",
+      "identity": {
+        "wslDistro": "om-clean2",
+        "rocmPython": "/var/lib/openmycelium/state/env/rocm/bin/python",
+        "stateDir": "/var/lib/openmycelium/state",
+        "torchVersion": "2.10.0+rocm7.0",
+        "torchLibSha256": "c13a873d6444aa9c32d846feaa888de2108a5ed3c15f8a1b7708c5742a894e81",
+        "rocmSystemVersion": "7.2.0",
+        "amdPciId": 4,
+        "deviceName": "AMD Radeon RX 9060 XT"
+      },
+      "activeHsaRuntime": {
+        "path": "/var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.1",
+        "flavor": "dxcore",
+        "kfdReferences": 1,
+        "dxcoreReferences": 2,
+        "bytes": 1439536,
+        "sha256": "83bedf380844ae17f12ab231f2abb69a6cc91c90a5d9adafbe74875aafadd819",
+        "source": "system-provided"
+      },
+      "systemHsaRuntime": {
+        "path": "/opt/rocm-7.2.0/lib/libhsa-runtime64.so.1.18.70200",
+        "flavor": "dxcore",
+        "kfdReferences": 1,
+        "dxcoreReferences": 2,
+        "bytes": 1439536,
+        "sha256": "83bedf380844ae17f12ab231f2abb69a6cc91c90a5d9adafbe74875aafadd819"
+      },
+      "deviceName": "AMD Radeon RX 9060 XT",
+      "state": "qualified"
+    }
+  }
+}
+
+  next:  openmycelium doctor
+

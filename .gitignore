@@ -33,3 +33,6 @@ dist/
 # lock; the lock and its checksums are what matter and stay tracked.
 release/wheelhouse/**/*.whl
 release/wheelhouse/**/*.tar.gz
+
+# Wheel build scratch. The staged tree is a duplicate of runtime/ and packaging/.
+.build-*-temp/
