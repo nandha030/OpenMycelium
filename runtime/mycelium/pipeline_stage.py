@@ -11,7 +11,7 @@ pinned host -> device. Device memory is never handed to the socket, for the
 reason established by measurement: ROCm-for-WSL device memory faults on any CPU
 access, so anything that memcpys into it segfaults.
 
-Framing reuses `hetccl.xvendor.ActivationHeader`, so shape and dtype travel with
+Framing reuses `mccl.xvendor.ActivationHeader`, so shape and dtype travel with
 each transfer and are validated on arrival rather than assumed.
 
 Weights are derived from a per-tensor CRC32 seed, so both stages and the
@@ -32,9 +32,9 @@ import zlib
 from dataclasses import dataclass
 from typing import Any
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hetccl", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mccl", "src"))
 
-from hetccl.xvendor import ActivationHeader, TransferMetrics, TransportError  # noqa: E402
+from mccl.xvendor import ActivationHeader, TransferMetrics, TransportError  # noqa: E402
 
 _TORCH_TO_TAG = {
     "torch.float16": "f16", "torch.bfloat16": "bf16",

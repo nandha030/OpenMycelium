@@ -1,13 +1,17 @@
 # OpenMycelium research and invention package
 
 This directory contains the publication-oriented description of the Mycelium
-placement algorithm and HetCCL runtime contract.
+placement algorithm and MCCL runtime contract.
 
 ## Deliverables
 
-- `OPENMYCELIUM_MYCELIUM_HETCCL_IEEE_MANUSCRIPT.md`: editable source
-- `artifacts/OpenMycelium_Mycelium_HetCCL_IEEE_Manuscript.docx`: polished Word manuscript
-- `artifacts/OpenMycelium_Mycelium_HetCCL_IEEE_Manuscript.pdf`: publication PDF
+- `OPENMYCELIUM_MYCELIUM_MCCL_IEEE_MANUSCRIPT.md`: editable source
+- `artifacts/OpenMycelium_Mycelium_MCCL_IEEE_Manuscript.docx`: polished Word manuscript
+- `artifacts/OpenMycelium_Mycelium_MCCL_IEEE_Manuscript.pdf`: publication PDF
+
+The `artifacts/legacy/` directory preserves the pre-rename HetCCL-branded
+artifacts as historical records. They are not current OpenMycelium outputs and
+must not be relabeled as MCCL builds.
 - `assets/openmycelium_architecture.png`: architecture figure
 - `assets/mycelium_decision_flow.png`: evidence-gated algorithm figure
 - `build_paper.py`: reproducible document and diagram builder

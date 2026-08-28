@@ -1,0 +1,22 @@
+{
+  "allocatedBytes": 85983232,
+  "available": true,
+  "buildVendor": "rocm",
+  "capability": "12.0",
+  "cudaVersion": null,
+  "deviceCount": 1,
+  "deviceName": "AMD Radeon RX 9060 XT",
+  "expect": "rocm",
+  "freeBytes": 16891256832,
+  "hipVersion": "7.0.51831",
+  "matmulFinite": true,
+  "matmulMeanAbs": 25.5,
+  "operandDevice": "cuda:0",
+  "qualified": true,
+  "ranOnDevice": true,
+  "resultDevice": "cuda:0",
+  "resultDtype": "torch.bfloat16",
+  "torchVersion": "2.10.0+rocm7.0",
+  "totalBytes": 16974905344,
+  "vendorMatchesExpectation": true
+}

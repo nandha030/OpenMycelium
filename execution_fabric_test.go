@@ -72,35 +72,35 @@ func TestMixedVendorDirectTransportFailsClosedWithoutQualification(t *testing.T)
 	}
 }
 
-func TestPortableHetCCLTransportIsExecutableWithoutRDMA(t *testing.T) {
+func TestPortableMCCLTransportIsExecutableWithoutRDMA(t *testing.T) {
 	nodes := []ClusterNode{
 		fabricTestNode("nvidia-1", "NVIDIA", "cuda", "A100", "nvidia.com/gpu", 1, NodeFabricStatus{Backends: []string{"nccl"}}),
 		fabricTestNode("amd-1", "AMD", "rocm", "MI250", "amd.com/gpu", 1, NodeFabricStatus{Backends: []string{"rccl"}}),
 	}
 	request := fabricTestRequest()
-	request.PreferredTransport = "hetccl-tcp"
-	plan, err := buildExecutionPlan("exec-portable-hetccl", request, nodes, nil)
+	request.PreferredTransport = "mccl-tcp"
+	plan, err := buildExecutionPlan("exec-portable-mccl", request, nodes, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !plan.Executable || plan.Transport != "hetccl-tcp" || plan.TransportStatus != "ready" {
-		t.Fatalf("portable HetCCL must remain executable without direct RDMA claims: %#v", plan)
+	if !plan.Executable || plan.Transport != "mccl-tcp" || plan.TransportStatus != "ready" {
+		t.Fatalf("portable MCCL must remain executable without direct RDMA claims: %#v", plan)
 	}
 	if !strings.Contains(strings.Join(plan.Warnings, " "), "host memory") {
-		t.Fatalf("portable HetCCL must disclose host staging: %#v", plan.Warnings)
+		t.Fatalf("portable MCCL must disclose host staging: %#v", plan.Warnings)
 	}
 	request.RequireRDMA = true
-	blocked, err := buildExecutionPlan("exec-portable-hetccl-rdma", request, nodes, nil)
+	blocked, err := buildExecutionPlan("exec-portable-mccl-rdma", request, nodes, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if blocked.Executable || blocked.TransportStatus != "blocked" {
-		t.Fatalf("portable HetCCL must not satisfy an RDMA requirement: %#v", blocked)
+		t.Fatalf("portable MCCL must not satisfy an RDMA requirement: %#v", blocked)
 	}
 }
 
-func TestQualifiedHetCCLPlanAndProfileWeightedPlacement(t *testing.T) {
-	qualified := NodeFabricStatus{RDMA: true, Qualified: true, Backends: []string{"hetccl", "ucx"}}
+func TestQualifiedMCCLPlanAndProfileWeightedPlacement(t *testing.T) {
+	qualified := NodeFabricStatus{RDMA: true, Qualified: true, Backends: []string{"mccl", "ucx"}}
 	nodes := []ClusterNode{
 		fabricTestNode("nvidia-1", "NVIDIA", "cuda", "A100", "nvidia.com/gpu", 1, qualified),
 		fabricTestNode("amd-1", "AMD", "rocm", "MI250", "amd.com/gpu", 1, qualified),
@@ -110,7 +110,7 @@ func TestQualifiedHetCCLPlanAndProfileWeightedPlacement(t *testing.T) {
 		{Vendor: "amd", Runtime: "rocm", Model: "MI250", Precision: "bf16", TokensPerSecond: 100, MemoryGiB: 128, Source: "measured"},
 	}
 	request := fabricTestRequest()
-	request.PreferredTransport = "hetccl"
+	request.PreferredTransport = "mccl"
 	request.RequireRDMA = true
 	request.ZeroStage = 2
 	request.VendorImages = map[string]string{"nvidia": "trainer:cuda", "amd": "trainer:rocm"}
@@ -118,7 +118,7 @@ func TestQualifiedHetCCLPlanAndProfileWeightedPlacement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !plan.Executable || plan.Transport != "hetccl" || plan.Parallel.Mode != "heterogeneous-zero" {
+	if !plan.Executable || plan.Transport != "mccl" || plan.Parallel.Mode != "heterogeneous-zero" {
 		t.Fatalf("unexpected qualified plan: %#v", plan)
 	}
 	placements := map[string]ExecutionGroup{}

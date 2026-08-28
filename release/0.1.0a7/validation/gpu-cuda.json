@@ -1,0 +1,22 @@
+{
+  "allocatedBytes": 14811136,
+  "available": true,
+  "buildVendor": "cuda",
+  "capability": "12.0",
+  "cudaVersion": "12.8",
+  "deviceCount": 1,
+  "deviceName": "NVIDIA GeForce RTX 5060 Ti",
+  "expect": "cuda",
+  "freeBytes": 15894315008,
+  "hipVersion": null,
+  "matmulFinite": true,
+  "matmulMeanAbs": 25.5,
+  "operandDevice": "cuda:0",
+  "qualified": true,
+  "ranOnDevice": true,
+  "resultDevice": "cuda:0",
+  "resultDtype": "torch.bfloat16",
+  "torchVersion": "2.11.0+cu128",
+  "totalBytes": 17102864384,
+  "vendorMatchesExpectation": true
+}

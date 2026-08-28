@@ -1,0 +1,42 @@
+{
+  "configFile": null,
+  "configuration": {
+    "cuda_python": {
+      "source": "default",
+      "value": ""
+    },
+    "ledger": {
+      "source": "default",
+      "value": "/var/lib/openmycelium/xvendor_qualification.json"
+    },
+    "model_store": {
+      "source": "default",
+      "value": "/var/lib/openmycelium/models"
+    },
+    "rocm_python": {
+      "source": "default",
+      "value": ""
+    },
+    "state_dir": {
+      "source": "default",
+      "value": "/var/lib/openmycelium/state"
+    },
+    "wsl_distro": {
+      "source": "default",
+      "value": "Ubuntu-24.04"
+    }
+  },
+  "eventSchemaVersion": 1,
+  "gitCommit": null,
+  "installedContentSha256": "ff402ba4ed7f1e81f8d75c94492fddc25df46771b8f1b98a4274881287dbbe08",
+  "mcclActivationProtocol": 1,
+  "mcclCollectiveProtocol": 1,
+  "mcclVersion": "0.2.0a2",
+  "openmycelium": "0.1.0a6",
+  "packageLocation": "/opt/om/venv/lib/python3.12/site-packages/openmycelium",
+  "placementSchemaVersion": 1,
+  "python": "3.12.3",
+  "pythonExecutable": "/opt/om/venv/bin/python3",
+  "pythonFiles": 45,
+  "transport": "host-staged-xvendor"
+}

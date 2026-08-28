@@ -1,0 +1,14 @@
+{
+  "available": false,
+  "buildVendor": "rocm",
+  "cudaVersion": null,
+  "deviceCount": 0,
+  "deviceName": "",
+  "expect": "rocm",
+  "hipVersion": "7.0.51831",
+  "matmulFinite": false,
+  "qualified": false,
+  "ranOnDevice": false,
+  "torchVersion": "2.10.0+rocm7.0",
+  "vendorMatchesExpectation": true
+}

@@ -52,7 +52,7 @@ type LabTopology struct {
 	RDMA          bool             `json:"rdma"`
 	GPUDirect     bool             `json:"gpuDirect"`
 	DirectGMA     bool             `json:"directGma"`
-	HetCCL        bool             `json:"hetccl"`
+	MCCL        bool             `json:"mccl"`
 	DeviceDirect  bool             `json:"deviceDirect"`
 	FaultScenario string           `json:"faultScenario"`
 }
@@ -358,8 +358,8 @@ func simulateLab(request LabSimulationRequest) (LabSimulationResult, error) {
 	for index, group := range request.Topology.Groups {
 		fabric := NodeFabricStatus{RDMA: request.Topology.RDMA, GPUDirect: request.Topology.GPUDirect, DirectGMA: request.Topology.DirectGMA, Qualified: false, Qualification: "simulated topology; hardware evidence required"}
 		fabric.Backends = []string{nativeBackend(group.Runtime)}
-		if request.Topology.HetCCL {
-			fabric.Backends = append(fabric.Backends, "hetccl")
+		if request.Topology.MCCL {
+			fabric.Backends = append(fabric.Backends, "mccl")
 		}
 		if request.Topology.DeviceDirect {
 			fabric.Backends = append(fabric.Backends, "device-direct")
@@ -407,7 +407,7 @@ func simulateLab(request LabSimulationRequest) (LabSimulationResult, error) {
 		comm = append(comm, LabCommunicationEstimate{Transport: name, AllReduceMS: math.Round(seconds*100000) / 100, EffectiveGBps: math.Round(gbps*100) / 100, HostStagingGiB: staging, Relative: 0, Evidence: evidence})
 	}
 	addComm("cpu-forwarding", .55, request.PayloadGiB*2, "simulated")
-	addComm("hetccl", .82, 0, "awaiting-qualification")
+	addComm("mccl", .82, 0, "awaiting-qualification")
 	addComm("device-direct", .90, 0, "awaiting-qualification")
 	baseline := comm[0].AllReduceMS
 	for i := range comm {

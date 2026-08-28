@@ -11,8 +11,8 @@
 __pycache__/
 *.pyc
 *.egg-info/
-runtime/hetccl/build/
-runtime/hetccl/dist/
+runtime/mccl/build/
+runtime/mccl/dist/
 *.exe
 .openmycelium-state.json
 .openmycelium/
@@ -24,3 +24,12 @@ dist/
 
 # One-off diagnostics kept locally; not part of the reproducibility set.
 scripts/scratch/
+
+# Release build outputs. The canonical copies live under release/<version>/.
+dist/
+
+# The verified wheelhouse holds 8.6 GB of third-party wheels, several of them
+# larger than GitHub's 100 MB file limit. The bytes are reproducible from the
+# lock; the lock and its checksums are what matter and stay tracked.
+release/wheelhouse/**/*.whl
+release/wheelhouse/**/*.tar.gz

@@ -88,8 +88,8 @@ func nodeFabricStatus(node corev1.Node, accelerators []NodeAccelerator) NodeFabr
 		status.DirectGMA = true
 		status.Sources = append(status.Sources, source)
 	}
-	if enabled, source := truthyLabel(node.Labels, "openmycelium.io/hetccl"); enabled {
-		backends["hetccl"] = true
+	if enabled, source := truthyLabel(node.Labels, "openmycelium.io/mccl"); enabled {
+		backends["mccl"] = true
 		status.Sources = append(status.Sources, source)
 	}
 	if enabled, source := truthyLabel(node.Labels, "openmycelium.io/device-direct"); enabled {

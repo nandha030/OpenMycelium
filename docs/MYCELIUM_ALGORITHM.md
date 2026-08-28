@@ -59,7 +59,7 @@ the failure and recommends ZeRO, checkpointing, offload, or more devices.
 
 The first release evaluates admissible data, pipeline and ZeRO contracts.
 Host-forwarded mixed-vendor plans remain pipeline-oriented. A qualified
-HetCCL or device-direct adapter permits collective data/ZeRO candidates. The
+MCCL or device-direct adapter permits collective data/ZeRO candidates. The
 selected candidate maximizes one of:
 
 - `throughput`: predicted tokens per second after transport and imbalance cost
@@ -97,15 +97,15 @@ CPU-forwarded all-reduce. It stages accelerator tensors in pinned host memory,
 uses a common CPU collective, and copies the result back. CUDA and ROCm worker
 images can therefore participate in one correctness-oriented baseline.
 
-`runtime/hetccl` adds an installable `hetccl-tcp` transport with a typed,
+`runtime/mccl` adds an installable `mccl-tcp` transport with a typed,
 sequence-safe TCP coordinator and a PyTorch host-staging bridge. This transport
 is executable without RDMA and is separately named so it cannot be confused
-with the optimized device-direct HetCCL path.
+with the optimized device-direct MCCL path.
 
 ## Transport boundary
 
 Mycelium does not create coherent memory across unrelated accelerators.
-`hetccl` and `device-direct` are direct native plug-in contracts and stay blocked
+`mccl` and `device-direct` are direct native plug-in contracts and stay blocked
 unless every selected node advertises the adapter and a qualified RDMA path.
 Paper-level direct-transfer performance requires a separately built and
 hardware-validated C++/CUDA/HIP/RDMA collective library.

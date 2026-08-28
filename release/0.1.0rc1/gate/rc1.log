@@ -1,0 +1,40 @@
+0.1.0rc1 gate 2026-08-28T12:09:44+00:00
+
+  == install RC1 from its own wheel ==
+  [PASS] frozen wheels match their recorded SHA-256
+  [PASS] installed
+  [PASS] installed content equals the frozen RC1 build
+
+  == doctor ==
+  [PASS] doctor reports no failures
+
+  == fabric ==
+  [PASS] fabric list
+  [PASS] both accelerators enumerated
+
+  == model verify and plan ==
+  [PASS] model verify
+  [PASS] plan
+  [PASS] exclusive 181/182 tensor ownership
+
+  == dual-GPU run ==
+  [PASS] openmycelium run
+
+  == multi-turn chat ==
+  [PASS] openmycelium chat
+
+  == byte-exact boundary qualification ==
+  [PASS] boundary is byte-exact
+
+  == audit trail replay ==
+  [PASS] audit trail replays and validates
+
+  0 check(s) failed before serve
+  [PASS] OpenAI SDK available
+  [PASS] serve reached ready
+  [PASS] OpenAI SDK: discovery, non-streaming, streaming, sampling refusal
+  [PASS] openmycelium stop
+  [PASS] zero orphan workers
+  [PASS] VRAM released
+
+  0 check(s) failed in the serve gate

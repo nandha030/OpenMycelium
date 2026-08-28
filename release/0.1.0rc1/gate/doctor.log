@@ -1,0 +1,12 @@
+
+  openmycelium doctor
+
+  [PASS] cuda   NVIDIA GeForce RTX 5060 Ti   15.93 GiB, 14.80 free  (torch 2.11.0+cu128, cuda build)
+  [PASS] rocm   AMD Radeon RX 9060 XT        15.81 GiB, 15.73 free  (torch 2.10.0+rocm7.0, rocm build)
+  [PASS] wsl    /dev/dxg present
+  [PASS] models 1 imported, 905.2 GiB free on the Linux filesystem
+         - Mistral-Nemo-Instruct-2407
+  [PASS] ledger /var/lib/openmycelium/xvendor_qualification.json present
+
+  ready
+

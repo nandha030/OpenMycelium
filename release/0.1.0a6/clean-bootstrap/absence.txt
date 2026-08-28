@@ -1,0 +1,15 @@
+observed at 2026-08-28T03:34:53+00:00
+
+state directory:
+total 12
+drwxr-xr-x 3 root root 4096 Aug 28 03:00 .
+drwxr-xr-x 3 root root 4096 Aug 28 03:00 ..
+drwxr-xr-x 5 root root 4096 Aug 28 03:00 cuda
+
+cuda: interpreter present at /var/lib/openmycelium/state/env/cuda/bin/python
+    created 2026-08-28 03:00:30.960885649 +0000
+rocm: ABSENT -- /var/lib/openmycelium/state/env/rocm does not exist
+
+distribution root filesystem created:
+  / 2026-08-28 02:58:43.000000000 +0000
+  oldest file in /var/lib/openmycelium: 2026-08-28+03:00:30.9408867980

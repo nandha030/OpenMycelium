@@ -27,9 +27,9 @@ import sys
 import time
 from typing import Any, Optional
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hetccl", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mccl", "src"))
 
-from hetccl.collective_frame import (  # noqa: E402
+from mccl.collective_frame import (  # noqa: E402
     AllGatherAssembler,
     CollectiveError,
     CollectiveFrame,
@@ -37,7 +37,7 @@ from hetccl.collective_frame import (  # noqa: E402
     ConnectionMultiplexer,
     StaleFrameError,
 )
-from hetccl.xvendor import QualificationLedger, TransportError  # noqa: E402
+from mccl.xvendor import QualificationLedger, TransportError  # noqa: E402
 
 LEDGER = os.environ.get("OM_XVENDOR_LEDGER", "/opt/xvendor_qualification.json")
 _TORCH_NAME = {"f16": "float16", "bf16": "bfloat16", "f32": "float32",

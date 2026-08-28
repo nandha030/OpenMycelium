@@ -6,7 +6,7 @@ still cannot address each other's memory, so the request is split at the only
 place where a clean handoff exists.
 
     prefill stage   run the prompt, produce the KV cache          (device A)
-    transfer        cache -> pinned host -> HetCCL broker -> host (network)
+    transfer        cache -> pinned host -> MCCL broker -> host (network)
     decode stage    load the cache, generate tokens               (device B)
 
 The KV cache is the natural cut point: it is produced once, consumed many
@@ -171,7 +171,7 @@ def resolve_device(vendor: str, torch: Any) -> tuple[str, str]:
 
 
 def cache_descriptor(cache: Any, config: ModelConfig, vendor: str, cache_id: str) -> Any:
-    from hetccl.kvcache import KVCacheDescriptor  # noqa: PLC0415
+    from mccl.kvcache import KVCacheDescriptor  # noqa: PLC0415
 
     return KVCacheDescriptor(
         cache_id=cache_id,
@@ -209,7 +209,7 @@ def main() -> int:
         report["tokens"] = decode(cache, hidden, args.steps, config, weights, device, torch)
         report["cacheBytes"] = cache.numel() * 4
     elif args.role == "prefill":
-        from hetccl.kvcache import KVCacheClient  # noqa: PLC0415
+        from mccl.kvcache import KVCacheClient  # noqa: PLC0415
 
         cache, hidden = prefill(tokens, config, weights, device, torch)
         # Leaving the device is the whole point: the cache is staged into host
@@ -217,7 +217,7 @@ def main() -> int:
         host_cache = cache.detach().to("cpu").contiguous()
         payload = host_cache.numpy().tobytes()
         descriptor = cache_descriptor(host_cache, config, args.vendor, args.cache_id)
-        client = KVCacheClient(args.broker_host, args.broker_port, auth_token=os.environ.get("HETCCL_KV_AUTH_TOKEN", ""))
+        client = KVCacheClient(args.broker_host, args.broker_port, auth_token=os.environ.get("MCCL_KV_AUTH_TOKEN", ""))
         report["checksum"] = client.put(descriptor, payload)
         report["cacheBytes"] = len(payload)
         report["lastToken"] = tokens[-1]
@@ -225,9 +225,9 @@ def main() -> int:
         # router carries it on the control path beside the cache transfer.
         report["lastHidden"] = hidden.detach().to("cpu").reshape(-1).tolist()
     else:
-        from hetccl.kvcache import KVCacheClient  # noqa: PLC0415
+        from mccl.kvcache import KVCacheClient  # noqa: PLC0415
 
-        client = KVCacheClient(args.broker_host, args.broker_port, auth_token=os.environ.get("HETCCL_KV_AUTH_TOKEN", ""))
+        client = KVCacheClient(args.broker_host, args.broker_port, auth_token=os.environ.get("MCCL_KV_AUTH_TOKEN", ""))
         record = client.get(args.cache_id)
         hidden_values = json.loads(os.environ["DEMO_LAST_HIDDEN"])
         cache = torch.frombuffer(bytearray(record.payload), dtype=torch.float32).reshape(record.descriptor.shape)

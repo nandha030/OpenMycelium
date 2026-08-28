@@ -23,9 +23,9 @@ import subprocess
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hetccl", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mccl", "src"))
 
-from hetccl.xvendor import (  # noqa: E402
+from mccl.xvendor import (  # noqa: E402
     DEFAULT_CHUNK,
     DEFAULT_SLOTS,
     QualificationLedger,

@@ -2,7 +2,7 @@
 
 This module intentionally imports PyTorch lazily. It can be included in CUDA
 and ROCm training images while OpenMycelium uses Gloo as the common host-side
-collective backend. Direct HetCCL and RDMA transports remain native adapters.
+collective backend. Direct MCCL and RDMA transports remain native adapters.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ class RuntimeConfig:
             raise ValueError("an OpenMycelium execution plan is required")
         if self.algorithm != "Mycelium":
             raise ValueError(f"unsupported execution algorithm: {self.algorithm}")
-        if self.transport not in {"gloo", "cpu-forwarding", "hetccl", "hetccl-tcp", "device-direct", "nccl", "rccl", "oneccl"}:
+        if self.transport not in {"gloo", "cpu-forwarding", "mccl", "mccl-tcp", "device-direct", "nccl", "rccl", "oneccl"}:
             raise ValueError(f"unsupported execution transport: {self.transport}")
         if self.world_size < 1 or self.rank < 0 or self.rank >= self.world_size:
             raise ValueError("computed rank is outside OPENMYCELIUM_WORLD_SIZE")
@@ -163,8 +163,8 @@ class CPUForwardedCollective:
             distributed.destroy_process_group()
 
 
-class HetCCLForwardedCollective:
-    """PyTorch bridge to the portable HetCCL host-staged backend.
+class MCCLForwardedCollective:
+    """PyTorch bridge to the portable MCCL host-staged backend.
 
     This path is functional across vendor-specific PyTorch builds, but moves
     tensor values through host memory. It is a qualification and compatibility
@@ -173,15 +173,15 @@ class HetCCLForwardedCollective:
 
     def __init__(self, config: Optional[RuntimeConfig] = None, torch_module: Any = None, client: Any = None):
         self.config = config or RuntimeConfig.from_environment()
-        if self.config.transport not in {"hetccl", "hetccl-tcp"}:
-            raise ValueError("HetCCLForwardedCollective requires a HetCCL transport")
+        if self.config.transport not in {"mccl", "mccl-tcp"}:
+            raise ValueError("MCCLForwardedCollective requires a MCCL transport")
         self._torch = torch_module
         if client is None:
             try:
-                from hetccl import HetCCLCollective
+                from mccl import MCCLCollective
             except ImportError as error:
-                raise RuntimeError("install openmycelium-hetccl in the workload image") from error
-            client = HetCCLCollective()
+                raise RuntimeError("install openmycelium-mccl in the workload image") from error
+            client = MCCLCollective()
         self._client = client
 
     @property
@@ -199,11 +199,11 @@ class HetCCLForwardedCollective:
 
     def all_reduce(self, tensor: Any, op: Any = None, async_op: bool = False) -> Any:
         if async_op:
-            raise ValueError("portable HetCCL does not expose asynchronous PyTorch work handles")
+            raise ValueError("portable MCCL does not expose asynchronous PyTorch work handles")
         if op is not None:
-            raise ValueError("portable HetCCL PyTorch bridge currently supports SUM only")
+            raise ValueError("portable MCCL PyTorch bridge currently supports SUM only")
         host = tensor.detach().to(device="cpu").contiguous()
-        dtype = _hetccl_dtype(self.torch, host.dtype)
+        dtype = _mccl_dtype(self.torch, host.dtype)
         result = self._client.all_reduce(host.reshape(-1).tolist(), dtype=dtype, reduction="sum")
         reduced = self.torch.tensor(result, dtype=host.dtype).reshape(host.shape)
         tensor.copy_(reduced.to(device=tensor.device), non_blocking=True)
@@ -217,7 +217,7 @@ class HetCCLForwardedCollective:
         return None
 
 
-def _hetccl_dtype(torch_module: Any, dtype: Any) -> str:
+def _mccl_dtype(torch_module: Any, dtype: Any) -> str:
     mapping = {
         torch_module.float32: "f32",
         torch_module.float64: "f64",
@@ -227,7 +227,7 @@ def _hetccl_dtype(torch_module: Any, dtype: Any) -> str:
     try:
         return mapping[dtype]
     except KeyError as error:
-        raise ValueError("portable HetCCL supports float32, float64, int32, and int64 tensors") from error
+        raise ValueError("portable MCCL supports float32, float64, int32, and int64 tensors") from error
 
 
 def _synchronize_device(tensor: Any) -> None:

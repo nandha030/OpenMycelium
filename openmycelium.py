@@ -154,7 +154,7 @@ def add_resource_commands(sub):
     fabric_execution_plan.add_argument("--kind", choices=["training", "finetuning", "inference"], default="training")
     fabric_execution_plan.add_argument("--zero-stage", type=int, choices=[0, 1, 2, 3], default=0)
     fabric_execution_plan.add_argument("--max-devices", type=int, default=64)
-    fabric_execution_plan.add_argument("--transport", choices=["auto", "hetccl-tcp", "hetccl", "device-direct", "gloo"], default="auto")
+    fabric_execution_plan.add_argument("--transport", choices=["auto", "mccl-tcp", "mccl", "device-direct", "gloo"], default="auto")
     fabric_execution_plan.add_argument("--require-rdma", action="store_true")
     fabric_execution_plan.add_argument("--allow-cpu-fallback", action="store_true")
     fabric_execution_plan.add_argument("--dynamic-microbatch", action="store_true")

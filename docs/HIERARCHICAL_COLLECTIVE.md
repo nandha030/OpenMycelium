@@ -8,16 +8,16 @@ across NVIDIA and AMD groups without a cross-vendor communicator.
 NCCL and RCCL are not wire-compatible. RCCL is a source-level fork of NCCL's
 API, not of its transport, and neither library exposes a documented wire
 protocol that a third implementation could join. An NVIDIA rank and an AMD rank
-therefore cannot share one communicator, and HetCCL cannot "speak NCCL".
+therefore cannot share one communicator, and MCCL cannot "speak NCCL".
 
 What is achievable is composition. Each vendor reduces internally with its own
 native library, and only the group leaders cross the boundary, carrying host
-memory over HetCCL's portable TCP transport:
+memory over MCCL's portable TCP transport:
 
 ```
   1. reduce    NCCL across the NVIDIA group      -> NVIDIA partial
                RCCL across the AMD group         -> AMD partial
-  2. bridge    leaders exchange partials over HetCCL host-staged TCP
+  2. bridge    leaders exchange partials over MCCL host-staged TCP
   3. fan-out   each leader broadcasts the global result down its own group
 ```
 
@@ -71,10 +71,10 @@ bitwise identical to a flat one. The harness asserts within `1e-6`.
 
 ## Running it
 
-Start a HetCCL coordinator, then launch one process per rank:
+Start a MCCL coordinator, then launch one process per rank:
 
 ```bash
-hetccl serve --host 127.0.0.1 --port 29500 &
+mccl serve --host 127.0.0.1 --port 29500 &
 cd runtime
 python -m mycelium.launch_hierarchy --topology cpu:2,cpu:2 -- \
     python -m mycelium.hierarchy_check
@@ -89,7 +89,7 @@ exits non-zero on any mismatch, so the launcher's exit code gates CI.
 
 A single-group job reduces entirely inside its own vendor group and never
 contacts the coordinator; bridging one group to itself is a no-op. Only
-`group_count > 1` engages HetCCL. This keeps homogeneous NVIDIA-only or
+`group_count > 1` engages MCCL. This keeps homogeneous NVIDIA-only or
 AMD-only jobs independent of cross-vendor infrastructure.
 
 `scripts/wsl_bridge_is_load_bearing.sh` asserts both halves of that claim by
@@ -112,7 +112,7 @@ RTX 5060 Ti (Blackwell, sm_120).
 |---|---|---|
 | Topology, leader election, backend choice | 21 unit tests, no PyTorch needed | passing |
 | Multi-group hierarchy on CPU | reduce, bridge, and fan-out compose correctly | passing, 2 and 3 groups, even and uneven |
-| Bridge is load-bearing | cross-group payload really travels over HetCCL | passing |
+| Bridge is load-bearing | cross-group payload really travels over MCCL | passing |
 | CUDA group with a real device | GPU tensor staged across the bridge and back | passing, `cuda:1,cpu:2` |
 | CUDA group standalone | an NVIDIA-only job needs no coordinator | passing, `cuda:1` |
 | Multi-GPU NCCL reduce | NCCL's own collective across ranks | **not validated** — needs 2+ NVIDIA GPUs |

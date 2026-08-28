@@ -18,8 +18,8 @@ cat "$OM_XVENDOR_LEDGER" 2>/dev/null | head -30
 
 echo
 echo "=== fail-closed check: an unqualified direction must be refused ==="
-PYTHONPATH="$S/runtime/hetccl/src" /opt/hetenv/bin/python - <<'PY'
-from hetccl.xvendor import QualificationLedger, TransportError
+PYTHONPATH="$S/runtime/mccl/src" /opt/hetenv/bin/python - <<'PY'
+from mccl.xvendor import QualificationLedger, TransportError
 led = QualificationLedger.load("/opt/xvendor_qualification.json")
 print("  qualified directions:", led.directions())
 for a, b in (("cuda", "rocm"), ("rocm", "cuda"), ("cuda", "oneapi")):

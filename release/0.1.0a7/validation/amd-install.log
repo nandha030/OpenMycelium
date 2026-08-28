@@ -1,0 +1,11 @@
+Selecting previously unselected package rocm-core.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 47814 files and directories currently installed.)
+Preparing to unpack .../rocm-core_7.2.0.70200-43~24.04_amd64.deb ...
+Unpacking rocm-core (7.2.0.70200-43~24.04) ...
+Selecting previously unselected package hsa-runtime-rocr4wsl-amdgpu:amd64.
+Preparing to unpack .../hsa-runtime-rocr4wsl-amdgpu_25.30.13-2281980.24.04_amd64.deb ...
+Unpacking hsa-runtime-rocr4wsl-amdgpu:amd64 (25.30.13-2281980.24.04) ...
+Setting up rocm-core (7.2.0.70200-43~24.04) ...
+update-alternatives: using /opt/rocm-7.2.0 to provide /opt/rocm (rocm) in auto mode
+Setting up hsa-runtime-rocr4wsl-amdgpu:amd64 (25.30.13-2281980.24.04) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.8) ...

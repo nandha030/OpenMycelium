@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mccl-coordinator
+  namespace: openmycelium-system
+  labels:
+    app.kubernetes.io/name: mccl-coordinator
+    app.kubernetes.io/managed-by: openmycelium
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mccl-coordinator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mccl-coordinator
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: coordinator
+          image: openmycelium/mccl:0.2.0
+          args: ["serve", "--host", "0.0.0.0", "--port", "29500"]
+          ports:
+            - name: collective
+              containerPort: 29500
+          readinessProbe:
+            tcpSocket:
+              port: collective
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mccl-coordinator
+  namespace: openmycelium-system
+spec:
+  selector:
+    app.kubernetes.io/name: mccl-coordinator
+  ports:
+    - name: collective
+      port: 29500
+      targetPort: collective

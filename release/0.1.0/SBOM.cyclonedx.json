@@ -1,0 +1,2563 @@
+{
+  "bomFormat": "CycloneDX",
+  "components": [
+    {
+      "description": "OpenMycelium first-party artifact",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4e4bde2fc1d3637cc8e04dc499c6b0fc6a0677bf611806eef829b147cd11bdc9"
+        }
+      ],
+      "name": "openmycelium",
+      "properties": [
+        {
+          "name": "file",
+          "value": "openmycelium-0.1.0-py3-none-any.whl"
+        }
+      ],
+      "purl": "pkg:pypi/openmycelium@0.1.0",
+      "type": "library",
+      "version": "0.1.0"
+    },
+    {
+      "description": "OpenMycelium first-party artifact",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ce766054068ab627dc6b6930f562819c70e687fdadf3811dc3ba5eed33243694"
+        }
+      ],
+      "name": "openmycelium_mccl",
+      "properties": [
+        {
+          "name": "file",
+          "value": "openmycelium_mccl-0.2.0a2-py3-none-any.whl"
+        }
+      ],
+      "purl": "pkg:pypi/openmycelium-mccl@0.2.0a2",
+      "type": "library",
+      "version": "0.2.0a2"
+    },
+    {
+      "description": "OpenMycelium first-party artifact",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "da41062e1b54bc3426ba1f8a546f81d7ddb405e4976baf97e3cb3a32e9c11089"
+        }
+      ],
+      "name": "openmycelium_mccl",
+      "properties": [
+        {
+          "name": "file",
+          "value": "openmycelium_mccl-0.2.0a2.tar.gz"
+        }
+      ],
+      "purl": "pkg:pypi/openmycelium-mccl@0.2.0a2.tar.gz",
+      "type": "library",
+      "version": "0.2.0a2.tar.gz"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101"
+        }
+      ],
+      "name": "annotated-doc",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "5302"
+        }
+      ],
+      "purl": "pkg:pypi/annotated-doc@0.0.5",
+      "scope": "required",
+      "type": "library",
+      "version": "0.0.5"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494"
+        }
+      ],
+      "name": "anyio",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "125813"
+        }
+      ],
+      "purl": "pkg:pypi/anyio@4.14.2",
+      "scope": "required",
+      "type": "library",
+      "version": "4.14.2"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
+        }
+      ],
+      "name": "certifi",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "136983"
+        }
+      ],
+      "purl": "pkg:pypi/certifi@2026.7.22",
+      "scope": "required",
+      "type": "library",
+      "version": "2026.7.22"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
+        }
+      ],
+      "name": "click",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "125251"
+        }
+      ],
+      "purl": "pkg:pypi/click@8.5.0",
+      "scope": "required",
+      "type": "library",
+      "version": "8.5.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4c7ef48c5e13ae90f3b2ecfb72f8e99ac43c8f4c43e67e1325b8aae331453687"
+        }
+      ],
+      "name": "cuda-bindings",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "7611059"
+        }
+      ],
+      "purl": "pkg:pypi/cuda-bindings@12.9.7",
+      "scope": "required",
+      "type": "library",
+      "version": "12.9.7"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1503af579d8379c24bdd65528379bc57039b0455be9f5f9686cf8e473a1fce51"
+        }
+      ],
+      "name": "cuda-pathfinder",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "54591"
+        }
+      ],
+      "purl": "pkg:pypi/cuda-pathfinder@1.6.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.6.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "adc7906af4ecbf9a352f9dca5734eceb21daec281ccfcf5675e1d2f724fc2cba"
+        }
+      ],
+      "name": "cuda-toolkit",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "2283"
+        }
+      ],
+      "purl": "pkg:pypi/cuda-toolkit@12.8.1",
+      "scope": "required",
+      "type": "library",
+      "version": "12.8.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f0ca4bcc0e181c60dbbd8aa9ab5b120ebb99e4e064e83636340056f833a1f09"
+        }
+      ],
+      "name": "filelock",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "98901"
+        }
+      ],
+      "purl": "pkg:pypi/filelock@3.32.3",
+      "scope": "required",
+      "type": "library",
+      "version": "3.32.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "22e58ca3b1ae3b98993b762d7338367ae64fe50252bf78d59da3bfebcdf1cedd"
+        }
+      ],
+      "name": "filelock",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "99864"
+        }
+      ],
+      "purl": "pkg:pypi/filelock@3.32.4",
+      "scope": "required",
+      "type": "library",
+      "version": "3.32.4"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b57ddbafedfaef7018c1ecab32aa200a9d7ca26b77965f64e48b70061249d279"
+        }
+      ],
+      "name": "fsspec",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "206583"
+        }
+      ],
+      "purl": "pkg:pypi/fsspec@2026.7.0",
+      "scope": "required",
+      "type": "library",
+      "version": "2026.7.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"
+        }
+      ],
+      "name": "h11",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "37515"
+        }
+      ],
+      "purl": "pkg:pypi/h11@0.16.0",
+      "scope": "required",
+      "type": "library",
+      "version": "0.16.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d62671bb130879cef0ee4c9ebe47a14af6c66ec53e6d84dc15936e5ffdfac82f"
+        }
+      ],
+      "name": "hf-xet",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "4464663"
+        }
+      ],
+      "purl": "pkg:pypi/hf-xet@1.6.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.6.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55"
+        }
+      ],
+      "name": "httpcore",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "78784"
+        }
+      ],
+      "purl": "pkg:pypi/httpcore@1.0.9",
+      "scope": "required",
+      "type": "library",
+      "version": "1.0.9"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad"
+        }
+      ],
+      "name": "httpx",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "73517"
+        }
+      ],
+      "purl": "pkg:pypi/httpx@0.28.1",
+      "scope": "required",
+      "type": "library",
+      "version": "0.28.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b00f7782afc14db4bc6572763810a635bdfbab8623d957bfb553bd18e03852cd"
+        }
+      ],
+      "name": "huggingface-hub",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "795768"
+        }
+      ],
+      "purl": "pkg:pypi/huggingface-hub@1.29.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.29.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "815e7be7a7806d54abb586dc943addc79e8b2ee16915059658cbeff4b1b43bf4"
+        }
+      ],
+      "name": "idna",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "68550"
+        }
+      ],
+      "purl": "pkg:pypi/idna@3.19",
+      "scope": "required",
+      "type": "library",
+      "version": "3.19"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+        }
+      ],
+      "name": "jinja2",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "134899"
+        }
+      ],
+      "purl": "pkg:pypi/jinja2@3.1.6",
+      "scope": "required",
+      "type": "library",
+      "version": "3.1.6"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a"
+        }
+      ],
+      "name": "markdown-it-py",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "91687"
+        }
+      ],
+      "purl": "pkg:pypi/markdown-it-py@4.2.0",
+      "scope": "required",
+      "type": "library",
+      "version": "4.2.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d6dd0be5b5b189d31db7cda48b91d7e0a9795f31430b7f271219ab30f1d3ac9d"
+        }
+      ],
+      "name": "markupsafe",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "22947"
+        }
+      ],
+      "purl": "pkg:pypi/markupsafe@3.0.3",
+      "scope": "required",
+      "type": "library",
+      "version": "3.0.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"
+        }
+      ],
+      "name": "mdurl",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "9979"
+        }
+      ],
+      "purl": "pkg:pypi/mdurl@0.1.2",
+      "scope": "required",
+      "type": "library",
+      "version": "0.1.2"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"
+        }
+      ],
+      "name": "mpmath",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "536198"
+        }
+      ],
+      "purl": "pkg:pypi/mpmath@1.3.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.3.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"
+        }
+      ],
+      "name": "networkx",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "2068504"
+        }
+      ],
+      "purl": "pkg:pypi/networkx@3.6.1",
+      "scope": "required",
+      "type": "library",
+      "version": "3.6.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8"
+        }
+      ],
+      "name": "numpy",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "16722264"
+        }
+      ],
+      "purl": "pkg:pypi/numpy@2.5.2",
+      "scope": "required",
+      "type": "library",
+      "version": "2.5.2"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142"
+        }
+      ],
+      "name": "nvidia-cublas-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "594346921"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cublas-cu12@12.8.4.1",
+      "scope": "required",
+      "type": "library",
+      "version": "12.8.4.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182"
+        }
+      ],
+      "name": "nvidia-cuda-cupti-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "10248621"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cuda-cupti-cu12@12.8.90",
+      "scope": "required",
+      "type": "library",
+      "version": "12.8.90"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994"
+        }
+      ],
+      "name": "nvidia-cuda-nvrtc-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "88040029"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cuda-nvrtc-cu12@12.8.93",
+      "scope": "required",
+      "type": "library",
+      "version": "12.8.93"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90"
+        }
+      ],
+      "name": "nvidia-cuda-runtime-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "954765"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cuda-runtime-cu12@12.8.90",
+      "scope": "required",
+      "type": "library",
+      "version": "12.8.90"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ac6ad90a075bb33a94f2b4cf4622eac13dd4dc65cf6dd9c7572a318516a36625"
+        }
+      ],
+      "name": "nvidia-cudnn-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "657906812"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cudnn-cu12@9.19.0.56",
+      "scope": "required",
+      "type": "library",
+      "version": "9.19.0.56"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74"
+        }
+      ],
+      "name": "nvidia-cufft-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "193118695"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cufft-cu12@11.3.3.83",
+      "scope": "required",
+      "type": "library",
+      "version": "11.3.3.83"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc"
+        }
+      ],
+      "name": "nvidia-cufile-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "1197834"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cufile-cu12@1.13.1.3",
+      "scope": "required",
+      "type": "library",
+      "version": "1.13.1.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9"
+        }
+      ],
+      "name": "nvidia-curand-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "63619976"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-curand-cu12@10.3.9.90",
+      "scope": "required",
+      "type": "library",
+      "version": "10.3.9.90"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450"
+        }
+      ],
+      "name": "nvidia-cusolver-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "267506905"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cusolver-cu12@11.7.3.90",
+      "scope": "required",
+      "type": "library",
+      "version": "11.7.3.90"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b"
+        }
+      ],
+      "name": "nvidia-cusparse-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "288216466"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cusparse-cu12@12.5.8.93",
+      "scope": "required",
+      "type": "library",
+      "version": "12.5.8.93"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623"
+        }
+      ],
+      "name": "nvidia-cusparselt-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "287193691"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-cusparselt-cu12@0.7.1",
+      "scope": "required",
+      "type": "library",
+      "version": "0.7.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "485776daa8447da5da39681af455aa3b2c2586ddcf4af8772495e7c532c7e5ab"
+        }
+      ],
+      "name": "nvidia-nccl-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "296782137"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-nccl-cu12@2.28.9",
+      "scope": "required",
+      "type": "library",
+      "version": "2.28.9"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88"
+        }
+      ],
+      "name": "nvidia-nvjitlink-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "39254836"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-nvjitlink-cu12@12.8.93",
+      "scope": "required",
+      "type": "library",
+      "version": "12.8.93"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd"
+        }
+      ],
+      "name": "nvidia-nvshmem-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "139103095"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-nvshmem-cu12@3.4.5",
+      "scope": "required",
+      "type": "library",
+      "version": "3.4.5"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f"
+        }
+      ],
+      "name": "nvidia-nvtx-cu12",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "89954"
+        }
+      ],
+      "purl": "pkg:pypi/nvidia-nvtx-cu12@12.8.90",
+      "scope": "required",
+      "type": "library",
+      "version": "12.8.90"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+        }
+      ],
+      "name": "packaging",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "129956"
+        }
+      ],
+      "purl": "pkg:pypi/packaging@26.3",
+      "scope": "required",
+      "type": "library",
+      "version": "26.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9"
+        }
+      ],
+      "name": "pygments",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "1250147"
+        }
+      ],
+      "purl": "pkg:pypi/pygments@2.21.0",
+      "scope": "required",
+      "type": "library",
+      "version": "2.21.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc"
+        }
+      ],
+      "name": "pyyaml",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "807870"
+        }
+      ],
+      "purl": "pkg:pypi/pyyaml@6.0.3",
+      "scope": "required",
+      "type": "library",
+      "version": "6.0.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9dce8ec9695f531a1b8a6f314fd4b393adcccf2ea861db480cdf97a301d01a68"
+        }
+      ],
+      "name": "regex",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "801798"
+        }
+      ],
+      "purl": "pkg:pypi/regex@2026.7.19",
+      "scope": "required",
+      "type": "library",
+      "version": "2026.7.19"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb"
+        }
+      ],
+      "name": "rich",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "310654"
+        }
+      ],
+      "purl": "pkg:pypi/rich@15.0.0",
+      "scope": "required",
+      "type": "library",
+      "version": "15.0.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fd6f3f93c9a0a7cc2788ee63fb763353d4bd2e89b0751bc78fcf7dda00bea774"
+        }
+      ],
+      "name": "safetensors",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "516040"
+        }
+      ],
+      "purl": "pkg:pypi/safetensors@0.8.0",
+      "scope": "required",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3e386e96793c8702ae83d17b853fb93d3e09ef82ec62722e61da5cd22376dcd8"
+        }
+      ],
+      "name": "setuptools",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "1256108"
+        }
+      ],
+      "purl": "pkg:pypi/setuptools@78.1.0",
+      "scope": "required",
+      "type": "library",
+      "version": "78.1.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"
+        }
+      ],
+      "name": "shellingham",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "9755"
+        }
+      ],
+      "purl": "pkg:pypi/shellingham@1.5.4",
+      "scope": "required",
+      "type": "library",
+      "version": "1.5.4"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"
+        }
+      ],
+      "name": "sympy",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "6299353"
+        }
+      ],
+      "purl": "pkg:pypi/sympy@1.14.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.14.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "369cc9fc8cc10cb24143873a0d95438bb8ee257bb80c71989e3ee290e8d72c67"
+        }
+      ],
+      "name": "tokenizers",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "3274982"
+        }
+      ],
+      "purl": "pkg:pypi/tokenizers@0.22.2",
+      "scope": "required",
+      "type": "library",
+      "version": "0.22.2"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d252cf975fb18c94a85336323ad425f473df56dab35a44b00399bd70c7a3b997"
+        }
+      ],
+      "name": "torch",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "820326880"
+        }
+      ],
+      "purl": "pkg:pypi/torch@2.11.0+cu128",
+      "scope": "required",
+      "type": "library",
+      "version": "2.11.0+cu128"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f585706bfddbdebf89daac705b2dfcc16890130727d3197ca62c732b4310953"
+        }
+      ],
+      "name": "tqdm",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "80184"
+        }
+      ],
+      "purl": "pkg:pypi/tqdm@4.70.0",
+      "scope": "required",
+      "type": "library",
+      "version": "4.70.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b7cdf238ff583e3a58dbc7fa34da1aaf091ce063141f65a30538160bd5afe93f"
+        }
+      ],
+      "name": "transformers",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "11749582"
+        }
+      ],
+      "purl": "pkg:pypi/transformers@5.15.1",
+      "scope": "required",
+      "type": "library",
+      "version": "5.15.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6f5928e6d44c34a97bbe164cceddc0ef2007121c89ebcfba5415cf452de7ee9f"
+        }
+      ],
+      "name": "triton",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "188273546"
+        }
+      ],
+      "purl": "pkg:pypi/triton@3.6.0",
+      "scope": "required",
+      "type": "library",
+      "version": "3.6.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "53150287edd11baeb4e4722c8e394fcdf8181c0ae89485cba8d25c778d5edd56"
+        }
+      ],
+      "name": "typer",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "122874"
+        }
+      ],
+      "purl": "pkg:pypi/typer@0.27.1",
+      "scope": "required",
+      "type": "library",
+      "version": "0.27.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+        }
+      ],
+      "name": "typing-extensions",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "cuda"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/cu128"
+        },
+        {
+          "name": "bytes",
+          "value": "45571"
+        }
+      ],
+      "purl": "pkg:pypi/typing-extensions@4.16.0",
+      "scope": "required",
+      "type": "library",
+      "version": "4.16.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101"
+        }
+      ],
+      "name": "annotated-doc",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "5302"
+        }
+      ],
+      "purl": "pkg:pypi/annotated-doc@0.0.5",
+      "scope": "required",
+      "type": "library",
+      "version": "0.0.5"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494"
+        }
+      ],
+      "name": "anyio",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "125813"
+        }
+      ],
+      "purl": "pkg:pypi/anyio@4.14.2",
+      "scope": "required",
+      "type": "library",
+      "version": "4.14.2"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
+        }
+      ],
+      "name": "certifi",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "136983"
+        }
+      ],
+      "purl": "pkg:pypi/certifi@2026.7.22",
+      "scope": "required",
+      "type": "library",
+      "version": "2026.7.22"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
+        }
+      ],
+      "name": "click",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "125251"
+        }
+      ],
+      "purl": "pkg:pypi/click@8.5.0",
+      "scope": "required",
+      "type": "library",
+      "version": "8.5.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f0ca4bcc0e181c60dbbd8aa9ab5b120ebb99e4e064e83636340056f833a1f09"
+        }
+      ],
+      "name": "filelock",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "98901"
+        }
+      ],
+      "purl": "pkg:pypi/filelock@3.32.3",
+      "scope": "required",
+      "type": "library",
+      "version": "3.32.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "22e58ca3b1ae3b98993b762d7338367ae64fe50252bf78d59da3bfebcdf1cedd"
+        }
+      ],
+      "name": "filelock",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "99864"
+        }
+      ],
+      "purl": "pkg:pypi/filelock@3.32.4",
+      "scope": "required",
+      "type": "library",
+      "version": "3.32.4"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b57ddbafedfaef7018c1ecab32aa200a9d7ca26b77965f64e48b70061249d279"
+        }
+      ],
+      "name": "fsspec",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "206583"
+        }
+      ],
+      "purl": "pkg:pypi/fsspec@2026.7.0",
+      "scope": "required",
+      "type": "library",
+      "version": "2026.7.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"
+        }
+      ],
+      "name": "h11",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "37515"
+        }
+      ],
+      "purl": "pkg:pypi/h11@0.16.0",
+      "scope": "required",
+      "type": "library",
+      "version": "0.16.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d62671bb130879cef0ee4c9ebe47a14af6c66ec53e6d84dc15936e5ffdfac82f"
+        }
+      ],
+      "name": "hf-xet",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "4464663"
+        }
+      ],
+      "purl": "pkg:pypi/hf-xet@1.6.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.6.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55"
+        }
+      ],
+      "name": "httpcore",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "78784"
+        }
+      ],
+      "purl": "pkg:pypi/httpcore@1.0.9",
+      "scope": "required",
+      "type": "library",
+      "version": "1.0.9"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad"
+        }
+      ],
+      "name": "httpx",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "73517"
+        }
+      ],
+      "purl": "pkg:pypi/httpx@0.28.1",
+      "scope": "required",
+      "type": "library",
+      "version": "0.28.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b00f7782afc14db4bc6572763810a635bdfbab8623d957bfb553bd18e03852cd"
+        }
+      ],
+      "name": "huggingface-hub",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "795768"
+        }
+      ],
+      "purl": "pkg:pypi/huggingface-hub@1.29.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.29.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "815e7be7a7806d54abb586dc943addc79e8b2ee16915059658cbeff4b1b43bf4"
+        }
+      ],
+      "name": "idna",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "68550"
+        }
+      ],
+      "purl": "pkg:pypi/idna@3.19",
+      "scope": "required",
+      "type": "library",
+      "version": "3.19"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+        }
+      ],
+      "name": "jinja2",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "134899"
+        }
+      ],
+      "purl": "pkg:pypi/jinja2@3.1.6",
+      "scope": "required",
+      "type": "library",
+      "version": "3.1.6"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a"
+        }
+      ],
+      "name": "markdown-it-py",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "91687"
+        }
+      ],
+      "purl": "pkg:pypi/markdown-it-py@4.2.0",
+      "scope": "required",
+      "type": "library",
+      "version": "4.2.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d6dd0be5b5b189d31db7cda48b91d7e0a9795f31430b7f271219ab30f1d3ac9d"
+        }
+      ],
+      "name": "markupsafe",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "22947"
+        }
+      ],
+      "purl": "pkg:pypi/markupsafe@3.0.3",
+      "scope": "required",
+      "type": "library",
+      "version": "3.0.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"
+        }
+      ],
+      "name": "mdurl",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "9979"
+        }
+      ],
+      "purl": "pkg:pypi/mdurl@0.1.2",
+      "scope": "required",
+      "type": "library",
+      "version": "0.1.2"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"
+        }
+      ],
+      "name": "mpmath",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "536198"
+        }
+      ],
+      "purl": "pkg:pypi/mpmath@1.3.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.3.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"
+        }
+      ],
+      "name": "networkx",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "2068504"
+        }
+      ],
+      "purl": "pkg:pypi/networkx@3.6.1",
+      "scope": "required",
+      "type": "library",
+      "version": "3.6.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8"
+        }
+      ],
+      "name": "numpy",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "16722264"
+        }
+      ],
+      "purl": "pkg:pypi/numpy@2.5.2",
+      "scope": "required",
+      "type": "library",
+      "version": "2.5.2"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+        }
+      ],
+      "name": "packaging",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "129956"
+        }
+      ],
+      "purl": "pkg:pypi/packaging@26.3",
+      "scope": "required",
+      "type": "library",
+      "version": "26.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9"
+        }
+      ],
+      "name": "pygments",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "1250147"
+        }
+      ],
+      "purl": "pkg:pypi/pygments@2.21.0",
+      "scope": "required",
+      "type": "library",
+      "version": "2.21.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc"
+        }
+      ],
+      "name": "pyyaml",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "807870"
+        }
+      ],
+      "purl": "pkg:pypi/pyyaml@6.0.3",
+      "scope": "required",
+      "type": "library",
+      "version": "6.0.3"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9dce8ec9695f531a1b8a6f314fd4b393adcccf2ea861db480cdf97a301d01a68"
+        }
+      ],
+      "name": "regex",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "801798"
+        }
+      ],
+      "purl": "pkg:pypi/regex@2026.7.19",
+      "scope": "required",
+      "type": "library",
+      "version": "2026.7.19"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb"
+        }
+      ],
+      "name": "rich",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "310654"
+        }
+      ],
+      "purl": "pkg:pypi/rich@15.0.0",
+      "scope": "required",
+      "type": "library",
+      "version": "15.0.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fd6f3f93c9a0a7cc2788ee63fb763353d4bd2e89b0751bc78fcf7dda00bea774"
+        }
+      ],
+      "name": "safetensors",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "516040"
+        }
+      ],
+      "purl": "pkg:pypi/safetensors@0.8.0",
+      "scope": "required",
+      "type": "library",
+      "version": "0.8.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3e386e96793c8702ae83d17b853fb93d3e09ef82ec62722e61da5cd22376dcd8"
+        }
+      ],
+      "name": "setuptools",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "1256108"
+        }
+      ],
+      "purl": "pkg:pypi/setuptools@78.1.0",
+      "scope": "required",
+      "type": "library",
+      "version": "78.1.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"
+        }
+      ],
+      "name": "shellingham",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "9755"
+        }
+      ],
+      "purl": "pkg:pypi/shellingham@1.5.4",
+      "scope": "required",
+      "type": "library",
+      "version": "1.5.4"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"
+        }
+      ],
+      "name": "sympy",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "6299353"
+        }
+      ],
+      "purl": "pkg:pypi/sympy@1.14.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.14.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "369cc9fc8cc10cb24143873a0d95438bb8ee257bb80c71989e3ee290e8d72c67"
+        }
+      ],
+      "name": "tokenizers",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "3274982"
+        }
+      ],
+      "purl": "pkg:pypi/tokenizers@0.22.2",
+      "scope": "required",
+      "type": "library",
+      "version": "0.22.2"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "613f6de3b4c39d3e0bd3e88e2fd20943356bc7f8388a494fee6545b181978c59"
+        }
+      ],
+      "name": "torch",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "4832095085"
+        }
+      ],
+      "purl": "pkg:pypi/torch@2.10.0+rocm7.0",
+      "scope": "required",
+      "type": "library",
+      "version": "2.10.0+rocm7.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f585706bfddbdebf89daac705b2dfcc16890130727d3197ca62c732b4310953"
+        }
+      ],
+      "name": "tqdm",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "80184"
+        }
+      ],
+      "purl": "pkg:pypi/tqdm@4.70.0",
+      "scope": "required",
+      "type": "library",
+      "version": "4.70.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b7cdf238ff583e3a58dbc7fa34da1aaf091ce063141f65a30538160bd5afe93f"
+        }
+      ],
+      "name": "transformers",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "11749582"
+        }
+      ],
+      "purl": "pkg:pypi/transformers@5.15.1",
+      "scope": "required",
+      "type": "library",
+      "version": "5.15.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cff15082784c7056b0af9347770e034ab0a8ccbce0642723ddc8c8de1bd6af3f"
+        }
+      ],
+      "name": "triton-rocm",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "302480643"
+        }
+      ],
+      "purl": "pkg:pypi/triton-rocm@3.6.0",
+      "scope": "required",
+      "type": "library",
+      "version": "3.6.0"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "53150287edd11baeb4e4722c8e394fcdf8181c0ae89485cba8d25c778d5edd56"
+        }
+      ],
+      "name": "typer",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "122874"
+        }
+      ],
+      "purl": "pkg:pypi/typer@0.27.1",
+      "scope": "required",
+      "type": "library",
+      "version": "0.27.1"
+    },
+    {
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+        }
+      ],
+      "name": "typing-extensions",
+      "properties": [
+        {
+          "name": "environment",
+          "value": "rocm"
+        },
+        {
+          "name": "sourceIndex",
+          "value": "https://download.pytorch.org/whl/rocm7.0"
+        },
+        {
+          "name": "bytes",
+          "value": "45571"
+        }
+      ],
+      "purl": "pkg:pypi/typing-extensions@4.16.0",
+      "scope": "required",
+      "type": "library",
+      "version": "4.16.0"
+    },
+    {
+      "description": "AMD ROCm system component. Installed manually from repo.radeon.com; NOT part of the Python wheelhouse and NOT cached by it.",
+      "name": "rocm-core",
+      "properties": [
+        {
+          "name": "repository",
+          "value": "https://repo.radeon.com/rocm/apt/7.2 noble main"
+        },
+        {
+          "name": "signingKeySha256",
+          "value": "3e660bdc559b34781b5498e79b9c117394b46ce55592812db0b84d65986b4df2"
+        },
+        {
+          "name": "installedBy",
+          "value": "manual, documented prerequisite"
+        }
+      ],
+      "purl": "pkg:deb/ubuntu/rocm-core@7.2.0.70200-43~24.04?arch=amd64",
+      "type": "operating-system-package",
+      "version": "7.2.0.70200-43~24.04"
+    },
+    {
+      "description": "AMD ROCm-for-WSL HSA runtime. Required because the HSA runtime shipped inside the PyTorch ROCm wheel targets /dev/kfd, which does not exist under WSL. Installed manually; NOT part of the Python wheelhouse.",
+      "name": "hsa-runtime-rocr4wsl-amdgpu",
+      "properties": [
+        {
+          "name": "repository",
+          "value": "https://repo.radeon.com/rocm/apt/7.2 noble main"
+        },
+        {
+          "name": "signingKeySha256",
+          "value": "3e660bdc559b34781b5498e79b9c117394b46ce55592812db0b84d65986b4df2"
+        },
+        {
+          "name": "installedBy",
+          "value": "manual, documented prerequisite"
+        }
+      ],
+      "purl": "pkg:deb/ubuntu/hsa-runtime-rocr4wsl-amdgpu@25.30.13-2281980.24.04?arch=amd64",
+      "type": "operating-system-package",
+      "version": "25.30.13-2281980.24.04"
+    }
+  ],
+  "metadata": {
+    "component": {
+      "description": "Cross-vendor inference runtime. Aggregates model capacity across one NVIDIA CUDA GPU and one AMD ROCm GPU. Does not create unified VRAM.",
+      "name": "openmycelium",
+      "type": "application",
+      "version": "0.1.0"
+    },
+    "properties": [
+      {
+        "name": "validatedOn",
+        "value": "Windows 11 + WSL2, RTX 5060 Ti 16 GB, RX 9060 XT 16 GB"
+      },
+      {
+        "name": "validatedModel",
+        "value": "Mistral-Nemo-Instruct-2407"
+      },
+      {
+        "name": "modelSha256",
+        "value": "f3298db2f04eb440bc235a9709fb120e38a72758ae5e2b14bbefcad552ada966"
+      },
+      {
+        "name": "modelFingerprintScheme",
+        "value": "om-model-fingerprint-1"
+      }
+    ],
+    "timestamp": "2026-08-28T12:13:47+00:00"
+  },
+  "specVersion": "1.5",
+  "version": 1
+}

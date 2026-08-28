@@ -164,13 +164,13 @@ func TestVolcanoGangAndTopologyContractsReachPodTemplate(t *testing.T) {
 	}
 }
 
-func TestHetCCLExecutionContractIncludesCoordinator(t *testing.T) {
-	t.Setenv("HETCCL_COORDINATOR_SERVICE", "hetccl.test.svc")
-	t.Setenv("HETCCL_COORDINATOR_PORT", "31000")
+func TestMCCLExecutionContractIncludesCoordinator(t *testing.T) {
+	t.Setenv("MCCL_COORDINATOR_SERVICE", "mccl.test.svc")
+	t.Setenv("MCCL_COORDINATOR_PORT", "31000")
 	workload := Workload{
-		ID: "job-hetccl", Kind: "training", Image: "trainer:latest", Namespace: "research",
-		ResourceName: "trainer-hetccl", ServiceName: "trainer-hetccl-workers", CPU: "2", Memory: "8Gi",
-		DesiredCount: 2, ExecutionPlanID: "plan-hetccl", ExecutionTransport: "hetccl-tcp",
+		ID: "job-mccl", Kind: "training", Image: "trainer:latest", Namespace: "research",
+		ResourceName: "trainer-mccl", ServiceName: "trainer-mccl-workers", CPU: "2", Memory: "8Gi",
+		DesiredCount: 2, ExecutionPlanID: "plan-mccl", ExecutionTransport: "mccl-tcp",
 	}
 	job, err := buildJob(workload, ManagedPool{Vendor: "CPU", Runtime: "cpu"}, nil)
 	if err != nil {
@@ -180,11 +180,11 @@ func TestHetCCLExecutionContractIncludesCoordinator(t *testing.T) {
 	for _, item := range job.Spec.Template.Spec.Containers[0].Env {
 		environment[item.Name] = item.Value
 	}
-	if environment["HETCCL_COORDINATOR_HOST"] != "hetccl.test.svc" || environment["HETCCL_COORDINATOR_PORT"] != "31000" {
-		t.Fatalf("expected configured HetCCL coordinator, got %#v", environment)
+	if environment["MCCL_COORDINATOR_HOST"] != "mccl.test.svc" || environment["MCCL_COORDINATOR_PORT"] != "31000" {
+		t.Fatalf("expected configured MCCL coordinator, got %#v", environment)
 	}
-	if environment["HETCCL_GROUP"] != "plan-hetccl" || environment["HETCCL_BACKEND"] != "tcp" {
-		t.Fatalf("expected plan-scoped portable HetCCL contract, got %#v", environment)
+	if environment["MCCL_GROUP"] != "plan-mccl" || environment["MCCL_BACKEND"] != "tcp" {
+		t.Fatalf("expected plan-scoped portable MCCL contract, got %#v", environment)
 	}
 }
 
@@ -248,7 +248,7 @@ func TestClusterNodeInventoryDiscoversFabricCapabilities(t *testing.T) {
 	node := testReadyNode("worker-fabric")
 	node.Labels["openmycelium.io/rdma"] = "ready"
 	node.Labels["openmycelium.io/gpudirect"] = "true"
-	node.Labels["openmycelium.io/hetccl"] = "enabled"
+	node.Labels["openmycelium.io/mccl"] = "enabled"
 	node.Status.Capacity["rdma/rdma_shared_device_a"] = resource.MustParse("1")
 	nodes := buildClusterNodeInventory([]corev1.Node{*node}, nil, nil, "cluster-1", "research")
 	if len(nodes) != 1 {
@@ -259,7 +259,7 @@ func TestClusterNodeInventoryDiscoversFabricCapabilities(t *testing.T) {
 		t.Fatalf("expected qualified RDMA and GPUDirect inventory: %#v", fabric)
 	}
 	backends := strings.Join(fabric.Backends, ",")
-	if !strings.Contains(backends, "hetccl") || !strings.Contains(backends, "nccl") || !strings.Contains(backends, "ucx") {
+	if !strings.Contains(backends, "mccl") || !strings.Contains(backends, "nccl") || !strings.Contains(backends, "ucx") {
 		t.Fatalf("expected native and fabric backends, got %s", backends)
 	}
 }

@@ -22,9 +22,9 @@ def main() -> int:
     parser.add_argument("--topology", required=True, help="vendor:count[,vendor:count...]")
     parser.add_argument("--master-addr", default=os.environ.get("MASTER_ADDR", "127.0.0.1"))
     parser.add_argument("--master-port", type=int, default=int(os.environ.get("MASTER_PORT", "29400")))
-    parser.add_argument("--coordinator-host", default=os.environ.get("HETCCL_COORDINATOR_HOST", "127.0.0.1"))
-    parser.add_argument("--coordinator-port", type=int, default=int(os.environ.get("HETCCL_COORDINATOR_PORT", "29500")))
-    parser.add_argument("--group", default=os.environ.get("HETCCL_GROUP", "mycelium-hierarchy"))
+    parser.add_argument("--coordinator-host", default=os.environ.get("MCCL_COORDINATOR_HOST", "127.0.0.1"))
+    parser.add_argument("--coordinator-port", type=int, default=int(os.environ.get("MCCL_COORDINATOR_PORT", "29500")))
+    parser.add_argument("--group", default=os.environ.get("MCCL_GROUP", "mycelium-hierarchy"))
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
@@ -40,9 +40,9 @@ def main() -> int:
             "WORLD_SIZE": str(topology.world_size),
             "MASTER_ADDR": args.master_addr,
             "MASTER_PORT": str(args.master_port),
-            "HETCCL_COORDINATOR_HOST": args.coordinator_host,
-            "HETCCL_COORDINATOR_PORT": str(args.coordinator_port),
-            "HETCCL_GROUP": args.group,
+            "MCCL_COORDINATOR_HOST": args.coordinator_host,
+            "MCCL_COORDINATOR_PORT": str(args.coordinator_port),
+            "MCCL_GROUP": args.group,
         }
     )
 

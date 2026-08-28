@@ -1,0 +1,10 @@
+
+  openmycelium            0.1.0a7
+  mccl                    0.2.0a2
+  transport               host-staged-xvendor
+  event schema            v1
+
+  full detail:  openmycelium version --verbose
+
+  decoding is deterministic greedy only in this build
+

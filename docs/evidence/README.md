@@ -9,7 +9,7 @@ itself.
 
 | File | What it is |
 |---|---|
-| `qualification-report-DESKTOP-DTHF5UD.json` | `hetccl diagnose` output at 0.2.0a1 |
+| `qualification-report-DESKTOP-DTHF5UD.json` | `mccl diagnose` output at 0.2.0a1 |
 
 ## The machine
 
@@ -30,7 +30,7 @@ installer.
 
 ```sh
 # authoritative test suite
-bash scripts/repro/wsl_test_hetccl.sh
+bash scripts/repro/wsl_test_mccl.sh
 
 # build the package and validate it in a clean venv
 bash scripts/repro/wsl_package.sh

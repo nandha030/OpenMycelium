@@ -57,7 +57,7 @@ class TopologyTests(unittest.TestCase):
 class HierarchyConfigTests(unittest.TestCase):
     def test_reads_topology_and_rank_from_the_environment(self):
         config = HierarchyConfig.from_environment(
-            {"MYCELIUM_TOPOLOGY": "cuda:2,rocm:2", "RANK": "3", "HETCCL_COORDINATOR_PORT": "29777"}
+            {"MYCELIUM_TOPOLOGY": "cuda:2,rocm:2", "RANK": "3", "MCCL_COORDINATOR_PORT": "29777"}
         )
         self.assertEqual(config.rank, 3)
         self.assertEqual(config.coordinator_port, 29777)
@@ -125,7 +125,7 @@ class LeaderSelectionTests(unittest.TestCase):
         described = self._collective(2).describe()
         self.assertEqual(described["vendor"], "rocm")
         self.assertEqual(described["nativeBackend"], "rccl")
-        self.assertEqual(described["bridge"], "hetccl-tcp")
+        self.assertEqual(described["bridge"], "mccl-tcp")
         self.assertTrue(described["isLeader"])
         self.assertTrue(described["heterogeneous"])
 

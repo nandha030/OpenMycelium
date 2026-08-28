@@ -1,0 +1,11 @@
+AMD prerequisite installed manually on 2026-08-28T08:44:52+00:00
+repositories:
+deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/7.2 noble main
+deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/graphics/7.2/ubuntu noble main
+deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amdgpu/30.30/ubuntu noble main
+signing key sha256: 3e660bdc559b34781b5498e79b9c117394b46ce55592812db0b84d65986b4df2
+packages:
+hsa-runtime-rocr4wsl-amdgpu:amd64 25.30.13-2281980.24.04
+rocm-core 7.2.0.70200-43~24.04
+runtime file:
+  /opt/rocm-7.2.0/lib/libhsa-runtime64.so.1.18.70200  1439536 bytes  83bedf380844ae17f12ab231f2abb69a6cc91c90a5d9adafbe74875aafadd819

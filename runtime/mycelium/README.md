@@ -24,12 +24,12 @@ python -m runtime.mycelium.launch -- python train.py
 ```
 
 This adapter prioritizes correctness and portability. It does not reproduce
-the device-direct results reported by mixed-vendor research. `hetccl` and
+the device-direct results reported by mixed-vendor research. `mccl` and
 `device-direct` plans remain blocked until every selected node advertises a
-qualified native adapter and RDMA path. The separate `runtime/hetccl` package
+qualified native adapter and RDMA path. The separate `runtime/mccl` package
 provides a portable TCP reference implementation and native adapter SDK. Use
-`HetCCLForwardedCollective` for a functional PyTorch compatibility test after
-installing `openmycelium-hetccl` in the workload image.
+`MCCLForwardedCollective` for a functional PyTorch compatibility test after
+installing `openmycelium-mccl` in the workload image.
 
 Build the CPU validation image from the repository root:
 

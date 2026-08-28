@@ -1,0 +1,78 @@
+bootstrap 2026-08-28T02:59:00+00:00 on DESKTOP-DTHF5UD
+
+  == P0  nothing is inherited ==
+  [PASS] no inherited environment, model store or ledger
+  [PASS] no inherited OpenMycelium environment variables
+  [PASS] no source checkout on PYTHONPATH
+  [PASS] openmycelium is not importable before installation
+  distro   Ubuntu 24.04.4 LTS
+  kernel   6.18.33.2-microsoft-standard-WSL2
+  dxg      present
+  [PASS] /dev/dxg present (GPU access in a fresh distro)
+
+  == P1  base packages ==
+  [PASS] python3-venv, python3-pip and curl installed
+  python   Python 3.12.3
+
+  == P2  install the frozen 0.1.0a6 artifacts ==
+  openmycelium-0.1.0a6-py3-none-any.whl: OK
+  openmycelium_mccl-0.2.0a2-py3-none-any.whl: OK
+  [PASS] frozen wheels match their recorded SHA-256
+  [PASS] openmycelium installed from the wheel
+  entry    /opt/om/venv/bin/openmycelium
+
+  == P3  provenance from a bare install ==
+  
+    openmycelium            0.1.0a6
+    installed content       ff402ba4ed7f1e81f8d75c94492fddc2  (45 files)
+    package location        /opt/om/venv/lib/python3.12/site-packages/openmycelium
+    python                  3.12.3
+    mccl                    0.2.0a2  (activation v1, collective v1)
+    transport               host-staged-xvendor
+    event schema            v1
+    placement schema        v1
+  
+    configuration file      (none)
+      cuda_python        (unset)                                        default
+  [PASS] installed content hash equals the frozen build
+  
+    resolved configuration
+    configuration file  (none found)
+    cuda_python          (unset)                                          default
+    rocm_python          (unset)                                          default
+    model_store          /var/lib/openmycelium/models                     default
+    state_dir            /var/lib/openmycelium/state                      default
+    ledger               /var/lib/openmycelium/xvendor_qualification.json default
+    wsl_distro           Ubuntu-24.04                                     default
+  
+    configuration files are looked for in this order:
+      /root/.config/openmycelium/config.toml               absent
+      /root/.openmycelium.toml                             absent
+      /etc/openmycelium/config.toml                        absent
+
+  == P4  provision both environments from nothing ==
+  this is the claim under test; expect roughly 100 minutes of transfer
+  [PASS] dry run reports it would CREATE both environments, not recognise them
+  provision took 82 min 8 s
+  [FAIL] openmycelium provision created both environments
+  [FAIL] a real BF16 matmul succeeded on both GPUs during provisioning
+
+  == P5  doctor against the newly built environments ==
+  [FAIL] doctor reports no failures
+  [PASS] fabric list ran
+
+  == P6  import the model into the fresh store ==
+  [PASS] model source is readable
+  import took 3 min 22 s
+  [PASS] openmycelium model import
+  [PASS] openmycelium model verify
+
+  == P7  full command flow ==
+  [PASS] model inspect
+  [FAIL] plan
+  [FAIL] placement is exclusive 181/182
+  run wall clock 1 s
+  [FAIL] openmycelium run
+  [FAIL] openmycelium chat
+
+  7 check(s) failed in phases P0-P7

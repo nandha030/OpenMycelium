@@ -1,0 +1,40 @@
+cmake_minimum_required(VERSION 3.24)
+project(openmycelium_mccl LANGUAGES CXX)
+
+option(MCCL_ENABLE_CUDA "Build the CUDA adapter" OFF)
+option(MCCL_ENABLE_ROCM "Build the ROCm adapter" OFF)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+add_library(mccl_host SHARED src/host_adapter.cpp)
+target_include_directories(mccl_host PUBLIC include)
+set_target_properties(mccl_host PROPERTIES OUTPUT_NAME "mccl_host")
+set(MCCL_INSTALL_TARGETS mccl_host)
+
+if(MCCL_ENABLE_CUDA)
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  add_library(mccl_cuda SHARED src/cuda_adapter.cu)
+  target_include_directories(mccl_cuda PUBLIC include)
+  target_link_libraries(mccl_cuda PRIVATE CUDA::cudart)
+  set_target_properties(mccl_cuda PROPERTIES CUDA_STANDARD 17 OUTPUT_NAME "mccl_cuda")
+  list(APPEND MCCL_INSTALL_TARGETS mccl_cuda)
+endif()
+
+if(MCCL_ENABLE_ROCM)
+  enable_language(HIP)
+  find_package(hip REQUIRED)
+  add_library(mccl_rocm SHARED src/rocm_adapter.cpp)
+  target_include_directories(mccl_rocm PUBLIC include)
+  target_link_libraries(mccl_rocm PRIVATE hip::host)
+  set_source_files_properties(src/rocm_adapter.cpp PROPERTIES LANGUAGE HIP)
+  set_target_properties(mccl_rocm PROPERTIES OUTPUT_NAME "mccl_rocm")
+  list(APPEND MCCL_INSTALL_TARGETS mccl_rocm)
+endif()
+
+include(GNUInstallDirs)
+install(TARGETS ${MCCL_INSTALL_TARGETS}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

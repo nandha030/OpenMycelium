@@ -715,20 +715,20 @@ func workloadContainer(workload Workload, pool ManagedPool) (corev1.Container, e
 			corev1.EnvVar{Name: "OPENMYCELIUM_EXECUTION_TRANSPORT", Value: workload.ExecutionTransport},
 			corev1.EnvVar{Name: "OPENMYCELIUM_EXECUTION_PLAN_JSON", Value: workload.ExecutionPlan},
 		)
-		if workload.ExecutionTransport == "hetccl" || workload.ExecutionTransport == "hetccl-tcp" {
-			coordinatorHost := strings.TrimSpace(os.Getenv("HETCCL_COORDINATOR_SERVICE"))
+		if workload.ExecutionTransport == "mccl" || workload.ExecutionTransport == "mccl-tcp" {
+			coordinatorHost := strings.TrimSpace(os.Getenv("MCCL_COORDINATOR_SERVICE"))
 			if coordinatorHost == "" {
-				coordinatorHost = "hetccl-coordinator.openmycelium-system.svc.cluster.local"
+				coordinatorHost = "mccl-coordinator.openmycelium-system.svc.cluster.local"
 			}
-			coordinatorPort := strings.TrimSpace(os.Getenv("HETCCL_COORDINATOR_PORT"))
+			coordinatorPort := strings.TrimSpace(os.Getenv("MCCL_COORDINATOR_PORT"))
 			if coordinatorPort == "" {
 				coordinatorPort = "29500"
 			}
 			container.Env = append(container.Env,
-				corev1.EnvVar{Name: "HETCCL_COORDINATOR_HOST", Value: coordinatorHost},
-				corev1.EnvVar{Name: "HETCCL_COORDINATOR_PORT", Value: coordinatorPort},
-				corev1.EnvVar{Name: "HETCCL_GROUP", Value: workload.ExecutionPlanID},
-				corev1.EnvVar{Name: "HETCCL_BACKEND", Value: "tcp"},
+				corev1.EnvVar{Name: "MCCL_COORDINATOR_HOST", Value: coordinatorHost},
+				corev1.EnvVar{Name: "MCCL_COORDINATOR_PORT", Value: coordinatorPort},
+				corev1.EnvVar{Name: "MCCL_GROUP", Value: workload.ExecutionPlanID},
+				corev1.EnvVar{Name: "MCCL_BACKEND", Value: "tcp"},
 			)
 		}
 		var executionPlan ExecutionPlan

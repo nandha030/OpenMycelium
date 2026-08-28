@@ -17,7 +17,7 @@ It is designed for platform teams that need to operate inference, training, fine
 - [Architecture](docs/ARCHITECTURE.md)
 - [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md)
 - [Heterogeneous inference fabric: HetRouter, KV-cache transfer, Metal, vLLM, and speculative decoding](docs/INFERENCE_FABRIC.md)
-- [Mycelium and HetCCL technical manuscript, formulas, architecture, market gap, and invention disclosure](docs/paper/OPENMYCELIUM_MYCELIUM_HETCCL_IEEE_MANUSCRIPT.md)
+- [Mycelium and MCCL technical manuscript, formulas, architecture, market gap, and invention disclosure](docs/paper/OPENMYCELIUM_MYCELIUM_MCCL_IEEE_MANUSCRIPT.md)
 - [Mycelium Lab and CPU/Gloo experiments](docs/MYCELIUM_LAB.md)
 - [Implemented features and roadmap](FEATURES.md)
 - [Authentication and security](AUTHENTICATION.md)
@@ -179,9 +179,24 @@ OpenMycelium rejects a Kueue or Volcano submission when the corresponding schedu
 
 ### Mycelium heterogeneous execution planning
 
+For the local NVIDIA + AMD inference alpha, the Scheduler can be inspected
+before loading either GPU:
+
+```powershell
+.\openmycelium.cmd fabric list
+.\openmycelium.cmd plan --model mistral-nemo --output /opt/openmycelium/placement.json
+.\openmycelium.cmd chat --model mistral-nemo
+```
+
+`plan` issues one digest-protected placement with exact model ownership and
+stable Fabric identities. `run` and `chat` issue the same contract internally;
+both workers validate it and do not independently choose a split. This is
+aggregated schedulable capacity across separate CUDA and ROCm memory spaces,
+not coherent or unified VRAM.
+
 The **Memory & execution fabric** dashboard qualifies each connected node for RDMA, native collectives, GPUDirect or DirectGMA evidence, and optional cross-vendor transport adapters. PostgreSQL stores benchmark profiles and compiled execution plans. **Mycelium 1.0** groups available devices by vendor/runtime/model, performs memory-constrained minimax layer placement, evaluates admissible data/pipeline/ZeRO candidates, and scores throughput, balance, or performance-per-watt objectives. The persisted contract includes profile coverage, stage imbalance, memory feasibility, and an explainable decision trace.
 
-Within one vendor, the contract selects NCCL, RCCL, or oneCCL. Cross-vendor direct plans are blocked unless every selected node advertises RDMA and qualified native adapters. `gloo` remains an explicit PyTorch host-staging fallback. The installable `runtime/hetccl` package adds a sequence-safe TCP AllReduce coordinator, device discovery, transport planning, a PyTorch bridge, build-gated host/CUDA/ROCm adapter implementations, and a 0.2 reference inference fabric with HetRouter, canonical KV-cache transfer, Metal staging, vLLM endpoint discovery, and speculative decoding. Its portable paths stage data through host memory; device-direct RDMA is still blocked pending physical qualification. A ready plan can be selected in Celium AI+ or passed with `--execution-plan`. Training, fine-tuning, and batch plans expand into indexed Jobs per vendor group, with exact extended-resource requests, qualified-node constraints, shared rendezvous metadata, and non-overlapping rank bases. The standalone inference adapters are functional, while the Kubernetes controller continues to reject multi-group inference until model-specific worker codecs and release reconciliation are connected. See [Mycelium algorithm](docs/MYCELIUM_ALGORITHM.md), [HetCCL runtime](docs/HETCCL_RUNTIME.md), [Heterogeneous inference fabric](docs/INFERENCE_FABRIC.md), and [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md).
+Within one vendor, the contract selects NCCL, RCCL, or oneCCL. Cross-vendor direct plans are blocked unless every selected node advertises RDMA and qualified native adapters. `gloo` remains an explicit PyTorch host-staging fallback. The installable `runtime/mccl` package adds a sequence-safe TCP AllReduce coordinator, device discovery, transport planning, a PyTorch bridge, build-gated host/CUDA/ROCm adapter implementations, and a 0.2 reference inference fabric with MHub routing, canonical KV-cache transfer, Metal staging, vLLM endpoint discovery, and speculative decoding. Its portable paths stage data through host memory; device-direct RDMA is still blocked pending physical qualification. A ready plan can be selected in Celium AI+ or passed with `--execution-plan`. Training, fine-tuning, and batch plans expand into indexed Jobs per vendor group, with exact extended-resource requests, qualified-node constraints, shared rendezvous metadata, and non-overlapping rank bases. The standalone inference adapters are functional, while the Kubernetes controller continues to reject multi-group inference until model-specific worker codecs and release reconciliation are connected. See [Mycelium platform layers](docs/MYCELIUM_PLATFORM_LAYERS.md), [Mycelium algorithm](docs/MYCELIUM_ALGORITHM.md), [MCCL runtime](docs/MCCL_RUNTIME.md), [Heterogeneous inference fabric](docs/INFERENCE_FABRIC.md), and [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md).
 
 ### Vagrant k3s laptop integration
 

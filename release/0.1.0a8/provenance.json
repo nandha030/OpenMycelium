@@ -1,0 +1,52 @@
+{
+  "configFile": null,
+  "configuration": {
+    "cuda_python": {
+      "source": "discovered",
+      "value": "/opt/hetenv/bin/python"
+    },
+    "ledger": {
+      "source": "discovered",
+      "value": "/opt/xvendor_qualification.json"
+    },
+    "model_store": {
+      "source": "discovered",
+      "value": "/opt/models"
+    },
+    "rocm_python": {
+      "source": "discovered",
+      "value": "/opt/rocmenv/bin/python"
+    },
+    "state_dir": {
+      "source": "discovered",
+      "value": "/opt/openmycelium"
+    },
+    "wsl_distro": {
+      "source": "discovered(WSL_DISTRO_NAME)",
+      "value": "Ubuntu-24.04"
+    }
+  },
+  "eventSchemaVersion": 1,
+  "gitCommit": null,
+  "hsaRuntime": {
+    "bytes": 1439536,
+    "dxcoreReferences": 2,
+    "flavor": "dxcore",
+    "kfdReferences": 1,
+    "path": "/opt/rocmenv/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.1",
+    "sha256": "83bedf380844ae17f12ab231f2abb69a6cc91c90a5d9adafbe74875aafadd819",
+    "source": "system-provided",
+    "systemRuntimePresent": true
+  },
+  "installedContentSha256": "b430eff6e79cd56b30841716431014c7b566942704b8e4c1df5c9336ad43981a",
+  "mcclActivationProtocol": 1,
+  "mcclCollectiveProtocol": 1,
+  "mcclVersion": "0.2.0a2",
+  "openmycelium": "0.1.0a8",
+  "packageLocation": "/tmp/0.1.0a8probe/lib/python3.12/site-packages/openmycelium",
+  "placementSchemaVersion": 1,
+  "python": "3.12.3",
+  "pythonExecutable": "/tmp/0.1.0a8probe/bin/python3",
+  "pythonFiles": 46,
+  "transport": "host-staged-xvendor"
+}

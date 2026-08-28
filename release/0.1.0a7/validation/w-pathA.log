@@ -1,0 +1,66 @@
+
+  == host ==
+    platform       Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+    distribution   Ubuntu 24.04.4 LTS
+    WSL            True
+    /dev/dxg       True   (WSL GPU paravirtualisation)
+    /dev/kfd       False   (absent under WSL; expected)
+    nvidia-smi     True  ['NVIDIA GeForce RTX 5060 Ti']
+
+  == configuration ==
+  configuration file  (none found)
+  cuda_python          /var/lib/openmycelium/state/env/cuda/bin/python  discovered(provisioned)
+  rocm_python          /var/lib/openmycelium/state/env/rocm/bin/python  discovered(provisioned)
+  model_store          /var/lib/openmycelium/models                     discovered
+  state_dir            /var/lib/openmycelium/state                      discovered
+  ledger               /var/lib/openmycelium/xvendor_qualification.json default
+  wsl_distro           om-clean2                                        discovered(WSL_DISTRO_NAME)
+
+  == cuda environment ==
+    location       /var/lib/openmycelium/state/env/cuda
+    already usable NVIDIA GeForce RTX 5060 Ti (torch 2.11.0+cu128)
+
+  == rocm environment ==
+    location       /var/lib/openmycelium/state/env/rocm
+    environment    already present
+    installing     torch==2.10.0 from https://download.pytorch.org/whl/rocm7.0, then 4 packages from PyPI (this takes a while)
+    packages       installed
+    ROCm Python packages installed   yes  (torch 2.10.0+rocm7.0)
+    ROCm WSL system runtime          no 
+    ROCm GPU operation qualified     no 
+      active HSA runtime   /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.1
+        flavour            kfd  (pip-shipped)
+        sha256             1afa806f27d4164c734af57b8c8dd4bf
+
+    ROCm Python packages are installed, but the AMD ROCm-for-WSL
+    system runtime is missing. OpenMycelium will not add system
+    repositories automatically. Install the supported ROCm WSL
+    runtime, then rerun `openmycelium provision`.
+
+    AMD's documented procedure adds an apt repository and installs
+    system-wide packages, which needs root and can affect software
+    other than OpenMycelium. Read it before running it:
+      https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/install-radeon.html
+      https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/legacywsl/install-pytorch.html
+
+    In outline, and subject to those pages:
+      1. install AMD's amdgpu-install package for this Ubuntu release
+      2. amdgpu-install --usecase=wsl,rocm --no-dkms
+
+      3. put the WSL runtime where torch will load it, keeping a backup:
+           cp /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.1 /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.1.orig
+           cp /opt/rocm/lib/libhsa-runtime64.so.1 /var/lib/openmycelium/state/env/rocm/lib/python3.12/site-packages/torch/lib/libhsa-runtime64.so.1
+
+      4. openmycelium provision        (reruns safely; installs nothing
+                                        that is already present)
+
+    Nothing above is executed for you. Step 3 modifies a file inside an
+    installed package, so a later `pip install --upgrade torch` will put
+    the incompatible runtime back; provision detects that and says so.
+
+  == not provisioned ==
+    rocm: system-runtime-missing
+
+    rerun after fixing the cause; existing working environments
+    are never removed unless --clean is given.
+

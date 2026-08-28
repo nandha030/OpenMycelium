@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Build openmycelium-hetccl, then validate it in a clean venv.
+# Build openmycelium-mccl, then validate it in a clean venv.
 set -uo pipefail
 export LD_LIBRARY_PATH=/opt/rocm/lib:/opt/cudaroot/lib64:/usr/lib/wsl/lib:${LD_LIBRARY_PATH:-}
 export PATH=/opt/rocm/bin:$PATH
 export OM_XVENDOR_LEDGER=/opt/xvendor_qualification.json
 S=/mnt/c/Users/User/Documents/Open_Mycelium
-PKG=$S/runtime/hetccl
+PKG=$S/runtime/mccl
 DIST=/opt/dist
-CLEAN=/opt/hetccl-clean
+CLEAN=/opt/mccl-clean
 
 echo "############ 1. build wheel and sdist ############"
 rm -rf "$DIST" "$PKG/build" "$PKG"/src/*.egg-info
@@ -27,21 +27,21 @@ python3 -m venv "$CLEAN"
 "$CLEAN/bin/pip" install -q --upgrade pip
 WHL=$(ls "$DIST"/*.whl | head -1)
 "$CLEAN/bin/pip" install -q "$WHL"
-echo "installed: $("$CLEAN/bin/hetccl" --version)"
+echo "installed: $("$CLEAN/bin/mccl" --version)"
 echo "third-party deps pulled in:"
 "$CLEAN/bin/pip" list --format=freeze | grep -viE '^(pip|setuptools|wheel|openmycelium)' | sed 's/^/  /' || echo "  (none)"
 
 echo
 echo "############ 4. build native components from the installed package ############"
-NATIVE=$("$CLEAN/bin/python" -c "import hetccl,os;print(os.path.join(os.path.dirname(hetccl.__file__),'native'))")
+NATIVE=$("$CLEAN/bin/python" -c "import mccl,os;print(os.path.join(os.path.dirname(mccl.__file__),'native'))")
 echo "native sources: $NATIVE"
-sh "$NATIVE/build.sh" /opt/hetccl-bin 2>&1 | tail -4
-export OM_BRIDGE_BIN=/opt/hetccl-bin/bridge
-export OM_PROBE_BIN=/opt/hetccl-bin/host_access_probe
+sh "$NATIVE/build.sh" /opt/mccl-bin 2>&1 | tail -4
+export OM_BRIDGE_BIN=/opt/mccl-bin/bridge
+export OM_PROBE_BIN=/opt/mccl-bin/host_access_probe
 
 echo
-echo "############ 5. hetccl diagnose ############"
-"$CLEAN/bin/hetccl" diagnose > /opt/qualification_report.json 2>&1
+echo "############ 5. mccl diagnose ############"
+"$CLEAN/bin/mccl" diagnose > /opt/qualification_report.json 2>&1
 "$CLEAN/bin/python" -c "
 import json;d=json.load(open('/opt/qualification_report.json'))
 print('  package        :', d['package'])
@@ -53,9 +53,9 @@ print('  limitations    :', len(d['knownLimitations']), 'disclosed')
 "
 
 echo
-echo "############ 6. hetccl qualify ############"
+echo "############ 6. mccl qualify ############"
 for D in cuda-to-rocm rocm-to-cuda; do
-  "$CLEAN/bin/hetccl" qualify --direction "$D" >/opt/q.json 2>&1
+  "$CLEAN/bin/mccl" qualify --direction "$D" >/opt/q.json 2>&1
   RC=$?
   "$CLEAN/bin/python" -c "
 import json,sys
@@ -66,8 +66,8 @@ print(f\"  {d['direction']:<14} qualified={d['qualified']} \" + (f\"{r.get('thro
 done
 
 echo
-echo "############ 7. hetccl smoke-test ############"
-"$CLEAN/bin/hetccl" smoke-test
+echo "############ 7. mccl smoke-test ############"
+"$CLEAN/bin/mccl" smoke-test
 SMOKE=$?
 
 echo

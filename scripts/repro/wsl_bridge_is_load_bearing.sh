@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Proves the cross-group payload really travels over HetCCL and not over the
+# Proves the cross-group payload really travels over MCCL and not over the
 # global Gloo group. With no coordinator running, a multi-group reduction must
 # fail; a single-group one (which needs no bridge) must still succeed.
 set -uo pipefail
@@ -24,7 +24,7 @@ B=$?
 echo "exit=$B  (zero means single-group reduction is unaffected)"
 
 if [ "$A" -ne 0 ] && [ "$B" -eq 0 ]; then
-  echo "RESULT: PASS -- cross-group payload depends on HetCCL"
+  echo "RESULT: PASS -- cross-group payload depends on MCCL"
   exit 0
 fi
 echo "RESULT: FAIL -- A=$A B=$B"

@@ -1,6 +1,6 @@
 {
   "_evidence": {
-    "captured_by": "hetccl diagnose (openmycelium-hetccl 0.2.0a1)",
+    "captured_by": "mccl diagnose (openmycelium-mccl 0.2.0a1)",
     "captured_on": "DESKTOP-DTHF5UD",
     "note": "Records what one machine measured. Any other host is unqualified until it runs the qualification itself; see docs/evidence/README.md.",
     "scope": "MACHINE-SPECIFIC EVIDENCE, NOT A PORTABLE CLAIM"
@@ -37,7 +37,7 @@
     "No unified VRAM. The two cards remain separate memory domains."
   ],
   "package": {
-    "name": "openmycelium-hetccl",
+    "name": "openmycelium-mccl",
     "version": "0.2.0a1"
   },
   "protocol": {
@@ -67,7 +67,7 @@
         "staging through pinned host memory is the only qualified path"
       ],
       "receive_vendor": "rocm",
-      "transport": "hetccl-tcp-host-staged"
+      "transport": "mccl-tcp-host-staged"
     }
   },
   "transport": {

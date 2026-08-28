@@ -6,8 +6,8 @@ export PYTHONPATH="$REPO/runtime"
 TOPO="${1:-cpu:2,cpu:2}"
 PORT="${2:-29500}"
 
-echo "=== starting HetCCL coordinator on 127.0.0.1:$PORT ==="
-$VENV/bin/hetccl serve --host 127.0.0.1 --port "$PORT" &
+echo "=== starting MCCL coordinator on 127.0.0.1:$PORT ==="
+$VENV/bin/mccl serve --host 127.0.0.1 --port "$PORT" &
 COORD=$!
 trap 'kill $COORD 2>/dev/null' EXIT
 sleep 2

@@ -274,8 +274,8 @@ func validateExecutionRequest(request *ExecutionPlanRequest) error {
 	if request.Objective != "throughput" && request.Objective != "balanced" && request.Objective != "efficiency" {
 		return fmt.Errorf("objective must be throughput, balanced, or efficiency")
 	}
-	if request.PreferredTransport != "" && request.PreferredTransport != "auto" && request.PreferredTransport != "hetccl" && request.PreferredTransport != "hetccl-tcp" && request.PreferredTransport != "device-direct" && request.PreferredTransport != "gloo" && request.PreferredTransport != "cpu-forwarding" {
-		return fmt.Errorf("preferredTransport must be auto, hetccl, hetccl-tcp, device-direct, or gloo")
+	if request.PreferredTransport != "" && request.PreferredTransport != "auto" && request.PreferredTransport != "mccl" && request.PreferredTransport != "mccl-tcp" && request.PreferredTransport != "device-direct" && request.PreferredTransport != "gloo" && request.PreferredTransport != "cpu-forwarding" {
+		return fmt.Errorf("preferredTransport must be auto, mccl, mccl-tcp, device-direct, or gloo")
 	}
 	images := map[string]string{}
 	for vendor, image := range request.VendorImages {
@@ -459,18 +459,18 @@ func selectExecutionTransport(request ExecutionPlanRequest, groups []ExecutionGr
 	}
 	preferred := request.PreferredTransport
 	if preferred == "" || preferred == "auto" {
-		if allFabricNodesBackend(nodes, selectedNodes, "hetccl") {
-			preferred = "hetccl"
+		if allFabricNodesBackend(nodes, selectedNodes, "mccl") {
+			preferred = "mccl"
 		} else if allFabricNodesBackend(nodes, selectedNodes, "device-direct") {
 			preferred = "device-direct"
 		} else if request.AllowCPUFallback {
 			preferred = "gloo"
 		} else {
-			preferred = "hetccl"
+			preferred = "mccl"
 		}
 	}
 	switch preferred {
-	case "hetccl", "device-direct":
+	case "mccl", "device-direct":
 		missing := []string{}
 		if !allFabricNodesBackend(nodes, selectedNodes, preferred) {
 			missing = append(missing, preferred+" runtime adapter on every selected node")
@@ -482,18 +482,18 @@ func selectExecutionTransport(request ExecutionPlanRequest, groups []ExecutionGr
 			return preferred, "blocked", missing, []string{"direct cross-vendor execution is blocked until the runtime and RDMA prerequisites are advertised by inventory"}
 		}
 		return preferred, "ready", nil, nil
-	case "hetccl-tcp":
+	case "mccl-tcp":
 		if request.RequireRDMA {
-			return preferred, "blocked", []string{"device-direct HetCCL or another qualified RDMA adapter"}, []string{"HetCCL TCP host staging cannot satisfy requireRdma=true"}
+			return preferred, "blocked", []string{"device-direct MCCL or another qualified RDMA adapter"}, []string{"MCCL TCP host staging cannot satisfy requireRdma=true"}
 		}
-		return preferred, "ready", nil, []string{"HetCCL TCP centralizes reductions and stages tensors through host memory; use it for compatibility and qualification, not as a device-direct performance claim"}
+		return preferred, "ready", nil, []string{"MCCL TCP centralizes reductions and stages tensors through host memory; use it for compatibility and qualification, not as a device-direct performance claim"}
 	case "gloo", "cpu-forwarding":
 		if request.RequireRDMA {
 			return "gloo", "blocked", []string{"RDMA cross-vendor runtime adapter"}, []string{"CPU forwarding cannot satisfy requireRdma=true"}
 		}
 		return "gloo", "ready", nil, []string{"cross-vendor tensors are staged through host memory; benchmark before production use"}
 	default:
-		return preferred, "blocked", []string{"supported transport: hetccl, hetccl-tcp, device-direct, or gloo"}, nil
+		return preferred, "blocked", []string{"supported transport: mccl, mccl-tcp, device-direct, or gloo"}, nil
 	}
 }
 

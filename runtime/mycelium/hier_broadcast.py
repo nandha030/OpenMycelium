@@ -30,9 +30,9 @@ import sys
 import time
 from typing import Any
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hetccl", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mccl", "src"))
 
-from hetccl.collective_frame import (  # noqa: E402
+from mccl.collective_frame import (  # noqa: E402
     CollectiveError,
     CollectiveFrame,
     CollectiveTiming,
@@ -40,7 +40,7 @@ from hetccl.collective_frame import (  # noqa: E402
     StaleFrameError,
     degeneracy_note,
 )
-from hetccl.xvendor import QualificationLedger, TransportError  # noqa: E402
+from mccl.xvendor import QualificationLedger, TransportError  # noqa: E402
 
 LEDGER = os.environ.get("OM_XVENDOR_LEDGER", "/opt/xvendor_qualification.json")
 

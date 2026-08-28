@@ -1,0 +1,57 @@
+0.1.0a7 validation 2026-08-28T08:40:01+00:00 in om-clean2
+
+  == install the frozen 0.1.0a7 wheel ==
+  [PASS] installed
+  [PASS] installed content equals the frozen 0.1.0a7 build
+
+  == step 1  the actual distribution is discovered ==
+    cuda_python          /var/lib/openmycelium/state/env/cuda/bin/python  discovered(provisioned)
+    rocm_python          /var/lib/openmycelium/state/env/rocm/bin/python  discovered(provisioned)
+    state_dir            /var/lib/openmycelium/state                      discovered
+    wsl_distro           om-clean2                                        discovered(WSL_DISTRO_NAME)
+  [PASS] wsl_distro resolves to om-clean2, this distribution
+  [PASS] and records WSL_DISTRO_NAME as the source
+  [PASS] no silent Ubuntu-24.04 default
+  [PASS] the provisioned CUDA environment is discovered
+  [PASS] the provisioned ROCm environment is discovered
+
+  == step 2  the missing system runtime produces the intended refusal ==
+    == rocm environment ==
+      location       /var/lib/openmycelium/state/env/rocm
+      already usable AMD Radeon RX 9060 XT (torch 2.10.0+rocm7.0)
+  
+    qualification ledger written to /var/lib/openmycelium/xvendor_qualification.json
+  
+    add these to your configuration so they are found next time:
+      cuda_python = "/var/lib/openmycelium/state/env/cuda/bin/python"
+      rocm_python = "/var/lib/openmycelium/state/env/rocm/bin/python"
+      (in /root/.config/openmycelium/config.toml)
+  
+    next:  openmycelium doctor
+  
+  [FAIL] provision refuses rather than reporting success
+  [FAIL] reports ROCm Python packages as installed
+  [FAIL] reports the WSL system runtime as missing
+  [FAIL] reports the GPU operation as unqualified
+  [FAIL] names the active HSA runtime flavour as kfd
+  [FAIL] states that it will not add system repositories automatically
+  [FAIL] cites AMD's official documentation
+  [PASS] the CUDA environment is recognised as already usable on the same run
+
+  == doctor says the same thing ==
+  
+    openmycelium doctor
+  
+    [PASS] cuda   NVIDIA GeForce RTX 5060 Ti   15.93 GiB, 14.80 free  (torch 2.11.0+cu128, cuda build)
+    [PASS] rocm   AMD Radeon RX 9060 XT        15.81 GiB, 15.73 free  (torch 2.10.0+rocm7.0, rocm build)
+    [PASS] wsl    /dev/dxg present
+    [PASS] models 1 imported, 905.4 GiB free on the Linux filesystem
+           - Mistral-Nemo-Instruct-2407
+    [PASS] ledger /var/lib/openmycelium/xvendor_qualification.json present
+  
+    ready
+  
+  [FAIL] doctor separates the three ROCm states
+  [PASS] doctor no longer reports a hard-coded model store
+
+  8 check(s) failed

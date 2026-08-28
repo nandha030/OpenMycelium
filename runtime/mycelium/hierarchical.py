@@ -1,4 +1,4 @@
-"""Hierarchical cross-vendor collective: NCCL/RCCL inside a vendor, HetCCL between vendors.
+"""Hierarchical cross-vendor collective: NCCL/RCCL inside a vendor, MCCL between vendors.
 
 NCCL and RCCL are not wire-compatible, and neither exposes a transport that a
 third library can join. A single communicator therefore cannot span an NVIDIA
@@ -7,7 +7,7 @@ and an AMD group. This module composes them instead:
     1. reduce   -- every vendor group reduces internally with its own native
                    collective (NCCL on CUDA, RCCL on ROCm, Gloo on CPU)
     2. bridge   -- the group leaders exchange their partial results through the
-                   portable HetCCL host-staged TCP coordinator
+                   portable MCCL host-staged TCP coordinator
     3. fan-out  -- each leader broadcasts the global result down its own group
 
 Only step 2 crosses a vendor boundary, and it carries host memory, so no vendor
@@ -19,7 +19,7 @@ topology behaviour, and shipped in images that do not carry a GPU runtime.
 A Gloo process group spans every rank, but it is used only for rendezvous,
 sub-group construction, and barriers. No payload crosses a vendor boundary
 through it. `scripts/wsl_bridge_is_load_bearing.sh` proves this by running a
-multi-group reduction with the HetCCL coordinator stopped: if Gloo were
+multi-group reduction with the MCCL coordinator stopped: if Gloo were
 secretly carrying the payload the run would still succeed, and it does not.
 """
 
@@ -29,7 +29,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence
 
-_TORCH_TO_HETCCL_DTYPE = {
+_TORCH_TO_MCCL_DTYPE = {
     "torch.float32": "f32",
     "torch.float64": "f64",
     "torch.int32": "i32",
@@ -151,12 +151,12 @@ class HierarchyConfig:
         config = cls(
             rank=_integer(env, "RANK", 0),
             topology=Topology.from_spec(spec),
-            coordinator_host=env.get("HETCCL_COORDINATOR_HOST", "127.0.0.1"),
-            coordinator_port=_integer(env, "HETCCL_COORDINATOR_PORT", 29500),
-            group_name=env.get("HETCCL_GROUP", "mycelium-hierarchy"),
+            coordinator_host=env.get("MCCL_COORDINATOR_HOST", "127.0.0.1"),
+            coordinator_port=_integer(env, "MCCL_COORDINATOR_PORT", 29500),
+            group_name=env.get("MCCL_GROUP", "mycelium-hierarchy"),
             rendezvous_host=env.get("MASTER_ADDR", "127.0.0.1"),
             rendezvous_port=_integer(env, "MASTER_PORT", 29400),
-            timeout_seconds=float(env.get("HETCCL_TIMEOUT_SECONDS", "120")),
+            timeout_seconds=float(env.get("MCCL_TIMEOUT_SECONDS", "120")),
         )
         config.validate()
         return config
@@ -191,7 +191,7 @@ class HierarchicalCollective:
         """A single-vendor job reduces entirely inside its own group.
 
         Bridging one group to itself is mathematically a no-op, so a homogeneous
-        job must not depend on a HetCCL coordinator being reachable.
+        job must not depend on a MCCL coordinator being reachable.
         """
         return self.config.topology.group_count > 1
 
@@ -253,9 +253,9 @@ class HierarchicalCollective:
             )
 
     def _build_bridge(self) -> Any:
-        from hetccl.collective import CollectiveConfig, HetCCLCollective  # noqa: PLC0415
+        from mccl.collective import CollectiveConfig, MCCLCollective  # noqa: PLC0415
 
-        return HetCCLCollective(
+        return MCCLCollective(
             CollectiveConfig(
                 rank=self.group.group_id,
                 world_size=self.config.topology.group_count,
@@ -288,9 +288,9 @@ class HierarchicalCollective:
     def _bridge_in_place(self, tensor: Any, reduction: str) -> None:
         """Carry one group's partial result across the vendor boundary."""
         torch = self.torch
-        dtype_name = _TORCH_TO_HETCCL_DTYPE.get(str(tensor.dtype))
+        dtype_name = _TORCH_TO_MCCL_DTYPE.get(str(tensor.dtype))
         if dtype_name is None:
-            raise ValueError(f"HetCCL cannot carry {tensor.dtype}; use float32/64 or int32/64")
+            raise ValueError(f"MCCL cannot carry {tensor.dtype}; use float32/64 or int32/64")
         host = tensor.detach().to("cpu").reshape(-1)
         reduced = self._bridge.all_reduce(host.tolist(), dtype=dtype_name, reduction=reduction)
         tensor.copy_(torch.tensor(reduced, dtype=tensor.dtype).reshape(tensor.shape).to(tensor.device))
@@ -319,7 +319,7 @@ class HierarchicalCollective:
             "isLeader": self.is_leader,
             "intraBackend": self.intra_backend,
             "nativeBackend": self.group.native_backend,
-            "bridge": "hetccl-tcp",
+            "bridge": "mccl-tcp",
             "groupCount": self.config.topology.group_count,
             "heterogeneous": self.config.topology.is_heterogeneous,
         }

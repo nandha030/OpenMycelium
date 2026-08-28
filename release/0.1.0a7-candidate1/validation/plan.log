@@ -1,0 +1,10 @@
+  placement       pl-ca035b3bd2e14e89
+  digest          b0c7e65c49f2768a07bab683fbe079db9f2bba9cfcda6a1836b8535ef1a36456
+  model           Mistral-Nemo-Instruct-2407
+  boundary        after layer 19
+  cuda            nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033
+                  layers 0-19, 11.407 GiB weights, 14.0 GiB budget
+  rocm            amd:pci-0000:04:00.0
+                  layers 20-39, 11.407 GiB weights, 14.0 GiB budget
+  transport       host-staged-xvendor
+  written         /root/placement.json

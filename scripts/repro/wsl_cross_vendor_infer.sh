@@ -5,15 +5,15 @@ set -uo pipefail
 VENV=/opt/hetenv
 REPO=/mnt/c/Users/User/Documents/Open_Mycelium
 export PYTHONPATH="$REPO/runtime"
-export HETCCL_KV_AUTH_TOKEN="demo-token"
+export MCCL_KV_AUTH_TOKEN="demo-token"
 cd "$REPO/runtime"
 
 PREFILL_VENDOR="${1:-cuda}"
 DECODE_VENDOR="${2:-rocm}"
 PORT="${3:-29600}"
 
-echo "=== starting HetCCL KV-cache broker on 127.0.0.1:$PORT ==="
-$VENV/bin/hetccl kv-serve --host 127.0.0.1 --port "$PORT" --max-mib 256 --ttl 120 &
+echo "=== starting MCCL KV-cache broker on 127.0.0.1:$PORT ==="
+$VENV/bin/mccl kv-serve --host 127.0.0.1 --port "$PORT" --max-mib 256 --ttl 120 &
 BROKER=$!
 trap 'kill $BROKER 2>/dev/null' EXIT
 sleep 2

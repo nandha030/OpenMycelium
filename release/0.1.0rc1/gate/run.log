@@ -1,0 +1,26 @@
+[STARTING] placement pl-eb3953f95ef541a6 boundary=19 digest=5f0e1e2f75cb
+[STARTING] launching ROCm stage (second half of the model)
+[LOADING_ROCM] rocm=LOADING_ROCM  cuda=STARTING
+[LOADING_CUDA] ROCm stage bound; launching CUDA stage
+[LOADING_CUDA] rocm=READY (11680 MiB)  cuda=LOADING_CUDA
+[QUALIFYING] rocm=READY (11680 MiB)  cuda=QUALIFYING (11680 MiB)
+[QUALIFYING] transport connected; warming both runtimes (first BF16 kernels are slow to select)
+[QUALIFYING] runtimes warmed in 2.3 s
+[READY] rocm=READY (11680 MiB)  cuda=READY (11680 MiB)
+Cross-vendor GPU inference allows running pre-trained machine learning models on different brands of GPUs without needing to retrain or
+
+  model            Mistral-Nemo-Instruct-2407
+  placement        pl-eb3953f95ef541a6  5f0e1e2f75cb
+  CUDA stage       cuda:0  11680 MiB resident
+  ROCm stage       cuda:0  11680 MiB resident
+  boundary         after layer 19
+  decode           greedy (temperature 0, do_sample false)
+  prompt tokens    14
+  generated        24 tokens (length)
+  warmup           2314 ms (one cold forward per runtime, before READY)
+  TTFT             143 ms
+  prefill          98.0 tok/s
+  decode rate      11.11 tok/s
+  inter-token      p50 88.5 ms  p95 91.7 ms  p99 111.7 ms
+  KV cache (ROCm)  20 layers, length 37, 2.9 MiB
+  runtime state    READY

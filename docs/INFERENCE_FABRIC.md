@@ -1,6 +1,6 @@
 # Heterogeneous inference fabric
 
-OpenMycelium HetCCL 0.2.0 adds a correctness-first reference path for routing
+OpenMycelium MCCL 0.2.0 adds a correctness-first reference path for routing
 inference stages across CUDA, ROCm, Metal, oneAPI, and CPU endpoints. It does
 not claim coherent cross-vendor VRAM. Each runtime converts its native state to
 a canonical transfer representation at an explicit boundary.
@@ -51,7 +51,7 @@ vendor-name assumptions.
 Run a plan from two JSON files:
 
 ```bash
-hetccl inference-plan --nodes nodes.json --request request.json
+mccl inference-plan --nodes nodes.json --request request.json
 ```
 
 ## KV-cache transfer
@@ -71,10 +71,10 @@ again before reconstructing its native cache.
 Start the reference broker:
 
 ```bash
-hetccl kv-serve --host 0.0.0.0 --port 29600 --max-mib 1024 --ttl 300
+mccl kv-serve --host 0.0.0.0 --port 29600 --max-mib 1024 --ttl 300
 ```
 
-Set `HETCCL_KV_AUTH_TOKEN` on the broker and clients when shared-token
+Set `MCCL_KV_AUTH_TOKEN` on the broker and clients when shared-token
 authentication is required. Production deployments must place this protocol
 behind TLS or mTLS because the portable TCP reference does not encrypt frames.
 
@@ -97,7 +97,7 @@ as unavailable.
 ordinary inference. Check an endpoint with:
 
 ```bash
-hetccl vllm-check --url http://worker:8000 --model model-name --runtime cuda
+mccl vllm-check --url http://worker:8000 --model model-name --runtime cuda
 ```
 
 The command reads an API key from `OPENAI_API_KEY` by default. Use
@@ -107,9 +107,9 @@ placing a secret in the process list.
 Cross-vendor speculative decoding additionally requires an OpenMycelium worker
 extension exposing:
 
-- `GET /v1/hetccl/capabilities`
-- `POST /v1/hetccl/propose`
-- `POST /v1/hetccl/verify`
+- `GET /v1/mccl/capabilities`
+- `POST /v1/mccl/propose`
+- `POST /v1/mccl/verify`
 
 A stock vLLM OpenAI server is therefore usable for normal inference but is not
 reported as speculative-capable unless those token-probability endpoints exist.

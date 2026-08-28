@@ -1,0 +1,5 @@
+  copying 22.84 GiB
+    from /mnt/c/Users/User/Downloads/Models/Mistral-Nemo-Instruct-2407
+    to   /var/lib/openmycelium/models/Mistral-Nemo-Instruct-2407
+  done in 202s (0.11 GiB/s)
+  now:  openmycelium run --model Mistral-Nemo-Instruct-2407 --prompt "..."
