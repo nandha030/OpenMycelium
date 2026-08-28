@@ -1,87 +1,145 @@
 # OpenMycelium capability matrix
 
-This document distinguishes working product capabilities from adapters that still require engineering and hardware validation. A configured endpoint is not represented as a live integration until OpenMycelium has verified it.
+Four states, not two. Code existing is not the same as code that has ever
+driven the hardware, and collapsing those into "available now" is how a
+capability matrix stops being useful.
 
-## Available now
+| State | Meaning |
+|---|---|
+| **Hardware-qualified** | Runs on real NVIDIA + AMD hardware, with recorded evidence in `release/` |
+| **Integrated** | Invokes the real Node Runtime, but has not been qualified on hardware |
+| **Implemented** | Code exists and is tested, but has never invoked the Node Runtime |
+| **Roadmap** | Design or partial code. Not a feature. Do not present it as one |
 
-- Premium responsive dashboard with authenticated navigation and truthful empty states
-- Persistent light/dark dual-tone visual system with live compute-topology canvas
-- Local account bootstrap, admin-created users, bcrypt password hashing, revocable server-side sessions, account deletion, signup policy, admin/operator/viewer RBAC, and self/last-admin protection
-- PostgreSQL-backed users, sessions, clusters, accelerator-pool policies, queues, quotas, integrations, settings, and audit events
-- Authenticated Kubernetes connections with encrypted kubeconfig storage, persistent node inventory, live readiness, schedulability, CPU/RAM/pod availability, labels, taints, runtime metadata, extended accelerator resources, and a least-privilege Vagrant/k3s bootstrap
-- PostgreSQL-backed Workspaces that bind organization, authenticated cluster, namespace, queue, StorageClass, declared quotas, and policy profile into one governed application boundary
-- Celium AI+ launch flow for inference, training, fine-tuning, batch, interactive applications, and AI agents, with workspace/release labels and reconciled release records
-- Unified Workspace inventory for controllers, pods, Services and endpoints, logs, audited pod commands, PVCs, redacted configuration inventory, events, policies, node capacity, and release history
-- Authenticated workspace-scoped Kubernetes Service gateway for opening ClusterIP applications without direct worker SSH or NodePort exposure
-- Dynamic accelerator-pool capacity calculated from discovered nodes, including total, allocatable, available, unavailable, saturated, and selector-matched states
-- Explicit accelerator allocation profiles for exclusive GPUs, NVIDIA MIG, time-slicing, MPS, and vendor device-plugin slices, using the exact Kubernetes extended resource advertised by the cluster
-- Hypha distributed tensor planner with persistent logical addresses, sharding, replication, explicit consistency modes, GPU-memory assumptions or labels, host spill tiers, capacity rejection, mixed-vendor warnings, dashboard controls, CLI commands, and Kubernetes workload annotations
-- Heterogeneous fabric qualification with per-node RDMA, GPUDirect, DirectGMA, native collective, optional adapter, warning, and evidence-source inventory
-- PostgreSQL-backed accelerator benchmark profiles covering model, precision, throughput, memory, P2P, and all-reduce measurements with measured/operator/imported provenance
-- Mycelium 1.0 heterogeneous optimization with memory-constrained minimax layer allocation, data/pipeline/ZeRO candidate scoring, throughput/balance/efficiency objectives, versioned decision traces, model-state estimates, and explicit ready/blocked admission
-- PyTorch Gloo CPU-forwarding reference adapter with pinned host buffers, global rank normalization, and CUDA/ROCm-compatible execution contracts
-- Installable MCCL 0.2 alpha package with Windows/Linux/macOS discovery, sequence-safe typed TCP AllReduce, bounded checksummed KV-cache transfer, MRouter inference placement, PyTorch MPS Metal staging, OpenAI-compatible/vLLM endpoint adapters, standards-correct speculative decoding, coordinator CLI/container/Helm deployment, fail-closed transport planning, PyTorch host-staging bridge, and native host/CUDA/ROCm adapter source
-- Persistent Mycelium Lab with isolated virtual NVIDIA/AMD/Intel/Apple/CPU topologies, planning benchmark catalogue, runtime image matrix, communication simulator, saved experiments, and hardware qualification gates
-- Functional CPU/Gloo correctness experiment image and Kubernetes dry-run manifest generation using the same serialized Mycelium execution contract as managed workloads
-- Lab model and dataset sizing for dense/MoE active parameters, quantization, KV cache, activations, optimizer state, approximate step FLOPs, dataset staging, and checkpoint retention
-- Prometheus and Grafana visibility for saved lab evidence, with audit and NATS lifecycle events
-- Native NCCL/RCCL/oneCCL selection, strict MCCL/device-direct adapter gates, and an explicit working Gloo host-staging fallback that never claims coherent cross-vendor memory
-- Celium AI+ and CLI execution-plan selection with Kubernetes annotations, serialized pod environment contracts, audit events, NATS lifecycle events, and Prometheus fabric metrics
-- Real Kubernetes workload deployment: inference and interactive `Deployment`/`Service` resources, indexed parallel training and batch `Job` resources, namespace creation, CPU/RAM/accelerator requests, selectors, and scheduler preflight that subtracts active pod requests
-- Aggregate gang-capacity preflight plus Kueue LocalQueue admission and Volcano gang scheduling contracts, with backend API discovery before resource creation
-- Compact or spread topology placement, PriorityClass selection, headless rendezvous Services, worker index/world-size contracts, and RDMA/InfiniBand runtime transport settings for distributed workloads
-- Kubernetes lifecycle reconciliation with placement decisions, pod/container diagnostics, restart and failure reasons, start, stop, redeploy, deletion, current/previous logs, events, generated manifests, and ClusterIP/NodePort/LoadBalancer endpoint reporting
-- Audited Kubernetes container workspace with non-interactive pod exec, Service probes, PVC state, logs, events, diagnostics, and generated manifests
-- Governed namespaced YAML preview and server-side apply with resource allowlisting, dry-run validation, manifest digests, and privileged/host-access policy rejection
-- Public and private registry image deployment with existing Kubernetes `imagePullSecret` references and explicit cluster-governed egress behavior
-- Versioned model repository with Ollama synchronization, Hugging Face/OCI/object-storage/NFS/HTTPS/local source references, runtime contracts, provenance metadata, and workload selection
-- PVC-backed model storage, including an Ollama runtime path that downloads the selected model into a persistent cache and exposes the native Ollama API
-- Windows CPU, RAM, and display-adapter discovery through the included host agent
-- Branded Windows, macOS, and Linux Docker installers with secure first-run configuration, persistent Site ID, staged progress, readiness checks, lifecycle commands, diagnostic logs, and optional browser launch
-- Local NVIDIA and AMD command-line discovery when vendor tools are visible to the control-plane process
-- Apple Silicon Metal/Core ML domain identification when running natively on macOS
-- CPU-only model planning for dense and MoE models, quantization, KV cache, batch size, context, memory headroom, and approximate FLOPs per token
-- Advanced deployment planning for inference, LoRA, and full training with device presets, tensor/pipeline parallelism, bandwidth/compute ceilings, CPU offload, concurrency, and per-device fit
-- Local Ollama model discovery, managed workload registration, inference proxy, and live chat
-- Workload submission with cluster, namespace, type, image/model, command, pool, CPU, memory, accelerators, replicas, storage, port, and service exposure
-- Logical multi-vendor placement policies, with an explicit warning that separate device memories are not merged
-- Queue priority, accelerator quota, memory quota, and preemption policy records
-- Verified cluster registration and continuously refreshed pending/ready/degraded inventory model
+The product has two real components today:
+
+- **OpenMycelium Node Runtime** — the Python dual-vendor execution engine. Hardware-qualified.
+- **MHub Control Plane** — the Go platform: users, clusters, policies, queues, scheduling, Kubernetes, fleet. Implemented, **not integrated**.
+
+---
+
+## Hardware-qualified
+
+Validated on Windows 11 + WSL2, RTX 5060 Ti 16 GB, RX 9060 XT 16 GB, and
+Mistral-Nemo-Instruct-2407. Evidence under `release/0.1.0*/`.
+
+- Single-node inference with one model split across one NVIDIA CUDA GPU and one AMD ROCm GPU: 22.84 GiB checkpoint on two 16 GiB cards
+- 181/182 exclusive tensor ownership, 363 total, zero overlap, boundary after layer 19
+- Byte-exact host-staged cross-vendor activation transfer, SHA-256 verified either side of the boundary
+- Greedy decode: TTFT 142.09 ms median, 11.09 tok/s decode, 10.95 tok/s end-to-end over five independent sessions
+- OpenAI-compatible API on port 11500, verified with the OpenAI Python SDK 3.5.0 and Open WebUI v0.11.1
+- Local operator console on port 11501: readiness, Fabric, Models, Plan, one dual-GPU Run with streamed events, safe Stop
+- Provisioning both GPU environments from zero, each proved with a real BF16 matmul on its own card
+- Idempotent provisioning: rerun changes no environment fingerprint
+- Survives a WSL shutdown and restart, requalifying both GPUs
+- Accelerator discovery with stable identity: NVIDIA by UUID, AMD by PCI location
+- Placement manifests with digest, and an audit gate that refuses tampering, wrong run ids, replayed sequences and impostor writers
+- Clean bootstrap on a fresh WSL distribution, with the documented manual AMD prerequisite
+- Offline installation of all 90 Python wheels from a SHA-256-verified wheelhouse
+- Model import and shard verification against declared lengths
+
+## Integrated
+
+**Nothing yet.**
+
+No part of the MHub control plane has ever invoked the Node Runtime. There is
+no `.go` file referencing `openmycelium run`, `serve`, `plan`, `provision` or
+`console`, nor `pipeline_run`, nor ports 11500 or 11501. Closing this gap — an
+authenticated Node Agent API, and one end-to-end execution through it — is the
+next product milestone.
+
+## Implemented, not integrated
+
+Real code with tests, in the Go control plane and its dashboard. None of it has
+executed a workload on the qualified runtime. Treat every item as unproven
+against hardware.
+
+**Identity and governance**
+- Local account bootstrap, admin-created users, bcrypt hashing, revocable server-side sessions, signup policy, admin/operator/viewer RBAC, self and last-admin protection
+- PostgreSQL-backed users, sessions, clusters, accelerator-pool policies, queues, quotas, integrations, settings and audit events
+- Queue priority, accelerator quota, memory quota and preemption policy records
 - MCP/API integration registry with removal and audit history
-- Organization and workspace-scoped Agent Hub with versioned OCI runtime contracts for generic, LangGraph, OpenAI Agents SDK, Semantic Kernel, AutoGen, and CrewAI workloads
-- Persistent agent flows, runs, run events, human approval gates, least-privilege tool bindings, memory profiles, evaluation results, and A2A 1.0 Agent Card metadata
-- Real Kubernetes agent releases with dedicated service accounts, disabled automatic API-token mounts, workspace/release/agent/run labels, health probes, resource limits, model contracts, approved-tool contracts, cancellation, pod inspection, logs, service endpoints, and audit history
-- Durable agent event streaming through the existing NATS JetStream deployment, with PostgreSQL as the agent system of record and replayable workspace trace views
-- Agent CLI commands for definitions, flow import, runs, cancellation, approvals, traces, tools, and memory inventory
-- Reference OCI agent runtime with health, runtime-contract, A2A metadata, and OpenAI-compatible model execution endpoints
-- Live control-plane summary plus authenticated or bearer-token Prometheus metrics
-- MLOps dashboard correlating models, model versions, storage, runtime adoption, Celium AI+ workloads, workspace releases, failures, and restarts
-- AIOps dashboard with dependency probes, derived alerts, cluster readiness, active sessions, role-scoped user usage, and recent audit activity
-- Expanded bounded-label Prometheus metrics for workloads, runtimes, models, storage, releases, users, sessions, audit activity, clusters, restarts, and dependency health
-- Provisioned Prometheus alert rules and Grafana data source/dashboard with persistent Docker volumes
-- Docker Compose deployment with PostgreSQL, NATS, Prometheus, and Grafana
-- Hardened Kubernetes Helm chart for the control plane
-- Session-aware, dependency-free Python CLI for cluster connection and node inventory, Kubernetes workload submission/lifecycle/diagnostics/logs/events/services/manifests/storage, discovery, Ollama, observability, user administration, and audit
 
-## Engineering milestones required for production operation
+**Fleet and inventory**
+- Authenticated Kubernetes connections with encrypted kubeconfig storage, persistent node inventory, live readiness and schedulability
+- Verified cluster registration and a refreshed pending/ready/degraded inventory model
+- Dynamic accelerator-pool capacity from discovered nodes: total, allocatable, available, unavailable, saturated
+- Accelerator allocation profiles for exclusive GPUs, NVIDIA MIG, time-slicing, MPS and vendor device-plugin slices
+- Windows CPU, RAM and display-adapter discovery through the host agent
+- Local NVIDIA and AMD command-line discovery when vendor tools are visible to the control plane
+- Local Ollama model discovery, managed workload registration, inference proxy and chat
 
-- Signed Windows, macOS, and Linux agents with enrollment tokens, rotation, heartbeats, and remote upgrade
-- Kubernetes agent image and reconciler that update node, device, health, and cluster-ready state
-- NVIDIA DCGM/NVML, AMD ROCm SMI, Intel Level Zero/oneAPI, Apple Metal, NPU, and TPU telemetry adapters validated on real hardware
-- Runtime-aware scheduler adapters for Ray, Slurm, JobSet, Kubeflow Training Operator, LeaderWorkerSet, and automated vendor device-plugin/operator configuration
-- Hypha native data-plane workers, MLIR dialect, CUDA/HIP/Level Zero/Metal transfer backends, UCX/RDMA kernels, framework tensor-storage adapters, checkpoint recovery, and automatic benchmark execution
-- Production MCCL device-direct data plane: dynamic native plugin loading, hierarchical NCCL/RCCL execution, libibverbs transport, PyTorch ProcessGroup registration, resiliency, telemetry, and mixed-vendor hardware qualification; the current MCCL alpha provides a functional centralized TCP reference path and native adapter SDK
-- Distributed training orchestration with framework-specific checkpoint, topology, precision, and failure-recovery contracts
-- Production model-specific vLLM paged-KV and MLX cache codecs, plus llama.cpp, TensorRT-LLM, TGI, OpenAI, Anthropic, and cloud GPU runtime adapters; MCCL 0.2 currently provides OpenAI-compatible request serving and explicit propose/verify extension clients
-- OIDC discovery/login, Microsoft Entra ID group mapping, LDAP bind/search, SCIM provisioning, organizations, teams, and scoped service accounts
-- OpenTelemetry traces, centralized log aggregation, long-term utilization history, energy data, cloud cost ingestion, Alertmanager routing, and notification integrations
-- Temporal workflow-engine adapter for multi-day timers, resumable graph execution, cross-agent compensation, and distributed human tasks; the current release uses PostgreSQL state plus JetStream events
-- Executable MCP broker and A2A task gateway with credential exchange, streaming, consent prompts, and protocol conformance testing; the current release governs bindings and Agent Card metadata
-- Encrypted secret storage using Kubernetes Secrets plus an external KMS or secret manager
-- PostgreSQL backup/restore automation, schema migration versioning, disaster-recovery drills, HA topology, and upgrade rollback
-- API pagination, idempotency keys, optimistic concurrency, rate limits, signed agent APIs, CSRF protection, and full end-to-end security testing
-- Signed native Windows/macOS/Linux installers and packaged CLI binaries
+**Workloads and Kubernetes**
+- Workspaces binding organization, cluster, namespace, queue, StorageClass, quotas and policy
+- Celium AI+ launch flow for inference, training, fine-tuning, batch, interactive applications and agents
+- Kubernetes `Deployment`/`Service` rendering, indexed parallel training and batch Jobs
+- Gang-capacity preflight, Kueue LocalQueue admission and Volcano gang scheduling contracts
+- Topology placement, PriorityClass selection, headless rendezvous Services, worker index and world-size contracts
+- Lifecycle reconciliation with placement decisions, pod diagnostics, restart and failure reasons
+- Governed namespaced YAML preview and server-side apply with allowlisting, dry-run validation and manifest digests
+- Registry image deployment with existing `imagePullSecret` references and cluster-governed egress
+- Audited container workspace: non-interactive pod exec, Service probes, PVC state, logs, events
+
+**Models and planning**
+- Versioned model repository with Ollama sync and Hugging Face / OCI / object-storage / NFS / HTTPS / local source references
+- PVC-backed model storage including an Ollama runtime cache path
+- CPU-only model planning for dense and MoE models: quantization, KV cache, batch, context, headroom, approximate FLOPs
+- Deployment planning for inference, LoRA and full training with device presets and tensor/pipeline parallelism
+- Accelerator benchmark profile storage: model, precision, throughput, memory, P2P, all-reduce
+- Mycelium 1.0 optimization: memory-constrained minimax layer allocation, data/pipeline/ZeRO candidate scoring
+- Mycelium Lab with isolated virtual NVIDIA/AMD/Intel/Apple/CPU topologies and a planning benchmark catalogue
+
+**Observability and deployment**
+- Live control-plane summary, authenticated or bearer-token Prometheus metrics
+- MLOps and AIOps dashboards, bounded-label metrics, provisioned alert rules, Grafana data source and dashboards
+- Docker Compose deployment with PostgreSQL, NATS, Prometheus and Grafana; hardened Helm chart
+- Branded Windows, macOS and Linux Docker installers with first-run configuration and persistent Site ID
+- Dashboard with authenticated navigation, dual-tone visual system and compute-topology canvas
+- Session-aware Python CLI for cluster connection, node inventory and workload lifecycle
+
+**MCCL package (Python)**
+- Installable MCCL alpha: cross-platform discovery, sequence-safe typed TCP AllReduce, checksummed KV-cache transfer, MRouter planning, Metal staging, vLLM endpoint discovery, speculative decoding
+- Native NCCL/RCCL/oneCCL selection with strict device-direct gates and an explicit Gloo host-staging fallback
+- PyTorch Gloo CPU-forwarding reference adapter with pinned host buffers and global rank normalization
+
+Only the host-staged cross-vendor path in this package is hardware-qualified.
+The device-direct and native-collective paths are not.
+
+## Roadmap and experimental
+
+Isolated on purpose. **Do not present any of this as a release feature.**
+
+- Hypha native distributed-memory data plane, MLIR dialect, RDMA/UCX kernels
+- Cross-vendor training and fine-tuning
+- Multi-node MCCL and RDMA; device-direct collectives
+- Agent Hub, MCP broker and A2A task gateway
+- Apple, Intel, NPU and TPU execution
+- Energy-aware scheduling
+- Advanced Kubernetes gang scheduling beyond the current contracts
+- Failure recovery and checkpoint migration
+- Signed agents with enrollment tokens, rotation and remote upgrade
+- OIDC, Entra ID group mapping, LDAP, SCIM, organizations and teams
+- OpenTelemetry traces, log aggregation, long-term utilization, cost ingestion
+- Temporal workflow adapter
+- Encrypted secret storage via KMS
+- PostgreSQL backup/restore automation, migration versioning, HA, upgrade rollback
+- API pagination, idempotency keys, optimistic concurrency, rate limits, signed agent APIs
+- Signed native installers and packaged CLI binaries
 
 ## Platform truth
 
-OpenMycelium can manage heterogeneous devices as one scheduling inventory and split compatible work across separate workers. It cannot turn NVIDIA, AMD, Intel, Apple, NPU, TPU, local, and cloud memory into one hardware-coherent unified-memory pool. Every workload adapter must honor the memory, runtime, topology, and communication limits of the hardware it actually uses.
+OpenMycelium can manage heterogeneous devices as one scheduling inventory and
+split compatible work across separate workers. It **cannot** turn NVIDIA, AMD,
+Intel, Apple, NPU, TPU, local and cloud memory into one hardware-coherent
+unified-memory pool.
+
+What v0.1.0 proves is narrower still: **aggregated capacity across two GPUs in
+one machine**. A 22.84 GiB model runs on two 16 GiB cards because the layers
+are split and each stage keeps its own memory space. There is no shared address
+space and no page migration. A tensor that does not fit on one card still does
+not fit.
+
+One NVIDIA GPU and one AMD GPU per pipeline are qualified. Multi-AMD identity
+and scheduling are **not** qualified: the ledger records the AMD PCI bus number
+rather than the full BDF, which cannot distinguish multiple functions or
+devices sharing a bus topology.

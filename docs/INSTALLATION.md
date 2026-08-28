@@ -1,4 +1,9 @@
-# OpenMycelium Installation Guide
+# Installing the MHub control plane
+
+> This document covers the Go control plane, which is **implemented but not
+> integrated**: it has never invoked the Node Runtime. To install and operate
+> the qualified dual-GPU runtime, see [OPERATIONS.md](OPERATIONS.md) and
+> [INSTALL.md](INSTALL.md) instead.
 
 This guide covers the current Developer Edition deployment paths. The branded Docker launcher is the recommended installation method for a workstation, lab server, or evaluation environment.
 

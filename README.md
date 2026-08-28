@@ -1,18 +1,53 @@
 # OpenMycelium
 
-An installable control-plane foundation for discovering compute, governing logical accelerator pools, and operating AI workloads across local hosts and clusters. The interface is designed as a quiet, premium operations workspace: real data, explicit state, compact controls, and no fabricated infrastructure.
+Run one model across GPUs from different vendors.
 
-See [FEATURES.md](FEATURES.md) for the implemented capability matrix and the remaining production roadmap.
+**v0.1.0 Technical Preview** aggregates model capacity across one NVIDIA CUDA
+GPU and one AMD ROCm GPU. It does not create unified VRAM. Validated on Windows
+11 with WSL2, RTX 5060 Ti 16 GB, RX 9060 XT 16 GB, and
+Mistral-Nemo-Instruct-2407: a 22.84 GiB checkpoint running on two 16 GiB cards,
+181/182 exclusive tensor ownership, byte-exact cross-vendor transfer, 11.09
+tok/s median decode.
+
+## Two components, at different maturities
+
+**OpenMycelium Node Runtime** — the Python execution engine: CUDA/ROCm
+execution, model partitioning, MCCL cross-vendor transport, an
+OpenAI-compatible API, a local operator console, and hardware telemetry.
+**Hardware-qualified**, and what v0.1.0 ships.
+
+**MHub Control Plane** — the Go platform: users, clusters, policies, queues,
+scheduling, Kubernetes and fleet management. Substantial working code with
+tests, **but it has never invoked the Node Runtime**. Treat it as
+implemented-not-integrated until an authenticated Node Agent API connects the
+two and one workload executes end to end.
+
+[FEATURES.md](FEATURES.md) classifies every capability as hardware-qualified,
+integrated, implemented, or roadmap. Read it before relying on anything here.
+
+## What v0.1.0 does not do
+
+Greedy decoding only; sampling parameters are refused rather than ignored. One
+request at a time. One NVIDIA and one AMD GPU per pipeline — multi-AMD is not
+qualified. Single node. One model family validated. No TLS, no background
+service, no training. Manual installation of AMD ROCm-for-WSL system components
+is required. See [LIMITATIONS.md](docs/LIMITATIONS.md).
 
 ## Why OpenMycelium
 
-AI infrastructure is fragmented across GPU vendors, CPUs, local runtimes, Kubernetes distributions, model stores, schedulers, and agent frameworks. OpenMycelium provides one vendor-neutral control plane for discovering that capacity, planning model fit, governing placement, deploying workloads, and observing their real lifecycle without replacing the underlying CUDA, ROCm, Metal, Kubernetes, or model-runtime technologies.
+AI infrastructure is fragmented across GPU vendors, CPUs, local runtimes, Kubernetes distributions, model stores, schedulers, and agent frameworks. The long-term aim is one vendor-neutral control plane for discovering that capacity, planning model fit, governing placement, deploying workloads, and observing their real lifecycle without replacing the underlying CUDA, ROCm, Metal, Kubernetes, or model-runtime technologies.
 
-It is designed for platform teams that need to operate inference, training, fine-tuning, containers, models, and agentic systems across local machines and clusters with consistent identity, policy, auditability, and telemetry.
+That is the direction, not the current state. What exists today is a qualified single-node dual-vendor runtime, and a control plane that does not yet drive it.
 
 ## Documentation
 
-- [Installation and operations](docs/INSTALLATION.md)
+- [Operating the runtime: install, configure, run, maintain, stop](docs/OPERATIONS.md)
+- [Installing v0.1.0](docs/INSTALL.md)
+- [Hardware matrix: qualified and explicitly unqualified](docs/HARDWARE_MATRIX.md)
+- [Limitations](docs/LIMITATIONS.md)
+- [Rollback and uninstall](docs/ROLLBACK.md)
+- [Security notes](docs/SECURITY.md)
+- [Control-plane installation (MHub, not integrated)](docs/INSTALLATION.md)
 - [Problems solved and use cases](docs/USE_CASES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Heterogeneous execution fabric](docs/HETEROGENEOUS_FABRIC.md)
