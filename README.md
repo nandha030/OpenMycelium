@@ -25,6 +25,51 @@ two and one workload executes end to end.
 [FEATURES.md](FEATURES.md) classifies every capability as hardware-qualified,
 integrated, implemented, or roadmap. Read it before relying on anything here.
 
+## Platform support
+
+| Platform | Node Runtime | MHub Control Plane |
+|---|---|---|
+| Windows 11 + WSL2 | **Validated** | Installable, not connected to a runtime |
+| Native Linux | Experimental, unqualified | Installable, not connected to a runtime |
+| macOS | **Unsupported** — CUDA and ROCm cannot coexist there | Installable, not connected to a runtime |
+
+macOS is unsupported for a structural reason, not an untested one: the runtime
+needs one CUDA and one ROCm device in the same machine, and no Mac can present
+that pair. Apple Metal execution is roadmap. To use OpenMycelium from a Mac,
+run the runtime on a machine with both GPUs and connect to its
+OpenAI-compatible API. See [PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md).
+
+## Install and run, in short
+
+On the machine with both GPUs, inside WSL2 or Linux:
+
+```bash
+python3 -m venv /opt/openmycelium/venv
+/opt/openmycelium/venv/bin/pip install openmycelium_mccl-*.whl openmycelium-*.whl
+export PATH=/opt/openmycelium/venv/bin:$PATH
+
+# AMD ROCm-for-WSL system components are a manual prerequisite on WSL.
+# See docs/OPERATIONS.md before this step.
+openmycelium provision          # builds both GPU environments, proves each one
+openmycelium doctor             # every precondition, before loading 22 GB
+
+openmycelium model import /path/to/Mistral-Nemo-Instruct-2407
+openmycelium plan  --model Mistral-Nemo-Instruct-2407
+openmycelium run   --model Mistral-Nemo-Instruct-2407 --prompt "..."
+openmycelium serve --model Mistral-Nemo-Instruct-2407    # OpenAI API on 11500
+openmycelium console                                     # operator UI on 11501
+
+openmycelium ps                 # what is running
+openmycelium stop               # graceful shutdown
+```
+
+From Windows, `openmycelium.cmd` runs the same commands through WSL. Keep the
+window open: WSL2 stops its VM when the last client disconnects, so closing it
+unloads the model.
+
+Full instructions, including configuration and maintenance:
+[OPERATIONS.md](docs/OPERATIONS.md).
+
 ## What v0.1.0 does not do
 
 Greedy decoding only; sampling parameters are refused rather than ignored. One
@@ -41,6 +86,7 @@ That is the direction, not the current state. What exists today is a qualified s
 
 ## Documentation
 
+- [Platform support: Windows, Linux, macOS](docs/PLATFORM_SUPPORT.md)
 - [Operating the runtime: install, configure, run, maintain, stop](docs/OPERATIONS.md)
 - [Installing v0.1.0](docs/INSTALL.md)
 - [Hardware matrix: qualified and explicitly unqualified](docs/HARDWARE_MATRIX.md)
