@@ -1,0 +1,560 @@
+# Model Adapter SDK — contract
+
+**Status: FROZEN.** Reviewed, amended, and the manifest-schema question settled
+in favour of separate readable and executable schema sets. Implementation may
+begin against this document; changes to it require the same review.
+
+Baseline captured at `d76334a` on the qualified machine. Every number in
+[Acceptance](#10-acceptance-criteria) comes from that run.
+
+---
+
+## 1. Scope and non-goals
+
+### In scope
+
+The first milestone is **internal restructuring plus fail-closed rejection**. It
+adds no execution capability.
+
+- A stable adapter interface, and Mistral moved behind it unchanged.
+- Deterministic adapter resolution from the checkpoint.
+- Rejection of unsupported architectures **before any GPU allocation**, on both
+  the planning path and the direct-worker path.
+- Adapter identity pinned into new placement manifests.
+- Removal of the premature Llama declaration.
+
+### Explicitly not in scope
+
+Llama execution. Qwen2, Gemma, Phi. Quantization of any kind. Mixture-of-experts.
+Multimodal. Encoder-decoder, embedding or reranking models. Alternative serving
+backends. FP16. Sampling. Batching. Any change to CLI, API, console routes or UI
+workflows.
+
+### The state being corrected
+
+`SUPPORTED_ARCHITECTURES = {"MistralForCausalLM", "LlamaForCausalLM"}` exists at
+[model_inspect.py:179](../runtime/serving/model_inspect.py) and is **referenced
+nowhere**. There is no architecture gate today. A Llama checkpoint currently
+inspects, plans, allocates VRAM on both cards, loads weights, and fails when
+`MistralStage` builds Mistral layers from a Llama config. This milestone makes
+that a refusal before allocation.
+
+---
+
+## 2. Three status dimensions, never combined
+
+A single "supported" flag cannot express "we understand this model, but it will
+not fit" or "this adapter works but has never been qualified on hardware".
+
+### `compatibilityStatus` — can this checkpoint be executed at all?
+
+| Value | Meaning |
+|---|---|
+| `SUPPORTED` | An installed adapter claims this architecture and the checkpoint satisfies it |
+| `UNSUPPORTED_ARCHITECTURE` | No installed adapter claims this architecture |
+| `INVALID_CHECKPOINT` | Architecture recognised, checkpoint malformed: missing tensors, discontiguous layers, unreadable config |
+| `ADAPTER_UNAVAILABLE` | An adapter is registered for this architecture but is not installed or failed to load |
+| `CONVERSION_REQUIRED` | Recognised, but in a format this build cannot read directly |
+| `CUSTOM_CODE_REFUSED` | The checkpoint requires executing repository-supplied Python |
+
+### `qualificationStatus` — has this adapter been proven on hardware?
+
+| Value | Meaning |
+|---|---|
+| `HARDWARE_QUALIFIED` | A qualification record matches this exact situation |
+| `UNQUALIFIED` | No matching record |
+
+### Qualification is default-deny
+
+An `UNQUALIFIED` adapter may be **inspected and planned**. It may **not** be
+executed by `run`, `chat`, `serve` or the console. Execution requires an
+explicit qualification mode or policy override, and the audit trail records that
+the override was used, by whom, and against which record.
+
+This inverts the previous draft, where unqualified adapters could run freely.
+
+### Qualification is scoped, not a label on a name
+
+A record is **not** "mistral@1 is qualified". It is a tuple, and a change to any
+element makes it no longer apply:
+
+```
+modelFingerprint      ff74ccb7…       the checkpoint
+adapterId             mistral
+adapterVersion        "1"
+adapterConfigDigest   …               the config that drove construction
+openmyceliumVersion   0.2.0a6
+mcclVersion           0.2.0a3
+transport             host-staged-xvendor
+cudaRuntime           torch 2.11.0+cu128
+rocmRuntime           torch 2.10.0+rocm7.0
+topology              nvidia:<identity> + amd:<identity>, boundary after layer 19
+```
+
+A different checkpoint of the same architecture is unqualified. The same
+checkpoint after a torch upgrade is unqualified. The same everything on a
+different pair of cards is unqualified. That is the point: the previous draft's
+label would have claimed qualification for situations never tested.
+
+### Bootstrapping
+
+`mistral@1` is **`UNQUALIFIED` until the post-refactor hardware gate passes**.
+The gate itself must therefore run in qualification mode — that is what
+qualification mode is for. The record is written only after the gate passes, and
+the acceptance run is the evidence for it.
+
+### `feasibilityStatus` — will it fit and run here, now?
+
+| Value | Meaning |
+|---|---|
+| `FEASIBLE` | A placement compiles within the current budgets |
+| `INSUFFICIENT_MEMORY` | Aggregated capacity across the available GPUs is not enough |
+| `BACKEND_UNAVAILABLE` | A required runtime or device is missing |
+
+Feasibility is a property of this machine at this moment. It changes when a GPU
+is busy; compatibility does not.
+
+**A model may be `SUPPORTED` + `HARDWARE_QUALIFIED` + `INSUFFICIENT_MEMORY`.**
+That is a normal, well-formed answer.
+
+---
+
+## 3. Deterministic adapter resolution
+
+Resolution reads **only the checkpoint**:
+
+1. **Every entry** in `config["architectures"]`, not just the first
+2. `config["model_type"]`
+3. Architecture-driving configuration (§4)
+4. Required tensor names and structure
+
+The whole list is evaluated. A checkpoint declaring
+`["FooForCausalLM", "MistralForCausalLM"]` is a checkpoint that claims to be
+both, and taking only element zero would silently ignore half of what it says.
+If more than one installed adapter claims any entry, the result is
+`AMBIGUOUS_ADAPTER`.
+
+It **never** reads the model directory name, the repository name, a user-supplied
+adapter id, a CLI flag, or an environment variable. A checkpoint copied to a
+directory called `llama-7b` resolves by its contents.
+
+### Fail closed
+
+| Matches | Outcome |
+|---|---|
+| Exactly one | That adapter |
+| Zero | `UNSUPPORTED_ARCHITECTURE` |
+| More than one | `AMBIGUOUS_ADAPTER` — a registry defect, never resolved by precedence |
+
+Ambiguity is not broken by ordering, registration time or specificity. Two
+adapters claiming one architecture is a bug in the registry, and silently
+picking one would hide it.
+
+### Interface
+
+```python
+class ModelAdapter:
+    adapter_id: str           # "mistral"
+    adapter_version: str      # "1"  -- persisted, digest-covered
+    adapter_api_version: int  # 1    -- which SDK interface this implements
+    architectures: frozenset  # {"MistralForCausalLM"}
+
+    def claims(self, config: dict) -> bool: ...
+    def validate_checkpoint(self, config: dict, tensors: Sequence) -> list[str]: ...
+    def config_digest(self, config: dict) -> str: ...
+    def identify_layers(self, tensors: Sequence) -> dict: ...
+    def build_stage(self, config_path: str, spec, torch) -> Any: ...
+    def create_cache(self, config: dict, spec) -> Any: ...
+    def tokenizer(self, model_path: str) -> Any: ...
+    def numerical_contract(self) -> dict: ...
+```
+
+`build_stage` returns today's `MistralStage`, unchanged.
+
+---
+
+## 4. Adapter identity and `adapterConfigDigest`
+
+### Identity
+
+```
+adapterId          "mistral"     string
+adapterVersion     "1"           string: persisted and digest-covered
+adapterApiVersion  1             integer: the SDK interface version
+```
+
+`adapterVersion` is a string because it is written into manifests and covered
+by `manifestDigest`; a string will not be reformatted by a JSON round-trip.
+`adapterApiVersion` is an integer describing which SDK interface an adapter
+implements, and is not persisted in manifests.
+
+Written as `mistral@1` in messages. `adapterVersion` increments when the adapter
+changes in a way that could alter numerical output — a different attention
+implementation, a changed RoPE construction, a different default dtype. It does
+**not** increment for refactoring, logging or error-message changes.
+
+### `adapterConfigDigest`
+
+`MistralStage` passes the entire `config.json` to `MistralConfig(**raw)`, so
+**every key is architecture-driving by construction**. Digesting a hand-picked
+subset would let an unlisted key change behaviour without changing the digest.
+
+The digest therefore covers the whole config with a small, explicit exclusion
+list of keys that provably do not affect construction:
+
+```
+excluded: transformers_version, _name_or_path
+```
+
+Only these two. An earlier draft also excluded `torch_dtype_str` and
+`architectures_note`; neither exists in the validated checkpoint and neither was
+proven metadata-only by reading executable code, so they are hashed like any
+other key. Hashing an unknown key is safe; skipping one is not.
+
+`architectures`, `model_type` and `torch_dtype` are **included**: they select the
+adapter and the compute dtype.
+
+Canonical form:
+
+```
+1. Load config.json as JSON.
+2. Remove the excluded keys, if present.
+3. Serialise:  json.dumps(obj, sort_keys=True, separators=(",", ":"),
+                          ensure_ascii=True)
+4. Encode UTF-8.
+5. sha256, lowercase hex.
+```
+
+This matches `_canonical()` in `placement.py`, so the project has one canonical
+JSON form rather than two.
+
+For the validated checkpoint the digest covers these 22 keys:
+
+```
+architectures, attention_dropout, bos_token_id, eos_token_id, head_dim,
+hidden_act, hidden_size, initializer_range, intermediate_size,
+max_position_embeddings, model_type, num_attention_heads, num_hidden_layers,
+num_key_value_heads, rms_norm_eps, rope_theta, sliding_window,
+tie_word_embeddings, torch_dtype, use_cache, vocab_size
+```
+
+minus `transformers_version`.
+
+---
+
+## 5. Enforcement order
+
+```
+inspect                    read-only, always answers, never raises on unsupported
+  ↓
+resolve adapter            from checkpoint contents only
+  ↓
+require_executable_adapter ← REJECTS HERE, before any allocation
+  ↓
+create placement
+  ↓
+digest manifest            adapter fields covered
+  ↓
+spawn worker
+  ↓
+verify manifest digest     exactly as stored, nothing injected
+  ↓
+validate_for_worker        ← REJECTS HERE, before stage construction
+  ↓
+build stage / load weights
+```
+
+### Two enforcement points, because there are two ways in
+
+`create_placement()` alone is **not sufficient**. A worker can be started
+directly with an existing manifest — `pipeline_run.py` does exactly that via
+`load_placement()` at [pipeline_run.py:1278](../runtime/serving/pipeline_run.py),
+and `scripts/repro/boundary_exact_clean.sh` invokes `forward_pass.py` that way
+in this project's own qualification harness.
+
+| Point | Guards | Rejects |
+|---|---|---|
+| `require_executable_adapter()` | `plan`, `run`, `chat`, `serve`, console | unsupported architecture |
+| `validate_for_worker()` | direct worker invocation | manifest with no pinned adapter identity |
+
+### What each rejection actually guarantees
+
+The two are not observable in the same way, and an earlier draft wrongly claimed
+they were.
+
+**Planning rejection** — `require_executable_adapter()`:
+
+- No worker process is spawned.
+- No device context is created and no VRAM is allocated.
+
+**Direct-worker rejection** — `validate_for_worker()`:
+
+- A worker process **necessarily exists**; it was invoked directly. "No worker spawned" cannot apply here.
+- It must exit **before stage construction and before any weight allocation**.
+- No orphan process and no persistent VRAM allocation may remain afterwards.
+
+The test for the direct-worker path therefore samples VRAM before and after,
+waits for the process to exit, and asserts a non-zero exit code with residency
+returned to its pre-invocation level — not that nothing was started.
+
+---
+
+## 6. Manifest behaviour
+
+### New manifests
+
+```json
+{
+  "schemaVersion": 2,
+  "adapterId": "mistral",
+  "adapterVersion": "1",
+  "adapterConfigDigest": "…64 hex…"
+}
+```
+
+Top-level `schemaVersion` goes from `1` to `2`. The nested `fabric.schemaVersion`
+is independent and stays as it is — it is already `2` for unrelated reasons, and
+the two version the two different things.
+
+These are **covered by `manifestDigest`**. `_digest()` in `placement.py` hashes
+the whole manifest minus `manifestDigest` itself, so no allowlist needs
+updating, and a manifest with the adapter fields stripped fails validation
+rather than executing.
+
+### Legacy manifests
+
+A legacy manifest is one with `schemaVersion: 1` and no `adapterId`.
+
+**`validate_manifest()` must accept both schema versions.** It currently does an
+exact equality check:
+
+```python
+if manifest.get("schemaVersion") != MANIFEST_SCHEMA_VERSION:
+    raise ManifestError(...)
+```
+
+Bumping `MANIFEST_SCHEMA_VERSION` to `2` without changing that line makes every
+v1 manifest fail validation outright — including `release/0.1.0a5/placement.json`
+and every manifest inside the frozen gate evidence, all of which are v1. That
+would break "legacy manifests remain readable and audit-replayable" in the same
+change that promises it.
+
+Required behaviour:
+
+```python
+CURRENT_MANIFEST_SCHEMA_VERSION    = 2
+READABLE_MANIFEST_SCHEMA_VERSIONS  = frozenset({1, 2})
+EXECUTABLE_MANIFEST_SCHEMA_VERSIONS = frozenset({2})
+```
+
+| Situation | Outcome |
+|---|---|
+| Producers write a manifest | always schema `2` |
+| Schema `1`, integrity | digest verified against the file **as stored**; readable and audit-replayable |
+| Schema `1`, execution | `LEGACY_UNPINNED_MANIFEST`, `remediation: REPLAN_REQUIRED` |
+| Schema `2` missing adapter fields | `INVALID_MANIFEST` — an invalid v2, **not** treated as legacy |
+| Any other schema version | `UNSUPPORTED_MANIFEST_SCHEMA` |
+| Any version | no adapter defaults are ever injected |
+
+The v2-missing-fields rule matters: silently demoting an incomplete v2 to
+"legacy" would let a truncated or hand-edited manifest present itself as merely
+old, and the remedy offered would be wrong.
+
+### Validation order
+
+Fixed, because the order is what protects the frozen evidence:
+
+```
+1. parse the raw manifest
+2. recompute and verify its digest, without modifying it in any way
+3. check membership of READABLE_MANIFEST_SCHEMA_VERSIONS
+4. apply schema-specific structural validation
+5. for worker execution, check EXECUTABLE_MANIFEST_SCHEMA_VERSIONS
+6. validate adapter identity against the checkpoint
+```
+
+Step 2 precedes every other decision. Any step that added, defaulted or
+normalised a field before it would change what is hashed and make a legitimate
+file fail its own integrity check.
+
+Integrity and executability are separate questions, and conflating them is what
+would have destroyed the frozen evidence's validity.
+
+- **Verified exactly as stored.** `validate_manifest()` recomputes the digest over the file as written.
+- **No defaults are ever injected before verification.** Defaulting `adapterId` to `"mistral"` on load would make `_digest()` hash the injected field and the manifest would fail its own integrity check. This is the single most important rule here.
+- **Inspectable.** `plan` output, the console's Plan screen and audit replay all read them.
+- **Not executable.** `validate_for_worker()` raises a single error:
+
+  ```json
+  { "errorCode": "LEGACY_UNPINNED_MANIFEST", "remediation": "REPLAN_REQUIRED" }
+  ```
+
+  One code for the failure, remediation as a field. Two competing codes for one
+  condition would make callers guess which to match on.
+
+Frozen evidence — `release/0.1.0a5/placement.json` and the manifests inside the
+gate evidence — continues to pass `validate_manifest()` byte-for-byte, because
+nothing rewrites it.
+
+Normal workflows plan before executing, so Mistral users see no change.
+
+---
+
+## 7. Worker checks
+
+`validate_for_worker(manifest, inspection, spec, role)` requires all of:
+
+| Check | Failure |
+|---|---|
+| Manifest pins an adapter | `LEGACY_UNPINNED_MANIFEST` |
+| Pinned `adapterId`/`adapterVersion` is installed | `ADAPTER_UNAVAILABLE` |
+| Pinned adapter matches the resolved architecture | `ADAPTER_MISMATCH` |
+| `adapterConfigDigest` matches the checkpoint now | `ADAPTER_MISMATCH` |
+| `modelFingerprint` matches | `ADAPTER_MISMATCH` |
+| Stage assignment exists for this role | `ADAPTER_MISMATCH` |
+| Runtime role matches the stage's declared runtime | `ADAPTER_MISMATCH` |
+
+The `adapterConfigDigest` check is what catches a checkpoint edited between
+planning and execution.
+
+---
+
+## 8. UI and API compatibility
+
+**No existing route, request body, response field, gate or workflow changes.**
+
+Additive only:
+
+- `model inspect --json` gains `architecture`, `adapterId`, `adapterVersion`, `compatibilityStatus`, `qualificationStatus`, `compatibilityReason`.
+- Placement manifests gain the three adapter fields.
+- Audit events gain `adapterId`, `adapterVersion`.
+- Console `/api/models` and `/api/placement` carry them through.
+
+The console ignores unknown fields and renders `gates` by iteration rather than
+by hard-coded names, so a future compatibility gate would appear without a UI
+change. `schemaVersion` stays `1`: additive fields do not break a cached bundle.
+
+**Acceptance:** every existing console workflow works unchanged with
+Mistral-Nemo — same buttons, same routes, same request shapes, nothing removed
+or renamed.
+
+---
+
+## 9. Stable error codes
+
+Machine-readable, stable across versions, carried in JSON as `errorCode`.
+
+| Code | Meaning | Exit |
+|---|---|---|
+| `UNSUPPORTED_ARCHITECTURE` | No installed adapter claims this architecture | 65 |
+| `AMBIGUOUS_ADAPTER` | More than one adapter claims it — registry defect | 70 |
+| `ADAPTER_UNAVAILABLE` | Registered but not installed or failed to load | 69 |
+| `ADAPTER_MISMATCH` | Pinned identity disagrees with the checkpoint | 65 |
+| `LEGACY_UNPINNED_MANIFEST` | Schema 1 manifest; `remediation: REPLAN_REQUIRED` | 65 |
+| `INVALID_MANIFEST` | Schema 2 missing required adapter fields | 65 |
+| `UNSUPPORTED_MANIFEST_SCHEMA` | Schema version outside the readable set | 65 |
+| `INVALID_CHECKPOINT` | Architecture recognised, checkpoint malformed | 66 |
+| `CUSTOM_CODE_REFUSED` | Requires executing repository-supplied Python | 77 |
+
+Each message names the architecture found, the adapters installed, and the one
+action that resolves it.
+
+---
+
+## 10. Acceptance criteria
+
+Baseline captured at `d76334a`, boot `96203ff6-c5e7-4037-a0ab-d689c863e501`,
+`openmycelium 0.2.0a5` / `mccl 0.2.0a3`, content
+`74729745a44f79b13845786134852c3513cb6d89867d52009c8440ed488b0999`.
+
+### Must reproduce exactly
+
+| | Baseline |
+|---|---|
+| Greedy token ids | `[49256, 9332, 24227, 56455, 31587, 9985, 7523, 1750, 113422, 8832, 9055, 6056, 1408, 2801, 47910, 1307, 20534, 7176, 3816, 56309, 1317, 3398, 3486, 1505]` |
+| Text | `Cross-vendor GPU inference allows running pre-trained machine learning models on different brands of GPUs without needing to retrain or` |
+| Ownership | `[181, 182]`, 363 total, overlap 0 |
+| Boundary | 2 transfers, `[1,1,5120]` bfloat16, 10240 B, sent = received = `c1467cd33c52032932ae4a39661a8136` |
+| Model fingerprint | `ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adcc7be` |
+| Boundary layer | after 19 |
+| Orphan workers | 0 |
+| VRAM released | CUDA ≤ ~1.3 GiB, ROCm ≤ ~100 MiB |
+
+### Must fall in range
+
+| | Baseline | Acceptance |
+|---|---|---|
+| Decode | 11.06 tok/s | 10.9 – 11.3 tok/s |
+| TTFT | median **144.3 ms** of 142.4 / 144.3 / 161.8 | **median of ≥ 3 post-refactor sessions ≤ 173.2 ms** |
+
+TTFT: at least three independent post-refactor sessions. Accept when the median
+is no more than 20% above the baseline median of 144.3 ms — that is **173.2 ms**.
+All samples are preserved, not just the median, so a change in spread is visible
+even when the median passes.
+
+The three unchanged-code runs spanned 14%, which is why equality would fail on
+noise. Decode was 11.03–11.07 across the same runs and is held tightly.
+
+### Must newly hold
+
+- A Llama checkpoint is rejected with `UNSUPPORTED_ARCHITECTURE` **and no GPU memory is allocated** — asserted by sampling VRAM before and after, and by no worker process appearing.
+- An unknown architecture is likewise rejected.
+- A legacy manifest passes `validate_manifest()` unchanged, is inspectable, and refuses to execute with `LEGACY_UNPINNED_MANIFEST` / `REPLAN_REQUIRED`.
+- A direct `forward_pass.py` / `pipeline_run.py` invocation with a legacy manifest is refused **before stage construction**.
+- `release/0.1.0a5/placement.json` and every manifest in frozen evidence still verifies.
+- `manifestDigest` changes for new manifests; frozen digests do not.
+
+### Method
+
+`scripts/repro/console_wheel_gate.sh` runs **unchanged**, with `OM_REPO` set so
+wheel paths resolve. If the gate needs editing to pass, the extraction was
+wrong.
+
+Baseline and comparison are preserved together under the new alpha's release
+evidence once accepted — not before.
+
+---
+
+## 11. Resolved: the manifest-schema conflict
+
+Bumping `schemaVersion` to `2` would have broken legacy readability, because
+`validate_manifest()` did an exact equality check against a single constant.
+Every v1 manifest would have failed **integrity** validation, not merely
+execution — including `release/0.1.0a5/placement.json`, every manifest in the
+frozen gate evidence, and the captured baseline, all confirmed top-level v1 with
+`fabric.schemaVersion` independently at 2.
+
+**Resolved in favour of separate readable and executable schema sets**, as
+specified in §6. Integrity accepts `{1, 2}`; execution accepts `{2}`. A schema
+version is thereby free to describe the manifest's shape, which is its purpose,
+without integrity and executability being forced into one answer.
+
+---
+
+## Preserving imports
+
+If `MistralStage` moves to `runtime/serving/adapters/mistral.py`, its current
+module must re-export it:
+
+```python
+# runtime/serving/stage_model.py
+from adapters.mistral import MistralStage  # noqa: F401  (compatibility re-export)
+```
+
+`pipeline_run.py` imports it at line 49, and anything outside this repository
+may too. The re-export is temporary and removed only in a release that says so.
+
+---
+
+## Applied from review
+
+| # | Amendment | Where |
+|---|---|---|
+| 1 | `adapterVersion` string, `adapterApiVersion` integer, manifest `schemaVersion` → 2 | §4, §6 |
+| 2 | Qualification default-deny, scoped to a tuple, override audited | §2 |
+| 3 | Direct-worker rejection: a worker exists and must exit before allocation | §5 |
+| 4 | Every entry in `architectures`, not just the first | §3 |
+| 5 | Digest excludes only `transformers_version` and `_name_or_path` | §4 |
+| 6 | One error code, remediation as a field | §6, §9 |
+| 7 | TTFT: median of ≥ 3 sessions ≤ 173.2 ms | §10 |
+| 8 | `MistralStage` re-exported from its old module | above |
