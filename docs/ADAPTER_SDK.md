@@ -4,6 +4,10 @@
 in favour of separate readable and executable schema sets. Implementation may
 begin against this document; changes to it require the same review.
 
+**Amended after implementation** (reviewed and approved): §7 no longer
+renumbers the four pre-existing manifest failures — they keep
+`MANIFEST_ERROR`/66. §9 gains `ADAPTER_UNQUALIFIED` and `MANIFEST_ERROR`.
+
 Baseline captured at `d76334a` on the qualified machine. Every number in
 [Acceptance](#10-acceptance-criteria) comes from that run.
 
@@ -404,18 +408,40 @@ Normal workflows plan before executing, so Mistral users see no change.
 
 `validate_for_worker(manifest, inspection, spec, role)` requires all of:
 
-| Check | Failure |
-|---|---|
-| Manifest pins an adapter | `LEGACY_UNPINNED_MANIFEST` |
-| Pinned `adapterId`/`adapterVersion` is installed | `ADAPTER_UNAVAILABLE` |
-| Pinned adapter matches the resolved architecture | `ADAPTER_MISMATCH` |
-| `adapterConfigDigest` matches the checkpoint now | `ADAPTER_MISMATCH` |
-| `modelFingerprint` matches | `ADAPTER_MISMATCH` |
-| Stage assignment exists for this role | `ADAPTER_MISMATCH` |
-| Runtime role matches the stage's declared runtime | `ADAPTER_MISMATCH` |
+| Check | Failure | Exit | New? |
+|---|---|---|---|
+| Manifest pins an adapter | `LEGACY_UNPINNED_MANIFEST` | 65 | new |
+| Pinned `adapterId`/`adapterVersion` is installed | `ADAPTER_UNAVAILABLE` | 69 | new |
+| Pinned adapter matches the resolved architecture | `ADAPTER_MISMATCH` | 65 | new |
+| `adapterConfigDigest` matches the checkpoint now | `ADAPTER_MISMATCH` | 65 | new |
+| `modelFingerprint` matches | `MANIFEST_ERROR` | 66 | **pre-existing** |
+| Exclusive tensor ownership holds | `MANIFEST_ERROR` | 66 | **pre-existing** |
+| Stage assignment exists for this role | `MANIFEST_ERROR` | 66 | **pre-existing** |
+| Runtime role matches the stage's declared runtime | `MANIFEST_ERROR` | 66 | **pre-existing** |
+
+### Amendment: pre-existing failures keep their existing code and exit status
+
+An earlier revision of this table mapped the last four rows to
+`ADAPTER_MISMATCH`/65 as well. That is withdrawn.
+
+Those four conditions ship today as `ManifestError` with exit 66, and
+`test_model_drift_is_rejected` asserts the current wording. Renumbering them
+would change behaviour that already shipped in v0.1.0, for no gain: the
+refusal, the message and the guarantee are unchanged, and only the label would
+move. A caller that already branches on 66 would silently stop matching.
+
+The rule is therefore: **`ADAPTER_MISMATCH`/65 applies only to the conditions
+this milestone introduces** — a pinned identity no installed adapter provides,
+and a pinned identity that no longer describes the checkpoint. Everything the
+manifest could already fail on keeps `MANIFEST_ERROR`/66.
+
+Ordering follows from the same decision. The model fingerprint already covers
+the whole config, so it is checked **first** and keeps reporting config drift in
+the words it always has; adapter identity is checked after it, and adds only the
+case the fingerprint cannot see.
 
 The `adapterConfigDigest` check is what catches a checkpoint edited between
-planning and execution.
+planning and execution when the fingerprint is unchanged.
 
 ---
 
@@ -455,6 +481,8 @@ Machine-readable, stable across versions, carried in JSON as `errorCode`.
 | `UNSUPPORTED_MANIFEST_SCHEMA` | Schema version outside the readable set | 65 |
 | `INVALID_CHECKPOINT` | Architecture recognised, checkpoint malformed | 66 |
 | `CUSTOM_CODE_REFUSED` | Requires executing repository-supplied Python | 77 |
+| `ADAPTER_UNQUALIFIED` | No qualification record covers this situation; `remediation: QUALIFICATION_REQUIRED` | 65 |
+| `MANIFEST_ERROR` | Pre-existing manifest failures (§7), unchanged from v0.1.0 | 66 |
 
 Each message names the architecture found, the adapters installed, and the one
 action that resolves it.
