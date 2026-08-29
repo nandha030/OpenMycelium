@@ -1,0 +1,27 @@
+  baseline  /var/log/om-baseline
+  refactor  /var/log/om-refactor2
+
+  == must be identical ==
+    ok       generated token ids: [49256, 9332, 24227, 56455, 31587, 9985, 7523, 1750, 113422, 8832, 9055, 6056, 1408, 280
+    ok       decoded text: Cross-vendor GPU inference allows running pre-trained machine learning models on differe
+    ok       model fingerprint: ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adcc7be
+    ok       boundary layer: 19
+    ok       transport: host-staged-xvendor
+    ok       activation bytes/token: 10240
+    ok       tensor count: 363
+    ok       weight bytes: 24495564800
+    ok       boundary byte digest: c1467cd33c52032932ae4a39661a8136
+    ok       exclusive ownership: [181, 182], overlap 0
+
+  == must have changed ==
+    ok       manifest schema version: 1 -> 2
+    ok       manifest digest: 48cb459d079569971e582923701651e714b2164b -> 2bae205933b488d67e5c6a0cccd17d068644be90
+    ok       adapterId: mistral
+    ok       adapterVersion: 1
+    ok       adapterConfigDigest: f230a7c1dea09ad930957d1fb7a446b69f85279941cb39a95bada043706c2d4a
+
+  == reported, not asserted (one run is not a measurement) ==
+    TTFT ms        baseline 142.4   refactor 603.9
+    decode tok/s   baseline 11.06   refactor 9.73
+
+  == comparison PASSED: computation identical, pinning present ==

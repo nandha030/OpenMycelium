@@ -1,0 +1,7 @@
+failures 0
+step1 refuse exit 65
+step2 qualify exit 0
+step3 record exit 0
+step4 permitted exit 0
+step5 altered exit 65
+step6 override exit 0

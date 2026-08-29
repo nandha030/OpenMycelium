@@ -1,0 +1,3 @@
+failures 0
+test1 exit 65 vram 918 -> 919 workers 0 -> 0
+test2 exit 65 vram 919 -> 919 workers 0 -> 0
