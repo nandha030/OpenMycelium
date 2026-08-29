@@ -176,7 +176,19 @@ class ModelInspection:
         }
 
 
-SUPPORTED_ARCHITECTURES = {"MistralForCausalLM", "LlamaForCausalLM"}
+#: Kept as a thin view onto the adapter registry rather than a second list.
+#: It previously read `{"MistralForCausalLM", "LlamaForCausalLM"}`, was
+#: referenced nowhere, and declared support for an architecture that would have
+#: allocated VRAM on both cards and then failed in `MistralStage`. The registry
+#: is now the single answer to "what can this build execute", and this name
+#: cannot drift away from it.
+def _supported_architectures() -> frozenset:
+    from adapters import installed_adapters  # noqa: PLC0415
+    return frozenset(name for adapter in installed_adapters()
+                     for name in adapter.architectures)
+
+
+SUPPORTED_ARCHITECTURES = _supported_architectures()
 
 
 def inspect_model(path: str) -> ModelInspection:
