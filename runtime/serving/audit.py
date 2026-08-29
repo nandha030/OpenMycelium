@@ -53,7 +53,16 @@ PRE_VALIDATION_FIELDS = (
 )
 
 FAILURE_PHASES = ("read", "schema", "digest", "fingerprint", "ownership",
-                  "role", "startup")
+                  "role", "adapter", "qualification", "startup")
+
+
+def _situation_digest(situation: Dict[str, Any]) -> str:
+    """Deferred import: audit must stay usable without the adapters package."""
+    try:
+        from adapters.qualification import situation_digest  # noqa: PLC0415
+        return situation_digest(situation)
+    except Exception:                                     # noqa: BLE001
+        return ""
 
 TOKENIZER_FILES = ("tokenizer.json", "tokenizer_config.json",
                    "special_tokens_map.json")
@@ -170,6 +179,9 @@ class EventWriter:
         self._had_failure = False
         self._sequence = 0
         self._identity: Optional[Dict[str, Any]] = None
+        #: Events decided before the manifest was bound. Flushed by
+        #: `bind_placement`; discarded with the process if the run is refused.
+        self._deferred: List[Dict[str, Any]] = []
 
     # -- identity becomes available only after the manifest is verified ----
     def bind_placement(self, placement: Dict[str, Any], stage: Any) -> None:
@@ -185,6 +197,11 @@ class EventWriter:
             "stageOrientation": pipeline.get("stageOrientation", "cuda-first"),
             "boundaryAfterLayer": int(pipeline["boundaryAfterLayer"]),
         }
+        # Anything decided during validation, now that there is a verified
+        # identity to attribute it to.
+        deferred, self._deferred = self._deferred, []
+        for entry in deferred:
+            self._emit_qualification_override(entry)
 
     @property
     def bound(self) -> bool:
@@ -309,9 +326,50 @@ class EventWriter:
             "runtimeVersion": runtime_version,
             "transport": pipeline.get("transport", ""),
             "fabricSnapshotAt": placement.get("fabric", {}).get("probedAt"),
+            # Additive. A replayed audit trail should say which adapter built
+            # the stage and against which config, not leave a reader to infer
+            # it from the version of the build that happened to be installed.
+            "adapterId": placement.get("adapterId", ""),
+            "adapterVersion": placement.get("adapterVersion", ""),
+            "adapterConfigDigest": placement.get("adapterConfigDigest", ""),
         }
         summary.update(fields)
         return self.emit("placement_validated", **summary)
+
+    def emit_qualification_override(self, override: Dict[str, Any]
+                                    ) -> Dict[str, Any]:
+        """Someone executed a situation nothing had measured, and who.
+
+        The whole point of allowing an override is that it leaves a mark. The
+        situation digest is carried so a later reader can tell exactly what was
+        run unqualified, not merely that something was.
+
+        Deferred when the manifest is not yet bound, because the override is
+        decided during validation and events may not carry an identity that has
+        not been verified. Deferring keeps both rules: one enforcement point for
+        qualification, and no event attributed to an unverified manifest.
+        `bind_placement` flushes it, so the entry is never lost -- and if the
+        run is refused before binding, no run happened to attribute it to.
+        """
+        if self._identity is None:
+            self._deferred.append(dict(override or {}))
+            return {}
+        return self._emit_qualification_override(override)
+
+    def _emit_qualification_override(self, override: Dict[str, Any]
+                                     ) -> Dict[str, Any]:
+        entry = override or {}
+        situation = entry.get("situation") or {}
+        return self.emit(
+            "qualification_override",
+            qualificationMode=str(entry.get("mode") or ""),
+            qualificationActor=str(entry.get("actor") or ""),
+            qualificationReason=str(entry.get("reason") or ""),
+            againstRecord=entry.get("againstRecord"),
+            adapterId=str(situation.get("adapterId") or ""),
+            adapterVersion=str(situation.get("adapterVersion") or ""),
+            modelFingerprint=str(situation.get("modelFingerprint") or ""),
+            situationDigest=_situation_digest(situation))
 
     def emit_pre_validation_failure(self, placement_path: str, phase: str,
                                     reason: str) -> Dict[str, Any]:

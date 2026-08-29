@@ -416,6 +416,14 @@ def prepare_placement(args) -> None:
     args.placement = os.path.join(args.work_dir, "placement.json")
     write_placement(args.placement, args.placement_manifest)
 
+    # Qualification, on the execution path only. `openmycelium plan` compiles a
+    # placement for an unqualified situation quite deliberately -- you have to
+    # be able to look at what would run before you can qualify it. What must not
+    # happen is executing it, and this function is what every executing entry
+    # point (run, chat, serve, console) calls before a worker exists.
+    from placement import require_qualified_manifest  # noqa: PLC0415
+    args.qualification = require_qualified_manifest(args.placement_manifest)
+
     # One coordinator attempt. Correlation metadata only: independent of the
     # placement id and excluded from the manifest digest, so re-running the same
     # placement produces a new run id while the digest is unchanged.
