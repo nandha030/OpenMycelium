@@ -106,7 +106,10 @@
       </article>
       <article class="card">
         <h3>Gates</h3>
-        <p class="hint">All four must pass.</p>
+        <!-- Not a count. The gate list is rendered by iteration so a new gate
+             appears without a UI change, and a hard-coded number goes stale
+             the first time one is added -- as "All four must pass" did. -->
+        <p class="hint">Every gate must pass before a run may start.</p>
         <div id="gates"><p class="muted">not checked</p></div>
       </article>
     </div>

@@ -101,6 +101,23 @@ def _runtime_versions(config: Any) -> Dict[str, Any]:
     return out
 
 
+def _placement_schema_version() -> int:
+    """What this build's planner writes, asked of the planner itself.
+
+    Falls back to 1 rather than raising: a provenance report must still be
+    produced on a build where the scheduler directory is not importable, and
+    1 is what every such build wrote.
+    """
+    try:
+        scheduler = os.path.join(os.path.dirname(_HERE), "scheduler")
+        if scheduler not in sys.path:
+            sys.path.insert(0, scheduler)
+        from placement import CURRENT_MANIFEST_SCHEMA_VERSION  # noqa: PLC0415
+        return int(CURRENT_MANIFEST_SCHEMA_VERSION)
+    except Exception:                                     # noqa: BLE001
+        return 1
+
+
 def collect(config: Any = None, deep: bool = False) -> Dict[str, Any]:
     """Everything that identifies this build and this machine's setup."""
     if config is None:
@@ -113,7 +130,10 @@ def collect(config: Any = None, deep: bool = False) -> Dict[str, Any]:
         "packageLocation": os.path.dirname(os.path.dirname(_HERE)),
         "gitCommit": _git_commit(),
         "eventSchemaVersion": 1,
-        "placementSchemaVersion": 1,
+        # Read from the producer rather than restated here. A constant would
+        # have kept reporting 1 after producers began writing 2, which is a
+        # provenance record making a false statement about its own build.
+        "placementSchemaVersion": _placement_schema_version(),
     }
     record.update(_wheel_digest())
     try:
