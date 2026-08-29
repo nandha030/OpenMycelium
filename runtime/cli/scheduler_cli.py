@@ -75,8 +75,17 @@ def main() -> int:
         if args.output:
             write_placement(args.output, manifest)
     except (RuntimeError, OSError, ValueError) as error:
+        # Additive: the prose stays exactly where it was, and a machine-readable
+        # code is printed alongside it when the exception carries one. Existing
+        # refusals declare nothing and keep returning 65.
+        code = getattr(error, "error_code", "")
+        remediation = getattr(error, "remediation", "")
         print(f"  placement refused: {error}", file=sys.stderr)
-        return 65
+        if code:
+            print(f"  errorCode: {code}", file=sys.stderr)
+        if remediation:
+            print(f"  remediation: {remediation}", file=sys.stderr)
+        return getattr(error, "exit_code", 65)
 
     if args.json:
         print(json.dumps(manifest, indent=2, sort_keys=True))
