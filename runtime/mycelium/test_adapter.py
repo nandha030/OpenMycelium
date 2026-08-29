@@ -1,7 +1,20 @@
 import json
+import os
+import sys
 import unittest
 
-from runtime.mycelium.adapter import RuntimeConfig
+# These two test modules import the same package by two different names --
+# `runtime.mycelium.adapter` here, `mycelium.hierarchical` next door -- so a
+# bare `python -m unittest` only ever worked from one particular directory, and
+# discovery from anywhere else reported an import error that looked like a
+# broken module. Both roots go on the path so either spelling resolves.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_RUNTIME = os.path.dirname(_HERE)
+for _root in (os.path.dirname(_RUNTIME), _RUNTIME):
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+
+from runtime.mycelium.adapter import RuntimeConfig  # noqa: E402
 
 
 class RuntimeConfigTests(unittest.TestCase):
