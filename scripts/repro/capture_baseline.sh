@@ -10,7 +10,7 @@
 # the refactor passes.
 set -uo pipefail
 OM=/opt/om/venv
-OUT=/var/log/om-baseline
+OUT=${OM_OUT:-/var/log/om-baseline}
 MODEL=Mistral-Nemo-Instruct-2407
 H=${OM_HARNESS:-/root/repro}
 export PATH="$OM/bin:$PATH"
