@@ -1,0 +1,9 @@
+
+  dist/openmycelium-0.3.0a11-py3-none-any.whl
+    60 python files, content 249e1ba255d9f5648914334cc34453d2ff62fd4b368742d0ba4af6a483823e5e
+  /mnt/c/Users/User/AppData/Local/Temp/om-rebuild/openmycelium-0.3.0a11-py3-none-any.whl
+    60 python files, content 249e1ba255d9f5648914334cc34453d2ff62fd4b368742d0ba4af6a483823e5e
+
+  == the installed content is reproducible ==
+  The wheel files may still differ byte for byte; ZIP timestamps and
+  packaging metadata are not product content.

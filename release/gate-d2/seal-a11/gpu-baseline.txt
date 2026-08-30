@@ -1,0 +1,2 @@
+memory.used [MiB], memory.total [MiB], power.draw [W]
+722 MiB, 16311 MiB, 7.82 W

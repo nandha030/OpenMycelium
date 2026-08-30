@@ -53,7 +53,16 @@ def dig(document, *path, default=None):
 
 off, shadow = load("run-off.json"), load("run-shadow.json")
 
-print("\nGate D.2 seal -- paired 24-token smoke, 0.3.0a10\n")
+# The version is read, never written into this file. A report that names an
+# artifact by a hard-coded string keeps naming it after the artifact changes,
+# and this one did: it still said 0.3.0a10 while comparing runs from 0.3.0a11.
+try:
+    from importlib.metadata import distribution      # noqa: PLC0415
+    VERSION = distribution("openmycelium").version
+except Exception:                                    # noqa: BLE001
+    VERSION = "unknown"
+
+print(f"\nGate D.2 seal -- paired 24-token smoke, {VERSION}\n")
 print("  correctness across the arms")
 
 INVARIANTS = (

@@ -69,7 +69,33 @@ run_arm shadow shadow
 cat /proc/sys/kernel/random/boot_id > "$OUT/boot-after.txt"
 nvidia-smi --query-gpu=memory.used,memory.total --format=csv \
     > "$OUT/gpu-after.txt" 2>&1
-pgrep -af "stage_model|pipeline_run" > "$OUT/orphans.txt" 2>&1 \
-    || echo "none" > "$OUT/orphans.txt"
+
+# What the device total can and cannot show.
+#
+# Under WSL `nvidia-smi` reports the whole physical card, which includes
+# Windows host usage, and it cannot enumerate Windows processes. So a total
+# above the pre-run reading does not by itself mean this runtime kept memory,
+# and a total equal to it does not prove this runtime released it. Earlier
+# gates reported that number alone as "VRAM returned"; it does not carry that
+# claim on its own.
+#
+# What is attributable is recorded beside it: whether any worker process
+# survives, and whether any compute context remains on the device.
+# A worker is a python interpreter running one of these modules. Matching the
+# bare module names matches any shell whose command line happens to mention
+# them -- including this script, and including the pgrep that looks for them.
+# That turns "zero orphan workers" into a claim about nothing, so the pattern
+# requires an interpreter and the current process tree is excluded.
+pgrep -a -f "python[^ ]* .*(stage_model|pipeline_run|forward_pass)" 2>/dev/null \
+    | awk -v self="$$" -v parent="$PPID" '$1 != self && $1 != parent' \
+    | grep -v "d2_seal_smoke" > "$OUT/orphans.txt"
+[ -s "$OUT/orphans.txt" ] || echo "none" > "$OUT/orphans.txt"
+nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv \
+    > "$OUT/gpu-compute-apps.txt" 2>&1
+{
+    echo "Device totals under WSL include Windows host usage and cannot be"
+    echo "attributed by this instrument. Read gpu-after.txt with orphans.txt"
+    echo "and gpu-compute-apps.txt, not on its own."
+} > "$OUT/gpu-attribution.txt"
 
 printf '  evidence in %s\n' "$OUT"

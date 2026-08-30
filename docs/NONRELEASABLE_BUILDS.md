@@ -31,6 +31,8 @@ because a machine still carrying one of these needs to be identifiable.
 | `0.3.0a8` | `937d56dd9bc8343c8716c2299d93ffb0c480ed65d3b477b522f1c06adae9aec0` | First shadow-mode build. Observations reached stderr but were never persisted, so a run left no durable record of what the Governor would have done -- which is the entire output of shadow mode. Superseded by `0.3.0a9`, which writes them to `safety-shadow.jsonl`. |
 | `0.3.0a9` | `4f78d005fc4a1e1c5fc8299082a0351eb0dd028045928e221ae33cd970d2ca79` | Persisted observations that could not be correlated. The record carried `bootId` and device identity but no schema version, run id, placement id or timestamp, so an observation could not be matched against the audit trail of the run it described — and comparing predicted actions against actual outcomes is the whole output of shadow mode. Separately, inserting the observer split `prepare_placement` and stranded its `run_id` assignment after a `return`, where nothing reached it; dead code rather than a live fault, because `Coordinator.__init__` also issues a run id and every caller constructs one before reading `args.run_id` — but a milestone that promised to leave the `off` path unchanged had silently deleted a statement from it. Superseded by `0.3.0a10`. |
 
+| `0.3.0a10` | `36e6cd8f5a1047df47f84c19237a170f22453d8d5d67df0d0be610c8de076ac8` | Not reproducible from its own commit. Built from a working tree where 42 shipped modules carried CRLF and the rest LF: `.gitattributes` declares no rule for `.py`, so the checked-out bytes depend on `core.autocrlf` — `true` for the Windows git on this machine, unset for the WSL git — and the build ran over a mixture of the two. **Every file was byte-for-byte the committed program; zero content differences.** The artifact still cannot be reproduced, because no single checkout produces that mixture, and the identity model rests on the installed-content digest naming the committed source. This is the failure the digest exists to catch and the one it is worst at announcing: the program is identical, so every gate passes and nothing looks wrong. It surfaced only when a `git reset --hard` during an unrelated test normalised the tree and the installed-vs-checkout comparison began to fail. Tagged `v0.3.0a10` before the defect was found; the tag is left in place as a record and is superseded by `v0.3.0a11`. |
+
 ### Superseded after passing
 
 | Version | sha256 of the wheel | Why it is not releasable |
@@ -44,6 +46,23 @@ because a machine still carrying one of these needs to be identifiable.
 `e2eccbbe6de9aa8fdc342bbed015cede325a84161269dfa719c6f3f97c0011bf`,
 canonical wheel sha256 `3eeaed3e229226f4d1408826fc42934057878fa48a91fc7fbb89900a88a04871`,
 MCCL `0.2.0a3` content `5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d`.
+
+### The tree must match the commit, not merely contain the same program
+
+`0.3.0a10` established that "the same program" is not the same as "the same
+artifact". Equal source semantics with different line endings produce a
+different installed-content digest, and a digest that depends on which `git`
+wrote the working tree identifies something weaker than a commit.
+
+`scripts/build_openmycelium_wheel.py` now compares the tree against the index
+before staging and refuses to build when they differ. `OM_ALLOW_DIRTY=1`
+bypasses it, and a build made that way is not releasable.
+
+Still open, and deliberately not folded into the Gate D.2 seal: `.gitattributes`
+should declare `*.py text eol=lf`, for the same reason it already declares
+`*.cmd text eol=crlf` — so the bytes do not depend on the configuration of
+whoever cloned. That is a repository-wide renormalisation touching every
+milestone's files and belongs in its own change.
 
 ### Wheel bytes are not product content
 

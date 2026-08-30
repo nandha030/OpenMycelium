@@ -1,0 +1,9 @@
+
+  installed: /opt/om/venv/lib/python3.12/site-packages/openmycelium
+  checkout:  /mnt/c/Users/User/Documents/Open_Mycelium
+
+  identical                    58
+  differ in line endings only  0
+  differ in content            0
+
+  == the installed wheel is this checkout ==

@@ -1,7 +1,17 @@
 # Gate D.2 — seal
 
-**Status: SEALED.** Canonical artifact `0.3.0a10`. This directory records the
-identities D.2 was missing and the evidence for the build that carries them.
+**Status: SUPERSEDED. The canonical artifact is `0.3.0a11`, recorded in
+[`../seal-a11/`](../seal-a11/README.md) — read that first.**
+
+`0.3.0a10` is non-releasable: it was built from a working tree whose line
+endings differed from the commit, so its installed-content digest names a tree
+no checkout can reproduce. Every file was byte-for-byte the committed program;
+the defect is reproducibility, not behaviour. Everything below about the
+Governor holds — it was re-verified on `0.3.0a11` — but the identities in this
+file name a build that must not be used.
+
+This directory records the identities D.2 was missing and the evidence for the
+build that first carried them.
 
 `0.3.0a9`, the build D.2 was reviewed on, is **non-releasable** and recorded as
 such. It is not the sealed artifact.

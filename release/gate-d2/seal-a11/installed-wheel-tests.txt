@@ -1,0 +1,10 @@
+
+  installed wheel: /opt/om/venv/lib/python3.12/site-packages/openmycelium
+  version: 0.3.0a11
+  runtime/safety               ok    168 tests  (1 skipped)
+  runtime/serving              ok    34 tests
+    excluded                   test_manifest_schema.py (25 tests, needs repo evidence)
+  runtime/scheduler            ok    12 tests
+  runtime/fabric               ok    6 tests
+
+  == installed-wheel tests PASSED: 220 tests, 0 failures (25 checkout-only, excluded) ==
