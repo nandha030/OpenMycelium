@@ -23,7 +23,7 @@ import tempfile
 from typing import List
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = "0.3.0a10"
+VERSION = "0.3.0a11"
 MCCL_PIN = "openmycelium-mccl==0.2.0a3"
 
 #: Runtime subtrees the CLI needs. `mccl` is deliberately absent: it ships as
@@ -111,6 +111,49 @@ def check_versions() -> None:
             f"  version constants disagree; refusing to build:\n{listing}")
 
 
+def check_tree_matches_index() -> None:
+    """Refuse to build from a tree that differs from what is committed.
+
+    `0.3.0a10` was built from a tree where 42 shipped modules carried CRLF and
+    the rest carried LF: `.gitattributes` declares no rule for `.py`, so the
+    checked-out bytes depend on `core.autocrlf`, which is `true` for the Windows
+    git on this machine and unset for the WSL git. Every file was byte-for-byte
+    the committed program -- zero content differences -- and the artifact still
+    could not be reproduced from its own commit, because no single checkout
+    produces that mixture.
+
+    The whole identity model rests on the installed-content digest naming the
+    committed source. A digest that depends on which git wrote the working tree
+    names something weaker than that, and the difference is invisible in every
+    test: the program is identical, so everything passes.
+
+    Checked here rather than noticed afterwards. Bypass with OM_ALLOW_DIRTY=1
+    when building deliberately from a modified tree, which is then not a
+    releasable artifact.
+    """
+    if os.environ.get("OM_ALLOW_DIRTY"):
+        print("  OM_ALLOW_DIRTY set: building from a tree that may differ from "
+              "the commit; the result is not releasable")
+        return
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=no", "--",
+         "runtime", "packaging", "scripts/build_openmycelium_wheel.py"],
+        cwd=REPO, capture_output=True, text=True)
+    if result.returncode != 0:
+        print("  not a git checkout; skipping the tree/index comparison")
+        return
+    dirty = [line for line in result.stdout.splitlines() if line.strip()]
+    if dirty:
+        listing = "\n".join(f"    {line}" for line in dirty[:20])
+        more = f"\n    ... and {len(dirty) - 20} more" if len(dirty) > 20 else ""
+        raise SystemExit(
+            f"  {len(dirty)} shipped path(s) differ from the index; refusing to "
+            f"build an artifact that cannot be reproduced from its commit:\n"
+            f"{listing}{more}\n"
+            f"  Run `git checkout -- runtime packaging` first, or set "
+            f"OM_ALLOW_DIRTY=1 for a deliberately non-releasable build.")
+
+
 def stage(destination: str, verbose: bool = True) -> List[str]:
     package = os.path.join(destination, "openmycelium")
     os.makedirs(package, exist_ok=True)
@@ -156,6 +199,7 @@ def main() -> int:
     args = parser.parse_args()
 
     check_versions()
+    check_tree_matches_index()
 
     staging = tempfile.mkdtemp(prefix="om-wheel-")
     shipped = stage(staging)
