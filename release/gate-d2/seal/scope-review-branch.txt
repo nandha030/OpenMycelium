@@ -1,5 +1,5 @@
 
-Branch scope review -- main...HEAD
+Branch scope review -- ab6f2554...c230057
 
   69 file(s) changed
 
@@ -49,7 +49,7 @@ Branch scope review -- main...HEAD
     A   +10     -0      release/gate-d2/seal/run-shadow.err
     A   +638    -0      release/gate-d2/seal/run-shadow.json
     A   +1      -0      release/gate-d2/seal/safety-shadow-shadow.jsonl
-    A   +84     -0      release/gate-d2/seal/scope-review-branch.txt
+    A   +86     -0      release/gate-d2/seal/scope-review-branch.txt
     A   +18     -0      release/gate-d2/seal/scope-review.txt
     A   +42     -0      release/gate-d2/seal/smoke-compare.txt
     A   +9      -0      release/gate-d2/seal/unit-suite.txt
@@ -78,9 +78,10 @@ Branch scope review -- main...HEAD
   ok    no frozen release evidence is modified
   ok    every release/ path is an addition
   ok    no foreign subsystem is touched
-  ok    later-gate symbols are named only where they are forbidden -- 8 mention(s), all in docs/GATE_PROCESS.md
+  ok    no later-gate symbol appears in code
+  ok    later-gate symbols are named only where they are forbidden -- only in the rule, the checker, and the output of the checker
+  ok    the self-referential exemption is exactly three named paths -- docs/GATE_PROCESS.md, scripts/repro/scope_review_branch.py, release/gate-d2/seal/scope-review-branch.txt
   ok    no file changed only in whitespace or line endings
   ok    every changed path belongs to this milestone
-  FAIL  no later-gate symbol appears in code -- scripts/repro/scope_review_branch.py: ['EvictionPolicy', 'MemoryObject', 'PrefetchPolicy', 'ResidencyManager', 'TransportBackend', 'WorkingSet', 'advise_access_pattern', 'bind_working_set', 'create_memory_object', 'memoryMode', 'query_residency']
 
-  == branch scope review FAILED: 1 check(s) ==
+  == branch scope review PASSED: 9 checks ==

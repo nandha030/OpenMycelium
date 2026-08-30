@@ -110,7 +110,26 @@ check("no foreign subsystem is touched", not foreign, ", ".join(foreign[:5]))
 # document starting to describe Memory OS work on this branch is exactly the
 # drift this review exists to see.
 CODE_SUFFIXES = (".py", ".sh", ".c", ".h", ".cpp", ".cu", ".js", ".go", ".ps1")
+
+#: Paths allowed to contain the symbols, pinned exactly rather than by pattern.
+#:
+#: `GATE_PROCESS.md` states the rule and has to name what it forbids. This file
+#: enforces it and has to hold the list. Its output quotes whatever it found.
+#: All three match themselves. The first run passed only because this script was
+#: still untracked and so absent from the diff; the moment it was committed it
+#: failed on its own definition -- and that regenerated output was committed as
+#: evidence without being re-read, so a file recording FAIL was merged under a
+#: summary claiming PASS.
+#:
+#: Exempting a path means scope creep hidden inside it would pass. That is
+#: unavoidable for a checker that must name what it forbids, so the exemption is
+#: three exact paths, asserted below to be exactly three, and never a pattern.
 RULE_DOCUMENT = "docs/GATE_PROCESS.md"
+SELF_REFERENTIAL = (
+    RULE_DOCUMENT,
+    "scripts/repro/scope_review_branch.py",
+    "release/gate-d2/seal/scope-review-branch.txt",
+)
 
 code_hits, prose_hits = {}, {}
 path = None
@@ -123,13 +142,17 @@ for line in git("diff", f"{BASE}...{HEAD}").splitlines():
                 bucket = code_hits if path.endswith(CODE_SUFFIXES) else prose_hits
                 bucket.setdefault(path, set()).add(symbol)
 
-check("no later-gate symbol appears in code", not code_hits,
-      "; ".join(f"{p}: {sorted(s)}" for p, s in sorted(code_hits.items())))
-stray = {p: s for p, s in prose_hits.items() if p != RULE_DOCUMENT}
+stray_code = {p: s for p, s in code_hits.items() if p not in SELF_REFERENTIAL}
+check("no later-gate symbol appears in code", not stray_code,
+      "; ".join(f"{p}: {sorted(s)}" for p, s in sorted(stray_code.items())))
+stray_prose = {p: s for p, s in prose_hits.items() if p not in SELF_REFERENTIAL}
 check("later-gate symbols are named only where they are forbidden",
-      not stray,
-      "; ".join(f"{p}: {sorted(s)}" for p, s in sorted(stray.items()))
-      or f"{len(prose_hits.get(RULE_DOCUMENT, ()))} mention(s), all in {RULE_DOCUMENT}")
+      not stray_prose,
+      "; ".join(f"{p}: {sorted(s)}" for p, s in sorted(stray_prose.items()))
+      or "only in the rule, the checker, and the output of the checker")
+check("the self-referential exemption is exactly three named paths",
+      len(SELF_REFERENTIAL) == 3 and len(set(SELF_REFERENTIAL)) == 3,
+      ", ".join(SELF_REFERENTIAL))
 
 # 6. Line-ending churn has not been swept in. ---------------------------------
 #
