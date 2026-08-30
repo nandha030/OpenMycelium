@@ -266,7 +266,24 @@ class ProseMatchesDataTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert os.path.isfile(DOC), f"the contract is missing: {DOC}"
+        if not os.path.isfile(DOC):
+            # Not a skip-on-file-missing, which is how a gate comes to pass
+            # because its evidence vanished -- this project has shipped one of
+            # those already. The installed context is proven positively before
+            # anything is skipped, and a missing document anywhere else is a
+            # hard failure.
+            installed = ("site-packages" in _HERE or "dist-packages" in _HERE)
+            package = os.path.isfile(
+                os.path.join(os.path.dirname(os.path.dirname(_HERE)),
+                             "__init__.py"))
+            assert installed and package, (
+                f"the contract is missing: {DOC}. This is only tolerated inside "
+                f"an installed package, and this is not one ({_HERE}).")
+            raise unittest.SkipTest(
+                "prose-vs-data consistency is a property of the repository. An "
+                "installed wheel ships no document for the data to drift from, "
+                "so there is nothing here to check. The repository suite runs "
+                "these.")
         with open(DOC, "r", encoding="utf-8") as handle:
             cls.text = handle.read()
         # Prose is hard-wrapped, so a claim can span a line break. Assertions

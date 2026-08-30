@@ -145,6 +145,36 @@ stale paste is a test failure rather than a discrepancy nobody notices.
 finds itself asked to make one raises rather than choosing a plausible target;
 a state machine that repairs itself silently cannot be reasoned about.
 
+### Known gap: no incident path out of `ADMITTED`
+
+Found during Gate D.1, by the implementation refusing to invent a transition
+rather than by review. **Not fixed here** — `safety-contract-1` is frozen, and
+widening a frozen table silently is the failure this rule exists to prevent.
+
+`ADMITTED` is the window between capacity being reserved and the compute canary
+passing. Its only exits are `canary_passed`, `canary_failed`, `operator_cancel`
+and `soft_limit_sustained`. A worker that **dies** in that window, or a circuit
+breaker that **opens** on an incident recorded there, has no transition:
+
+```
+ADMITTED + worker_died     -> nothing
+ADMITTED + breaker_opened  -> nothing
+```
+
+The window is short but real — allocation and weight-load setup happen in it,
+which is exactly when an OOM is most likely.
+
+Current behaviour, and it is deliberate: `SafetyGovernor` raises
+`GovernorError` naming the permitted triggers. It does not route the incident
+through a neighbouring transition, because a state machine that quietly picks a
+plausible target is one nobody can reason about — and the raise is what surfaced
+the gap in the first place.
+
+Resolution needs a contract amendment, reviewed like any other, most likely
+adding `ADMITTED → FAILED` on `worker_died` and `ADMITTED → QUARANTINED` on
+`breaker_opened`. Until then, callers reaching an incident from `ADMITTED` must
+handle the raise.
+
 ### Source is not executor
 
 **Only the Governor mutates state.** A worker reporting its own death does not

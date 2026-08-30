@@ -80,7 +80,8 @@ class StateTests(unittest.TestCase):
         """A Governor sitting in FAILED is indistinguishable from a crashed one."""
         handle = ready()
         handle.admit(CUDA, requested_bytes=1 << 30)
-        handle.report_incident("worker_death", device=CUDA)
+        handle.canary_passed(CUDA)          # the contract has no incident
+        handle.report_incident("worker_death", device=CUDA)   # path from ADMITTED
         self.assertIn(handle.state, (State.COOLDOWN, State.QUARANTINED))
 
 
@@ -393,13 +394,24 @@ class TelemetryTests(unittest.TestCase):
                          Confidence.STALE)
         self.assertFalse(handle.admit(CUDA, requested_bytes=1 << 30))
 
-    def test_missing_vram_refuses_admission(self):
+    def test_missing_vram_is_caught_at_preflight_before_admission(self):
+        """Fail-closed earlier than expected is still fail-closed.
+
+        This originally asserted that admission refused. It never gets that
+        far: with no VRAM reading the baseline cannot be sampled, so preflight
+        fails and the machine never reaches READY. Refusing sooner is the
+        stronger behaviour, and the test now says so rather than describing a
+        path that cannot be taken.
+        """
         reading = healthy()
         reading["vramConfidence"] = Confidence.UNAVAILABLE_UNEXPECTED
         reading["freeBytes"] = None
-        handle = ready(telemetry=SyntheticTelemetry(
+        handle = governor(telemetry=SyntheticTelemetry(
             {CUDA: reading, ROCM: healthy()}))
-        self.assertFalse(handle.admit(CUDA, requested_bytes=1 << 30))
+        self.assertFalse(handle.preflight())
+        self.assertEqual(handle.state, State.FAILED)
+        with self.assertRaises(GovernorError):
+            handle.admit(CUDA, requested_bytes=1 << 30)
 
     def test_vram_lost_while_running_degrades_before_it_drains(self):
         """Continuation fails safe: stop admitting, keep the run, then drain."""
@@ -675,6 +687,10 @@ class CircuitBreakerTests(unittest.TestCase):
         for _ in range(count):
             handle.force_state(State.READY)
             handle.admit(device, requested_bytes=1 << 30)
+            # Through RUNNING, because that is the only state the frozen
+            # contract gives an incident path out of. See the ADMITTED gap
+            # recorded in docs/SAFETY_GOVERNOR.md.
+            handle.canary_passed(device)
             handle.report_incident(kind, device=device)
             clock.advance(10)
 
@@ -703,18 +719,25 @@ class CircuitBreakerTests(unittest.TestCase):
         for kind in ("oom", "stall", "transport_failure"):
             handle.force_state(State.READY)
             handle.admit(CUDA, requested_bytes=1 << 30)
+            handle.canary_passed(CUDA)
             handle.report_incident(kind, device=CUDA)
             clock.advance(10)
         self.assertNotEqual(handle.state, State.QUARANTINED)
 
     def test_incidents_outside_the_window_do_not_accumulate(self):
         clock = TestClock(start=1000.0)
-        handle = ready(clock=clock)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
         for _ in range(Policy().breaker_threshold):
             handle.force_state(State.READY)
             handle.admit(CUDA, requested_bytes=1 << 30)
+            handle.canary_passed(CUDA)
             handle.report_incident("oom", device=CUDA)
             clock.advance(Policy().breaker_window_seconds + 1)
+            # A real source keeps polling. Without this the readings age past
+            # max_signal_age_seconds and the next admission is refused as
+            # STALE -- correct, but not what this test is about.
+            telemetry.refresh(clock.now())
         self.assertNotEqual(handle.state, State.QUARANTINED)
 
 
@@ -797,7 +820,7 @@ class ManualResetTests(unittest.TestCase):
         self.assertEqual(handle.state, State.READY)
         event = [e for e in handle.events
                  if e.get("safetyTrigger") == "manual_reset"][-1]
-        self.assertEqual(event["safetyActor"], "operator")
+        self.assertEqual(event["safetyTriggerSource"], "operator")
         self.assertEqual(event["resetActor"], "an-operator")
         self.assertIn(record, event["clearedRecords"])
         self.assertIn("baseline", event)
@@ -811,6 +834,7 @@ class ManualResetTests(unittest.TestCase):
         for _ in range(Policy().breaker_threshold):
             handle.force_state(State.READY)
             handle.admit(CUDA, requested_bytes=1 << 30)
+            handle.canary_passed(CUDA)
             handle.report_incident("oom", device=CUDA)
             clock.advance(10)
         self.assertEqual(handle.state, State.QUARANTINED)
@@ -820,6 +844,7 @@ class ManualResetTests(unittest.TestCase):
         self.assertEqual(handle.state, State.READY)
 
         handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)          # no incident path from ADMITTED
         handle.report_incident("oom", device=CUDA)
         self.assertEqual(handle.state, State.QUARANTINED,
                          "cleared incidents still count inside the window")
@@ -884,17 +909,34 @@ class AuditTests(unittest.TestCase):
 # --------------------------------------------------------------- non-goal
 
 class NonGoalTests(unittest.TestCase):
-    """Section 0. The Governor does not claim hardware cannot fail."""
+    """Section 0. The Governor does not claim hardware cannot fail.
 
-    def test_the_contract_states_the_non_goal_before_anything_else(self):
-        path = os.path.join(os.path.dirname(_RUNTIME), "docs",
-                            "SAFETY_GOVERNOR.md")
-        assert os.path.isfile(path), f"the contract is missing: {path}"
-        with open(path, "r", encoding="utf-8") as handle:
-            text = handle.read()
-        non_goal = text.index("## 0. Non-goal")
-        self.assertLess(non_goal, text.index("## 1. Scope"))
-        self.assertIn("cannot guarantee that hardware will never fail", text)
+    The document assertions live in test_contract_data.py, which normalises the
+    hard-wrapped prose before matching. Duplicating them here matched raw text
+    and broke on a reflowed paragraph -- a false failure, and the kind that
+    teaches people to loosen tests.
+    """
+
+    def test_the_governor_marks_itself_simulated(self):
+        """A simulated Governor is not qualification evidence, and says so."""
+        handle = ready()
+        self.assertTrue(handle.simulated)
+        self.assertTrue(all(event.get("safetySimulated") is True
+                            for event in handle.events))
+
+    def test_no_real_signal_is_ever_sent(self):
+        """D.1 uses a fake actuator; nothing reaches the operating system."""
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.register_worker(pid=4242, process_start_time=99999,
+                               run_id="run-1", placement_id="pl-1")
+        handle.drain(reason="operator")
+        handle.terminate(pid=4242, process_start_time=99999, run_id="run-1",
+                         placement_id="pl-1", signal="SIGTERM")
+        self.assertEqual(handle.actuator.signalled,
+                         [{"pid": 4242, "signal": "SIGTERM"}],
+                         "recorded, not delivered to a real process")
 
 
 if __name__ == "__main__":

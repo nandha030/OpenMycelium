@@ -21,7 +21,7 @@ fi
 
 # unittest directories, and the one pytest module. mccl is run from its own
 # source root because it is a separate distribution with its own layout.
-UNITTEST_DIRS="runtime/serving runtime/scheduler runtime/fabric runtime/mycelium"
+UNITTEST_DIRS="runtime/serving runtime/scheduler runtime/fabric runtime/mycelium runtime/safety"
 PYTEST_FILES="runtime/cli/test_event_gate.py"
 
 TOTAL=0
