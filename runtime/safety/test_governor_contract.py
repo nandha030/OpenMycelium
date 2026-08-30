@@ -1,0 +1,671 @@
+"""The Safety Governor contract, as tests. Written before the implementation.
+
+Every test here fails until Gate D lands `safety.governor`, which is the point:
+each states a rule from docs/SAFETY_GOVERNOR.md that nothing currently enforces.
+
+No GPU is touched. Clock, telemetry and policy are injected, because the real
+deadlines are 60-900 s and a suite that waited them out would be skipped, and
+because STALE and UNAVAILABLE_UNEXPECTED are difficult to produce on demand from
+real hardware and trivial to get wrong.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+import unittest
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_RUNTIME = os.path.dirname(_HERE)
+for _root in (_HERE, os.path.join(_RUNTIME, "serving")):
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+
+from governor import (Confidence, GovernorError, Policy,  # noqa: E402
+                      SafetyGovernor, State, SyntheticTelemetry, TestClock)
+
+BOOT = "75a1077f-b05d-494a-af24-b00e2847d61c"
+OTHER_BOOT = "12c60700-b2e9-4c5c-824f-6ec7f679b58e"
+CUDA = "nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033"
+ROCM = "amd:pci-0000:04:00.0"
+TOTAL = 17102864384          # 15.93 GiB, the qualified NVIDIA card
+
+
+def healthy(total: int = TOTAL, used: int = 800 * 1024 * 1024) -> dict:
+    """A device reading that should admit: idle, telemetry fresh."""
+    return {
+        "totalBytes": total, "freeBytes": total - used,
+        "vramConfidence": Confidence.AVAILABLE,
+        # As the qualified platform actually reports AMD under WSL.
+        "powerWatts": None, "powerConfidence": Confidence.UNAVAILABLE_EXPECTED,
+        "temperatureC": None, "temperatureConfidence": Confidence.UNAVAILABLE_EXPECTED,
+    }
+
+
+def governor(**overrides) -> "SafetyGovernor":
+    clock = overrides.pop("clock", None) or TestClock(start=1000.0)
+    telemetry = overrides.pop("telemetry", None) or SyntheticTelemetry(
+        {CUDA: healthy(), ROCM: healthy()})
+    policy = overrides.pop("policy", None) or Policy()
+    return SafetyGovernor(clock=clock, telemetry=telemetry, policy=policy,
+                          boot_id=overrides.pop("boot_id", BOOT), **overrides)
+
+
+def ready(**overrides) -> "SafetyGovernor":
+    handle = governor(**overrides)
+    handle.preflight()
+    return handle
+
+
+# ------------------------------------------------------------------ states
+
+class StateTests(unittest.TestCase):
+    def test_the_eight_states_exist_and_no_others(self):
+        self.assertEqual(
+            {state.name for state in State},
+            {"UNKNOWN", "READY", "ADMITTED", "RUNNING", "DRAINING",
+             "COOLDOWN", "QUARANTINED", "FAILED"})
+
+    def test_a_new_governor_starts_unknown(self):
+        self.assertEqual(governor().state, State.UNKNOWN)
+
+    def test_failed_is_a_recording_state_not_a_resting_one(self):
+        """A Governor sitting in FAILED is indistinguishable from a crashed one."""
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.report_incident("worker_death", device=CUDA)
+        self.assertIn(handle.state, (State.COOLDOWN, State.QUARANTINED))
+
+
+# ------------------------------------------------------- the transition table
+
+class TransitionTableTests(unittest.TestCase):
+    """Section 3. Every transition not in the table is forbidden."""
+
+    def test_preflight_moves_unknown_to_ready(self):
+        handle = governor()
+        handle.preflight()
+        self.assertEqual(handle.state, State.READY)
+
+    def test_admission_moves_ready_to_admitted(self):
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        self.assertEqual(handle.state, State.ADMITTED)
+
+    def test_a_passing_canary_moves_admitted_to_running(self):
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        self.assertEqual(handle.state, State.RUNNING)
+
+    def test_completion_moves_running_to_cooldown(self):
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.completed()
+        self.assertEqual(handle.state, State.COOLDOWN)
+
+    def test_an_undeclared_transition_raises_rather_than_guessing(self):
+        """A state machine that repairs itself silently cannot be reasoned about."""
+        handle = governor()                       # UNKNOWN
+        with self.assertRaises(GovernorError):
+            handle.admit(CUDA, requested_bytes=1 << 30)
+
+    def test_every_transition_records_from_to_trigger_and_actor(self):
+        handle = governor()
+        handle.preflight()
+        event = handle.events[-1]
+        for field in ("safetyPreviousState", "safetyState", "safetyTrigger",
+                      "safetyActor", "safetyPolicyVersion"):
+            self.assertIn(field, event, f"{field} missing from a transition event")
+        self.assertEqual(event["safetyPreviousState"], "UNKNOWN")
+        self.assertEqual(event["safetyState"], "READY")
+
+    def test_the_governor_never_releases_its_own_quarantine(self):
+        """QUARANTINED -> READY is the operator's transition alone."""
+        handle = ready()
+        handle.quarantine("oom", device=CUDA, reason="test")
+        self.assertEqual(handle.state, State.QUARANTINED)
+        with self.assertRaises(GovernorError):
+            handle.preflight()
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+
+# ----------------------------------------------------------------- admission
+
+class AdmissionTests(unittest.TestCase):
+    """Section 4. All four inputs must pass; a missing input is not a pass."""
+
+    def test_a_healthy_idle_machine_admits(self):
+        self.assertTrue(ready().admit(CUDA, requested_bytes=1 << 30))
+
+    def test_admission_refused_when_the_reserve_would_be_breached(self):
+        handle = ready()
+        # Ask for everything free: the reserve cannot survive it.
+        free = TOTAL - 800 * 1024 * 1024
+        self.assertFalse(handle.admit(CUDA, requested_bytes=free))
+        self.assertEqual(handle.state, State.READY,
+                         "a refusal is not a fault; the machine stays READY")
+
+    def test_the_reserve_floor_applies_on_small_devices(self):
+        """max(floor, fraction * total): 3% of 16 GiB is under the 512 MiB floor."""
+        policy = Policy()
+        self.assertEqual(
+            policy.reserve_bytes(TOTAL),
+            max(policy.reserve_floor_bytes,
+                int(policy.reserve_fraction * TOTAL)))
+        self.assertEqual(policy.reserve_bytes(TOTAL), policy.reserve_floor_bytes)
+
+    def test_leases_are_counted_not_inferred_from_free_memory(self):
+        """Two admissions racing between samples would each see enough room."""
+        handle = ready()
+        self.assertTrue(handle.admit(CUDA, requested_bytes=1 << 30))
+        self.assertFalse(handle.admit(CUDA, requested_bytes=1 << 30),
+                         "the second admission must see the first one's lease")
+
+    def test_baseline_is_a_median_of_samples_not_one_reading(self):
+        """One compositor allocation must not raise the floor permanently."""
+        readings = [healthy(used=u * 1024 * 1024)
+                    for u in (800, 800, 4000, 800, 800)]
+        telemetry = SyntheticTelemetry({CUDA: readings, ROCM: healthy()})
+        handle = governor(telemetry=telemetry)
+        handle.preflight()
+        self.assertEqual(handle.baseline(CUDA), TOTAL - 800 * 1024 * 1024)
+
+
+# --------------------------------------------------------- telemetry handling
+
+class TelemetryTests(unittest.TestCase):
+    """Sections 4.4, 9 and 11."""
+
+    def test_missing_amd_power_is_unavailable_never_zero(self):
+        handle = ready()
+        signals = handle.signals(ROCM)
+        self.assertIsNone(signals["powerWatts"])
+        self.assertEqual(signals["powerConfidence"],
+                         Confidence.UNAVAILABLE_EXPECTED)
+        self.assertNotEqual(signals["powerWatts"], 0,
+                            "zero watts is a reading, and a false one")
+
+    def test_expected_unavailable_power_does_not_block_admission(self):
+        """Gating on it would refuse all work on the only qualified platform."""
+        self.assertTrue(ready().admit(ROCM, requested_bytes=1 << 30))
+
+    def test_unexpectedly_unavailable_power_does_block_admission(self):
+        """A source that should work has stopped: that is a fault, not a gap."""
+        reading = healthy()
+        reading["powerConfidence"] = Confidence.UNAVAILABLE_UNEXPECTED
+        handle = ready(telemetry=SyntheticTelemetry(
+            {CUDA: reading, ROCM: healthy()}))
+        self.assertFalse(handle.admit(CUDA, requested_bytes=1 << 30))
+
+    def test_stale_vram_refuses_admission(self):
+        clock = TestClock(start=1000.0)
+        handle = ready(clock=clock)
+        clock.advance(Policy().max_signal_age_seconds + 1)
+        self.assertEqual(handle.signals(CUDA)["vramConfidence"],
+                         Confidence.STALE)
+        self.assertFalse(handle.admit(CUDA, requested_bytes=1 << 30))
+
+    def test_missing_vram_refuses_admission(self):
+        reading = healthy()
+        reading["vramConfidence"] = Confidence.UNAVAILABLE_UNEXPECTED
+        reading["freeBytes"] = None
+        handle = ready(telemetry=SyntheticTelemetry(
+            {CUDA: reading, ROCM: healthy()}))
+        self.assertFalse(handle.admit(CUDA, requested_bytes=1 << 30))
+
+    def test_vram_lost_while_running_degrades_before_it_drains(self):
+        """Continuation fails safe: stop admitting, keep the run, then drain."""
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+
+        telemetry.set(CUDA, {**healthy(), "freeBytes": None,
+                             "vramConfidence": Confidence.UNAVAILABLE_UNEXPECTED})
+        handle.poll()
+        self.assertEqual(handle.state, State.RUNNING, "must not kill a live run")
+        self.assertTrue(handle.degraded)
+
+        clock.advance(Policy().degraded_deadline_seconds + 1)
+        handle.poll()
+        self.assertEqual(handle.state, State.DRAINING)
+
+    def test_an_unreadable_quarantine_store_is_treated_as_quarantined(self):
+        """Otherwise corrupting one file is how a quarantine gets cleared."""
+        handle = governor(quarantine_store_readable=False)
+        with self.assertRaises(GovernorError):
+            handle.preflight()
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+
+# -------------------------------------------------------------- soft and hard
+
+class LimitTests(unittest.TestCase):
+    """Section 5. Hysteresis needs both a gap and a dwell."""
+
+    def _at(self, fraction: float) -> dict:
+        return healthy(used=int(TOTAL * fraction))
+
+    def test_soft_limit_needs_dwell_before_it_acts(self):
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+
+        telemetry.set(CUDA, self._at(0.92))
+        handle.poll()
+        self.assertEqual(handle.state, State.RUNNING, "one sample is not sustained")
+
+        clock.advance(Policy().soft_dwell_seconds + 1)
+        handle.poll()
+        self.assertEqual(handle.state, State.DRAINING)
+
+    def test_a_single_spike_below_the_dwell_does_not_flap(self):
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+
+        for fraction in (0.92, 0.70, 0.92, 0.70):
+            telemetry.set(CUDA, self._at(fraction))
+            clock.advance(2)
+            handle.poll()
+        self.assertEqual(handle.state, State.RUNNING)
+
+    def test_release_requires_falling_below_the_lower_threshold(self):
+        """A gap with no dwell flaps; a dwell with no gap flaps too."""
+        policy = Policy()
+        self.assertLess(policy.soft_release_fraction, policy.soft_limit_fraction)
+        self.assertGreater(policy.soft_release_dwell_seconds, 0)
+
+    def test_the_hard_limit_acts_immediately_with_no_dwell(self):
+        """Waiting to confirm imminent exhaustion is how exhaustion happens."""
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        telemetry.set(CUDA, self._at(0.98))
+        handle.poll()
+        self.assertEqual(handle.state, State.DRAINING)
+
+    def test_utilisation_counts_other_processes_too(self):
+        """Another process's memory causes an OOM just as effectively."""
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        telemetry.set(CUDA, self._at(0.98))          # not ours; still fatal
+        handle.poll()
+        self.assertEqual(handle.state, State.DRAINING)
+
+
+# ------------------------------------------------------------------ watchdog
+
+class WatchdogTests(unittest.TestCase):
+    """Section 6. Stalled and unresponsive are different facts."""
+
+    def _running(self):
+        clock = TestClock(start=1000.0)
+        handle = ready(clock=clock)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.heartbeat(operation="decode_step", counter=1)
+        return handle, clock
+
+    def test_an_advancing_counter_is_progress(self):
+        handle, clock = self._running()
+        for step in range(2, 6):
+            clock.advance(5)
+            handle.heartbeat(operation="decode_step", counter=step)
+            handle.poll()
+        self.assertEqual(handle.state, State.RUNNING)
+
+    def test_a_repeated_counter_is_not_progress(self):
+        """A process claiming to be healthy is not evidence that it is."""
+        handle, clock = self._running()
+        for _ in range(6):
+            clock.advance(15)
+            handle.heartbeat(operation="decode_step", counter=1)
+            handle.poll()
+        self.assertEqual(handle.state, State.DRAINING)
+
+    def test_stalled_drains_rather_than_killing(self):
+        handle, clock = self._running()
+        clock.advance(Policy().stall_deadline_seconds + 1)
+        handle.poll()
+        self.assertEqual(handle.state, State.DRAINING)
+
+    def test_unresponsive_fails_because_there_is_nothing_to_drain(self):
+        handle, clock = self._running()
+        clock.advance(Policy().unresponsive_deadline_seconds + 1)
+        handle.poll()
+        self.assertIn(handle.state, (State.FAILED, State.COOLDOWN,
+                                     State.QUARANTINED))
+
+    def test_deadlines_are_per_operation(self):
+        """A decode deadline would fire during a legitimate weight load."""
+        policy = Policy()
+        self.assertGreater(policy.operation_deadline("weight_load"),
+                           policy.operation_deadline("decode_step"))
+        handle, clock = self._running()
+        handle.heartbeat(operation="weight_load", counter=2)
+        clock.advance(policy.operation_deadline("decode_step") + 1)
+        handle.poll()
+        self.assertEqual(handle.state, State.RUNNING)
+
+    def test_a_heartbeat_with_no_operation_uses_the_shortest_deadline(self):
+        """A worker that cannot say what it is doing is not evidence of work."""
+        handle, clock = self._running()
+        handle.heartbeat(operation=None, counter=2)
+        clock.advance(Policy().operation_deadline("canary") + 1)
+        handle.poll()
+        self.assertNotEqual(handle.state, State.RUNNING)
+
+
+# --------------------------------------------------------------------- drain
+
+class DrainTests(unittest.TestCase):
+    """Section 5.3. The deadline is a deadline, not a target."""
+
+    def _draining(self):
+        clock = TestClock(start=1000.0)
+        handle = ready(clock=clock)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.drain(reason="operator")
+        return handle, clock
+
+    def test_drain_within_the_deadline_reaches_cooldown(self):
+        handle, _clock = self._draining()
+        handle.workers_exited()
+        self.assertEqual(handle.state, State.COOLDOWN)
+
+    def test_grace_deadline_escalates_to_terminate(self):
+        handle, clock = self._draining()
+        clock.advance(Policy().drain_grace_deadline_seconds + 1)
+        handle.poll()
+        self.assertEqual(handle.escalation, "SIGTERM")
+        self.assertEqual(handle.state, State.DRAINING)
+
+    def test_exceeding_the_drain_deadline_is_an_incident_not_a_success(self):
+        """SIGKILL and a clean exit are different facts about the system."""
+        handle, clock = self._draining()
+        clock.advance(Policy().drain_deadline_seconds + 1)
+        handle.poll()
+        self.assertEqual(handle.escalation, "SIGKILL")
+        self.assertIn(handle.state, (State.FAILED, State.COOLDOWN,
+                                     State.QUARANTINED))
+        self.assertTrue(any(event.get("safetyTrigger") == "drain_timeout"
+                            for event in handle.events))
+
+    def test_cooldown_does_not_release_until_baseline_is_reverified(self):
+        """A killed process does not always release VRAM promptly."""
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.drain(reason="operator")
+        handle.workers_exited()
+
+        telemetry.set(CUDA, healthy(used=6000 * 1024 * 1024))   # leaked
+        clock.advance(Policy().cooldown_period_seconds + 1)
+        handle.poll()
+        self.assertEqual(handle.state, State.COOLDOWN)
+
+        telemetry.set(CUDA, healthy())
+        handle.poll()
+        self.assertEqual(handle.state, State.READY)
+
+    def test_recovery_deadline_quarantines_rather_than_waiting_forever(self):
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.drain(reason="operator")
+        handle.workers_exited()
+        telemetry.set(CUDA, healthy(used=6000 * 1024 * 1024))
+        clock.advance(Policy().recovery_deadline_seconds + 1)
+        handle.poll()
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+
+# ----------------------------------------------------------- circuit breaker
+
+class CircuitBreakerTests(unittest.TestCase):
+    """Section 7. Retrying into a pattern is how a fault becomes damage."""
+
+    def _incidents(self, handle, clock, count, *, kind="oom", device=CUDA):
+        for _ in range(count):
+            handle.force_state(State.READY)
+            handle.admit(device, requested_bytes=1 << 30)
+            handle.report_incident(kind, device=device)
+            clock.advance(10)
+
+    def test_three_matching_incidents_open_the_breaker(self):
+        clock = TestClock(start=1000.0)
+        handle = ready(clock=clock)
+        self._incidents(handle, clock, Policy().breaker_threshold)
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_two_matching_incidents_do_not(self):
+        clock = TestClock(start=1000.0)
+        handle = ready(clock=clock)
+        self._incidents(handle, clock, Policy().breaker_threshold - 1)
+        self.assertNotEqual(handle.state, State.QUARANTINED)
+
+    def test_the_signature_excludes_the_run_id(self):
+        """It differs every time; a breaker keyed on it never opens."""
+        clock = TestClock(start=1000.0)
+        handle = ready(clock=clock)
+        self._incidents(handle, clock, Policy().breaker_threshold)
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_unrelated_failures_are_not_a_pattern(self):
+        clock = TestClock(start=1000.0)
+        handle = ready(clock=clock)
+        for kind in ("oom", "stall", "transport_failure"):
+            handle.force_state(State.READY)
+            handle.admit(CUDA, requested_bytes=1 << 30)
+            handle.report_incident(kind, device=CUDA)
+            clock.advance(10)
+        self.assertNotEqual(handle.state, State.QUARANTINED)
+
+    def test_incidents_outside_the_window_do_not_accumulate(self):
+        clock = TestClock(start=1000.0)
+        handle = ready(clock=clock)
+        for _ in range(Policy().breaker_threshold):
+            handle.force_state(State.READY)
+            handle.admit(CUDA, requested_bytes=1 << 30)
+            handle.report_incident("oom", device=CUDA)
+            clock.advance(Policy().breaker_window_seconds + 1)
+        self.assertNotEqual(handle.state, State.QUARANTINED)
+
+
+# ---------------------------------------------------------------- quarantine
+
+class QuarantineTests(unittest.TestCase):
+    """Section 7. Scoped to the failing capability, and it outlives a restart."""
+
+    def test_quarantine_is_scoped_to_the_device_not_the_machine(self):
+        handle = ready()
+        handle.quarantine("oom", device=CUDA, reason="test")
+        self.assertTrue(handle.is_quarantined(device=CUDA))
+        self.assertFalse(handle.is_quarantined(device=ROCM))
+
+    def test_quarantine_survives_a_restart(self):
+        """A quarantine a restart clears is not a quarantine."""
+        store = {}
+        first = ready(quarantine_store=store)
+        first.quarantine("oom", device=CUDA, reason="test")
+
+        second = governor(quarantine_store=store)
+        with self.assertRaises(GovernorError):
+            second.preflight()
+        self.assertEqual(second.state, State.QUARANTINED)
+
+    def test_quarantine_survives_a_boot_change(self):
+        """It is a decision, not a measurement."""
+        store = {}
+        first = ready(quarantine_store=store)
+        first.quarantine("oom", device=CUDA, reason="test")
+
+        second = governor(quarantine_store=store, boot_id=OTHER_BOOT)
+        with self.assertRaises(GovernorError):
+            second.preflight()
+        self.assertEqual(second.state, State.QUARANTINED)
+
+
+# -------------------------------------------------------------- manual reset
+
+class ManualResetTests(unittest.TestCase):
+    """Section 8. A reset is a human overriding a refusal."""
+
+    def _quarantined(self):
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(telemetry=telemetry)
+        record = handle.quarantine("oom", device=CUDA, reason="test")
+        return handle, telemetry, record
+
+    def test_reset_requires_an_actor(self):
+        handle, _telemetry, record = self._quarantined()
+        with self.assertRaises(GovernorError):
+            handle.manual_reset(actor="", records=[record])
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_reset_requires_naming_the_records_it_clears(self):
+        """A blanket reset cannot clear an incident nobody read."""
+        handle, _telemetry, _record = self._quarantined()
+        with self.assertRaises(GovernorError):
+            handle.manual_reset(actor="an-operator", records=[])
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_reset_refused_while_vram_is_above_baseline_tolerance(self):
+        handle, telemetry, record = self._quarantined()
+        telemetry.set(CUDA, healthy(used=6000 * 1024 * 1024))
+        with self.assertRaises(GovernorError):
+            handle.manual_reset(actor="an-operator", records=[record])
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_reset_refused_when_the_canary_fails(self):
+        handle, telemetry, record = self._quarantined()
+        telemetry.fail_canary(CUDA)
+        with self.assertRaises(GovernorError):
+            handle.manual_reset(actor="an-operator", records=[record])
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_a_complete_reset_returns_to_ready_and_is_recorded(self):
+        handle, _telemetry, record = self._quarantined()
+        handle.manual_reset(actor="an-operator", records=[record],
+                            reason="replaced the riser")
+        self.assertEqual(handle.state, State.READY)
+        event = [e for e in handle.events
+                 if e.get("safetyTrigger") == "manual_reset"][-1]
+        self.assertEqual(event["safetyActor"], "operator")
+        self.assertEqual(event["resetActor"], "an-operator")
+        self.assertIn(record, event["clearedRecords"])
+        self.assertIn("baseline", event)
+        self.assertIn("canary", event)
+
+    def test_reset_does_not_erase_incident_history(self):
+        """Repeatedly clearing the same fault re-opens the breaker."""
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        for _ in range(Policy().breaker_threshold):
+            handle.force_state(State.READY)
+            handle.admit(CUDA, requested_bytes=1 << 30)
+            handle.report_incident("oom", device=CUDA)
+            clock.advance(10)
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+        handle.manual_reset(actor="an-operator",
+                            records=handle.open_quarantine_records())
+        self.assertEqual(handle.state, State.READY)
+
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.report_incident("oom", device=CUDA)
+        self.assertEqual(handle.state, State.QUARANTINED,
+                         "cleared incidents still count inside the window")
+
+
+# ------------------------------------------------------------------- clocks
+
+class BootDomainTests(unittest.TestCase):
+    """Section 10. Durations only mean something within one boot."""
+
+    def test_a_boot_change_returns_the_governor_to_unknown(self):
+        handle = ready()
+        handle.observe_boot(OTHER_BOOT)
+        self.assertEqual(handle.state, State.UNKNOWN)
+
+    def test_a_baseline_does_not_carry_across_boots(self):
+        handle = ready()
+        self.assertIsNotNone(handle.baseline(CUDA))
+        handle.observe_boot(OTHER_BOOT)
+        self.assertIsNone(handle.baseline(CUDA))
+
+    def test_durations_across_boots_are_refused_not_approximated(self):
+        handle = ready()
+        with self.assertRaises(GovernorError):
+            handle.duration_between({"bootId": BOOT, "monotonicNs": 10},
+                                    {"bootId": OTHER_BOOT, "monotonicNs": 20})
+
+    def test_every_event_carries_the_boot_id(self):
+        handle = ready()
+        self.assertTrue(all(event.get("bootId") == BOOT
+                            for event in handle.events))
+
+
+# -------------------------------------------------------------------- audit
+
+class AuditTests(unittest.TestCase):
+    """Section 12."""
+
+    def test_events_carry_the_policy_version(self):
+        """A decision is reviewable only against the thresholds then in force."""
+        handle = ready()
+        self.assertEqual(handle.events[-1]["safetyPolicyVersion"],
+                         Policy().version)
+
+    def test_events_carry_per_signal_value_and_confidence(self):
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        signals = handle.events[-1]["safetySignals"]
+        self.assertIn("powerConfidence", signals[ROCM])
+        self.assertEqual(signals[ROCM]["powerConfidence"],
+                         Confidence.UNAVAILABLE_EXPECTED)
+        self.assertIsNone(signals[ROCM]["powerWatts"],
+                          "an unmeasured signal must not be recorded as a value")
+
+    def test_a_simulated_governor_marks_every_event(self):
+        """The escape exists and is impossible to use without leaving a mark."""
+        handle = ready()
+        self.assertTrue(all(event.get("safetySimulated") is True
+                            for event in handle.events))
+
+
+# --------------------------------------------------------------- non-goal
+
+class NonGoalTests(unittest.TestCase):
+    """Section 0. The Governor does not claim hardware cannot fail."""
+
+    def test_the_contract_states_the_non_goal_before_anything_else(self):
+        path = os.path.join(os.path.dirname(_RUNTIME), "docs",
+                            "SAFETY_GOVERNOR.md")
+        assert os.path.isfile(path), f"the contract is missing: {path}"
+        with open(path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        non_goal = text.index("## 0. Non-goal")
+        self.assertLess(non_goal, text.index("## 1. Scope"))
+        self.assertIn("cannot guarantee that hardware will never fail", text)
+
+
+if __name__ == "__main__":
+    unittest.main()
