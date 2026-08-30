@@ -9,7 +9,9 @@ Also checks that earlier tags stay reachable. A tag left dangling off the main
 line is evidence that is still in the object database and no longer in the
 history anyone reads.
 
-Usage:  verify_ancestry.py [branch] [merge-commit]
+Usage:  verify_ancestry.py [branch] [tip]
+
+The merge commit is found from the tip, not assumed to be it.
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ import sys
 REPO = os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
 BRANCH = sys.argv[1] if len(sys.argv) > 1 else "feature/safety-governor"
-MERGE = sys.argv[2] if len(sys.argv) > 2 else "main"
+TIP = sys.argv[2] if len(sys.argv) > 2 else "main"
 
 failures, notes = [], []
 
@@ -36,12 +38,32 @@ def git(*args: str) -> str:
                           text=True).stdout.strip()
 
 
-def reachable(ref: str, tip: str = MERGE) -> bool:
+def reachable(ref: str, tip: str) -> bool:
     return subprocess.run(["git", "merge-base", "--is-ancestor", ref, tip],
                           cwd=REPO, capture_output=True).returncode == 0
 
 
-print(f"\nAncestry verification -- {MERGE}\n")
+def find_merge(branch: str, tip: str) -> str:
+    """The merge commit that brought `branch` in, not whatever the tip is now.
+
+    Taking the tip as the merge was wrong and briefly reported three failures
+    for a merge that was correct: main had already advanced by one commit --
+    the evidence for this very check -- so the tip had one parent and a
+    different tree. A gate whose verdict depends on how much has landed since
+    is not verifying what it claims to.
+    """
+    target = git("rev-parse", branch)
+    for candidate in git("rev-list", "--merges", tip).splitlines():
+        if target in git("log", "--format=%P", "-1", candidate).split():
+            return candidate
+    return tip          # no merge found; report against the tip and let the
+                        # two-parent check say so
+
+
+MERGE = find_merge(BRANCH, TIP)
+
+print(f"\nAncestry verification -- {git('rev-parse', '--short', MERGE)}"
+      f" (the merge of {BRANCH} into {TIP})\n")
 
 # 1. The merge preserved the branch, rather than replacing it. ----------------
 parents = git("log", "--format=%P", "-1", MERGE).split()
@@ -58,7 +80,7 @@ check("the branch tip is a parent of the merge",
 commits = [line for line in
            git("rev-list", f"{parents[0]}..{git('rev-parse', BRANCH)}").splitlines()
            if line]
-unreachable = [c for c in commits if not reachable(c)]
+unreachable = [c for c in commits if not reachable(c, TIP)]
 check("every commit the gates validated is reachable by its own id",
       not unreachable, f"{len(commits)} commit(s); {len(unreachable)} unreachable")
 
@@ -66,7 +88,9 @@ check("every commit the gates validated is reachable by its own id",
 for tag in git("tag", "--list").splitlines():
     if not tag.strip():
         continue
-    check(f"tag {tag} is reachable from {MERGE}", reachable(tag),
+    # Against the tip, not the merge: a tag created after this merge is still
+    # reachable history and must not be reported as lost.
+    check(f"tag {tag} is reachable", reachable(tag, TIP),
           git("rev-parse", "--short", tag))
 
 # 4. Nothing was lost: the merged tree equals the branch tree. ----------------

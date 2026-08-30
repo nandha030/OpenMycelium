@@ -1,13 +1,14 @@
 
-Ancestry verification -- main
+Ancestry verification -- 5287154 (the merge of feature/safety-governor into main)
 
 
   ok    the merge has two parents (not a squash or fast-forward) -- 2 parent(s): ab6f25548837b46050b671f682e00bd0057cadf9 c230057c08b689bdf1eacc3e904b0fabb32e1a42
   ok    the branch tip is a parent of the merge -- c230057
   ok    every commit the gates validated is reachable by its own id -- 12 commit(s); 0 unreachable
-  ok    tag hetccl-v0.2.0a1 is reachable from main -- 642ab81
-  ok    tag v0.1.0 is reachable from main -- f402792
-  ok    tag v0.3.0a5 is reachable from main -- 82309cc
+  ok    tag hetccl-v0.2.0a1 is reachable -- 642ab81
+  ok    tag v0.1.0 is reachable -- f402792
+  ok    tag v0.3.0a10 is reachable -- 34efe1e
+  ok    tag v0.3.0a5 is reachable -- 82309cc
   ok    the merged tree is identical to the branch tree -- 5d3ea97
 
-  == ancestry verification PASSED: 7 checks ==
+  == ancestry verification PASSED: 8 checks ==
