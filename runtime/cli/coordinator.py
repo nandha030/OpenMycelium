@@ -424,6 +424,67 @@ def prepare_placement(args) -> None:
     from placement import require_qualified_manifest  # noqa: PLC0415
     args.qualification = require_qualified_manifest(args.placement_manifest)
 
+    args.safety_observer = _shadow_observe(args, fabric_report)
+
+
+def _shadow_observe(args, fabric_report: Dict[str, Any]):
+    """Gate D.2: watch, record, change nothing. Returns the observer or None.
+
+    Off by default and off unless `OM_SAFETY_MODE=shadow` says otherwise, in
+    which case this reads the Fabric snapshot that was *already* taken -- it
+    issues no device query of its own, so it cannot contend with the workload it
+    is watching.
+
+    `observe()` returns nothing on purpose. A return value is how an observer
+    becomes a decision-maker: the first caller to branch on it turns shadow mode
+    into enforcement without anyone deciding to. Nothing here inspects a result,
+    and a failure inside it is swallowed -- an observer that can stop a
+    production run is not an observer.
+    """
+    # The off path is one dictionary lookup and a return: no sys.path change,
+    # no import, nothing loaded. "Preserves current behaviour exactly" has to
+    # mean exactly, and importing a module to discover you are switched off is
+    # already a difference. Any value at all defers to safety_mode(), which owns
+    # the off/shadow/typo decision -- so the rule lives in one place.
+    if not os.environ.get("OM_SAFETY_MODE"):
+        return None
+
+    safety = os.path.join(runtime_root(), "runtime", "safety")
+    if safety not in sys.path:
+        sys.path.insert(0, safety)
+    try:
+        from shadow import MODE_OFF, ShadowObserver, safety_mode  # noqa: PLC0415
+        mode = safety_mode()
+        if mode == MODE_OFF:
+            return None
+
+        from audit import boot_id  # noqa: PLC0415
+
+        # Its own file, never the production audit trail. Two reasons: the audit
+        # writer refuses events before a manifest is bound, which is exactly when
+        # this observes; and shadow mode must not alter the stream a real run's
+        # evidence is read from. A separate file is preserved evidence that
+        # cannot be mistaken for something the runtime acted on.
+        path = os.path.join(args.work_dir, "safety-shadow.jsonl")
+
+        def record_observation(record):
+            with open(path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, sort_keys=True) + "\n")
+            print(f"  [safety/shadow] {record['safetyPhase']}: "
+                  f"would {record['wouldAction']} "
+                  f"({record['wouldTransition']}) -- {record['wouldDetail']}",
+                  file=sys.stderr)
+
+        observer = ShadowObserver(mode=mode, boot_id=boot_id(),
+                                  emit=record_observation)
+        observer.observe("admission", fabric_report,
+                         manifest=args.placement_manifest, force=True)
+        return observer
+    except Exception as error:                                # noqa: BLE001
+        print(f"  [safety/shadow] observation skipped: "
+              f"{type(error).__name__}: {error}", file=sys.stderr)
+        return None
+
     # One coordinator attempt. Correlation metadata only: independent of the
     # placement id and excluded from the manifest digest, so re-running the same
     # placement produces a new run id while the digest is unchanged.
