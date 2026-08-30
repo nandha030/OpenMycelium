@@ -128,12 +128,29 @@ that it happened.
 
 | Step | Evidence |
 |---|---|
-| Branch scope review | `scope-review-branch.txt`, 8 checks, **before** the merge |
+| Branch scope review | `scope-review-branch.txt`, 9 checks, **before** the merge — see the correction below |
 | Merge | `5287154`, `--no-ff`; the gates validated these exact commit identities, so a squash would produce ids nothing has validated |
 | Ancestry verification | `ancestry.txt`, 8 checks — 12 validated commits reachable by their own ids, all four tags reachable, merged tree identical to the branch tree |
 | Tag | `v0.3.0a10`, annotated, on the merge commit — the same convention as `v0.3.0a5` |
 
-The ancestry script needed a fix on its second run: it had taken the tip of
+### Two harness corrections, after the fact
+
+**The branch scope review matched its own definition.** It holds the list of
+symbols it forbids, so it is a code file containing every one of them. Its first
+run passed only because it was still untracked and absent from the diff; once
+committed it failed on itself. Worse, I regenerated its output and committed
+that as evidence without reading it, so the file merged under this seal recorded
+`FAILED` while the summary above cited it as passing. Corrected in `d3f37a0`:
+three exact paths are exempt — the rule document, the checker, the output of the
+checker — a ninth check asserts there are exactly three, and re-running the
+corrected checker over the same range `ab6f2554...c230057` passes.
+
+**The merged content was never in question.** The finding was the reviewer
+matching itself, not scope creep, and nothing about the artifact, the merge or
+the tag changes. What does change is the honesty of the record: a gate result
+produced and filed unread is not a result.
+
+**The ancestry script** needed a fix on its second run: it had taken the tip of
 `main` as the merge commit, and `main` had already advanced by one commit — the
 evidence for that very check — so it reported three failures for a correct
 merge. A gate whose verdict depends on how much has landed since is not
