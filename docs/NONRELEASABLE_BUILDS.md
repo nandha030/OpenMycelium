@@ -23,13 +23,31 @@ Each of these was installed on the qualified machine and run. They are recorded
 because "we rebuilt it and it works now" is not an account of what happened, and
 because a machine still carrying one of these needs to be identifiable.
 
+### Superseded after passing
+
+| Version | sha256 of the wheel | Why it is not releasable |
+|---|---|---|
+| `0.3.0a4` | `0d668aefd9c9b37e5c46c2e324be9cb0895d7419421a1160cd38ac2b3d7e99cb` | Passed every gate and carries no known defect. Superseded by `0.3.0a5`, which pins `mcclContent` in the qualification tuple — `0.3.0a4` records only `mcclVersion`, leaving qualification-by-label open in the transport layer, which is the layer that decides what crosses the activation boundary. Retained as the incumbent in the Gate A paired campaign. |
+
 ## The complete artifact
 
-`0.3.0a4` — sha256 `0d668aefd9c9b37e5c46c2e324be9cb0895d7419421a1160cd38ac2b3d7e99cb`.
+`0.3.0a5` — installed content
+`e2eccbbe6de9aa8fdc342bbed015cede325a84161269dfa719c6f3f97c0011bf`,
+canonical wheel sha256 `3eeaed3e229226f4d1408826fc42934057878fa48a91fc7fbb89900a88a04871`,
+MCCL `0.2.0a3` content `5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d`.
 
-It is the first build of this milestone to pass every gate: unit suite, adapter
-refusal, qualification lifecycle, installed-wheel console gate, and the hardware
-comparison against the pre-refactor baseline at `d76334a`.
+### Wheel bytes are not product content
+
+Rebuilding `0.3.0a5` from the same committed source produced wheel files hashing
+`495a3fde…` and `b99adac0…` — three distinct byte streams at identical size,
+differing in ZIP timestamps and packaging metadata. All three install to the same
+`installedContentSha256`.
+
+So identity is asserted on **installed content**, never on the wheel file, and
+equal installed-content digests are never described as byte-identical wheels. The
+wheel that the Gate A paired campaign actually measured is preserved as canonical;
+a rebuild is used to confirm the digest, never to replace it. Two different wheel
+byte streams must never appear under one version in release evidence.
 
 ## Earlier precedent
 

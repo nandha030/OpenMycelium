@@ -87,13 +87,55 @@ modelFingerprint      ff74ccb7…       the checkpoint
 adapterId             mistral
 adapterVersion        "1"
 adapterConfigDigest   …               the config that drove construction
-openmyceliumVersion   0.2.0a6
+openmyceliumVersion   0.3.0a4
+openmyceliumContent   …               sha256 of the installed .py files
 mcclVersion           0.2.0a3
+mcclContent           …               sha256 of the installed .py files
 transport             host-staged-xvendor
 cudaRuntime           torch 2.11.0+cu128
 rocmRuntime           torch 2.10.0+rocm7.0
 topology              nvidia:<identity> + amd:<identity>, boundary after layer 19
 ```
+
+### Amendment: content digests, not version labels
+
+`openmyceliumContent` and `mcclContent` are additions to the tuple as originally
+frozen, and they close the same hole the scoping exists to close.
+
+**A version string does not identify a build.** The Adapter SDK milestone alone
+produced seven wheels; six of them are recorded as non-releasable. A wheel
+rebuilt under a version that already has a record would inherit qualification it
+was never measured against — which is exactly "mistral@1 is qualified" wearing a
+different hat.
+
+**MCCL needs it more than OpenMycelium does.** MCCL owns the wire protocol and
+the transport. A change there moves the boundary bytes, and every byte-exactness
+claim in this project — the `c1467cd33c52032932ae4a39661a8136` digest and
+everything resting on it — is a claim about those bytes. Carrying only
+`mcclVersion` would have left the label-shaped hole open in precisely the layer
+where it does the most damage.
+
+Both digests are computed the way `installedContentSha256` already was: over the
+installed distribution's `RECORD`-listed `.py` files, name and content, sorted.
+Not over the wheel, which is usually deleted after installation.
+
+A source checkout has no installed distribution to digest and receives
+`source-checkout:<commit>` for both. That is a sentinel, not a blank: every field
+of the tuple must be *something*, a checkout genuinely is a different build from
+any wheel, and a blank would be indistinguishable from "not filled in yet".
+
+### Boot identity stays out
+
+`bootId` is deliberately **not** in the tuple. Qualification must survive a
+reboot — nothing a restart changes is part of what was measured, and requalifying
+after every restart would make qualification a formality rather than evidence.
+This was checked rather than assumed: the `0.3.0a4` record was written before a
+restart and resolved to the same situation digest afterwards.
+
+`bootId` remains in event records, where it belongs. Event timestamps are only
+comparable within one boot, so the boot identity is what makes a monotonic clock
+reading meaningful — a different concern from qualification, and one that would
+be broken by conflating the two.
 
 A different checkpoint of the same architecture is unqualified. The same
 checkpoint after a torch upgrade is unqualified. The same everything on a
@@ -523,6 +565,61 @@ even when the median passes.
 The three unchanged-code runs spanned 14%, which is why equality would fail on
 noise. Decode was 11.03–11.07 across the same runs and is held tightly.
 
+### Amendment: TTFT is judged paired against the incumbent, not absolutely
+
+The absolute rule above is **superseded as a gate** and retained as a historical
+observation. The number 173.2 ms is not changed and not widened.
+
+**Why.** The band it defines is 28.9 ms wide (144.3 → 173.2). The measured
+within-build, run-to-run range on the qualified machine is **44–47 ms**. The
+instrument's own noise exceeds the interval it is asked to resolve, and identical
+code duly produced both a pass and a fail in different campaigns. TTFT also
+drifts upward through a session — the same build measured 142.5 ms early and
+169.1 ms late — so any protocol that measures one build before another charges
+the second for the first's warm-up.
+
+**The gate.** Measure the candidate **interleaved against the last sealed build**
+in one campaign, in a position-balanced sequence, and accept on:
+
+```
+regression = (candidate_mean_ttft - incumbent_mean_ttft) / incumbent_mean_ttft
+pass when regression <= 20%
+```
+
+The 20% is the tolerance this contract already used; it is applied to a paired
+comparison instead of an absolute number. Position balance is checked, not
+assumed: the two builds must have equal mean position in the sequence, or drift
+is charged unevenly and the means are not comparable.
+
+**Decode is unchanged** — median within `10.9 – 11.3 tok/s`, still a hard gate.
+It held across every campaign and is a stable instrument.
+
+**Adjacent-pair differences are diagnostics and never a threshold.** An earlier
+draft of this amendment proposed accepting when the mixed-pair difference stayed
+below the same-build pair spread. That is unsafe: a campaign yields two
+same-build pairs, so that spread is a single observation of a noisy quantity, and
+a campaign that happened to drift hard would have licensed a real regression.
+
+**Campaign requirements.** At least **five observations per build**,
+position-balanced interleaving, immutable side-by-side installations that are
+never reinstalled mid-campaign, and a pre-registered machine state: idle GPUs, no
+live workers, a settle period, and `bootId` captured **per run** with the campaign
+invalidated if it changes. Every observation preserves its boot id, placement id
+and digest, writer and sequence identity, package and content hashes, worker
+outcome, exact output and ownership, and cleanup state.
+
+Campaigns pre-registered with fewer observations stand as registered and are not
+re-judged against this minimum.
+
+**This is not a threshold widened after a failure.** The justification is the
+same-build adjacent-pair measurements, which were pre-registered as drift
+diagnostics before any candidate outcome was known and are independent of whether
+any particular candidate passed. See `release/0.3.0a5/gates/gate-a-verdict.md`
+for the campaign that established it.
+
+`scripts/repro/paired_analysis.py` implements this rule and replays a preserved
+campaign from its raw record without re-running it.
+
 ### Must newly hold
 
 - A Llama checkpoint is rejected with `UNSUPPORTED_ARCHITECTURE` **and no GPU memory is allocated** — asserted by sampling VRAM before and after, and by no worker process appearing.
@@ -537,6 +634,32 @@ noise. Decode was 11.03–11.07 across the same runs and is held tightly.
 `scripts/repro/console_wheel_gate.sh` runs **unchanged**, with `OM_REPO` set so
 wheel paths resolve. If the gate needs editing to pass, the extraction was
 wrong.
+
+### Clarification: "under the same conditions" includes an idle machine
+
+No threshold changes. This states what the baseline capture already did and the
+procedure left implicit.
+
+The baseline was measured on an otherwise idle machine. A campaign run
+immediately after other GPU work measures a machine that has just been worked —
+weights still being released, caches still warm or still cold in the wrong
+places. That is a real number about the wrong thing.
+
+Measured, not assumed. The same build, same machine, same three-session
+procedure gave:
+
+| Order | TTFT samples | Median | Spread |
+|---|---|---|---|
+| Campaign standalone | 140.3 / 142.5 / 172.5 | 142.5 ms | 23% |
+| Campaign after two other GPU gates | 139.7 / 172.3 / 192.0 | 172.3 ms | 37% |
+
+Both pass. The second passes by 0.9 ms on a metric whose own spread is 52 ms,
+which is not a result to build on. The first sample is near-identical in both
+runs; only the tail moves, which is what contention looks like.
+
+The campaign therefore runs **first among the GPU gates and after a settle
+period**, and refuses to start while any worker process is alive.
+`scripts/repro/performance_campaign.sh` enforces both.
 
 Baseline and comparison are preserved together under the new alpha's release
 evidence once accepted — not before.
