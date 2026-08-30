@@ -32,8 +32,8 @@ def _package_version() -> str:
         return "unknown (not installed as a distribution)"
 
 
-def _wheel_digest() -> Dict[str, Any]:
-    """Hash the installed package's own files, not a wheel that may be gone.
+def _distribution_digest(name: str) -> Dict[str, Any]:
+    """Hash an installed distribution's own files, not a wheel that may be gone.
 
     The wheel is often deleted after installation, so hashing it is unreliable.
     Digesting the installed `RECORD`-listed contents gives a stable identity for
@@ -41,24 +41,46 @@ def _wheel_digest() -> Dict[str, Any]:
     """
     try:
         from importlib.metadata import distribution      # noqa: PLC0415
-        dist = distribution("openmycelium")
+        dist = distribution(name)
         files = sorted(str(f) for f in (dist.files or [])
                        if str(f).endswith(".py"))
         digest = hashlib.sha256()
         counted = 0
-        for name in files:
-            path = dist.locate_file(name)
+        for entry in files:
+            path = dist.locate_file(entry)
             try:
                 with open(path, "rb") as handle:
-                    digest.update(name.encode("utf-8"))
+                    digest.update(entry.encode("utf-8"))
                     digest.update(handle.read())
                 counted += 1
             except OSError:
                 continue
-        return {"installedContentSha256": digest.hexdigest(),
-                "pythonFiles": counted}
+        return {"sha256": digest.hexdigest(), "pythonFiles": counted}
     except Exception as error:                            # noqa: BLE001
-        return {"installedContentSha256": None, "detail": str(error)[:120]}
+        return {"sha256": None, "detail": str(error)[:120]}
+
+
+def _wheel_digest() -> Dict[str, Any]:
+    """Content identity for both installed distributions.
+
+    MCCL is digested for the same reason openmycelium is, and with more force:
+    it owns the wire protocol and the transport, so a change there moves the
+    boundary bytes that every byte-exactness claim in this project rests on.
+    A version label alone cannot distinguish two builds of it.
+    """
+    own = _distribution_digest("openmycelium")
+    mccl = _distribution_digest("openmycelium-mccl")
+    record: Dict[str, Any] = {
+        "installedContentSha256": own.get("sha256"),
+        "pythonFiles": own.get("pythonFiles"),
+        "mcclContentSha256": mccl.get("sha256"),
+        "mcclPythonFiles": mccl.get("pythonFiles"),
+    }
+    if own.get("detail"):
+        record["detail"] = own["detail"]
+    if mccl.get("detail"):
+        record["mcclDetail"] = mccl["detail"]
+    return record
 
 
 def _git_commit() -> Optional[str]:

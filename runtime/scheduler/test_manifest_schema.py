@@ -304,7 +304,8 @@ class QualificationEnforcementTests(unittest.TestCase):
         self.assertEqual(caught.exception.error_code, "ADAPTER_UNQUALIFIED")
 
     def test_the_manifest_records_the_build_that_compiled_it(self):
-        for field in ("openmycelium", "openmyceliumContent", "mccl"):
+        for field in ("openmycelium", "openmyceliumContent", "mccl",
+                      "mcclContent"):
             self.assertTrue(self.manifest["build"][field],
                             f"build.{field} must never be blank; a blank is "
                             "indistinguishable from not filled in")
@@ -313,7 +314,7 @@ class QualificationEnforcementTests(unittest.TestCase):
         from adapters import AdapterError
         stripped = copy.deepcopy(self.manifest)
         stripped["build"] = {"openmycelium": "", "openmyceliumContent": "",
-                             "mccl": ""}
+                             "mccl": "", "mcclContent": ""}
         stripped = self._resign(stripped)
         with self.assertRaises(AdapterError) as caught:
             validate_for_worker(stripped, model(), "cuda")

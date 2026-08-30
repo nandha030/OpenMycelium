@@ -30,11 +30,17 @@ from adapters import AdapterError, ErrorCode, QualificationStatus, canonical_jso
 
 #: The tuple. Order is fixed because it is hashed.
 #:
-#: `openmyceliumContent` is the installed wheel's content digest, and it is here
-#: because the version string does not identify a build. This milestone alone
-#: produced three wheels; a rebuilt wheel carrying the same version would
-#: otherwise inherit a record it was never measured against, which is exactly
-#: the "qualification by label" failure the scoping exists to prevent.
+#: `openmyceliumContent` and `mcclContent` are the installed distributions'
+#: content digests, and they are here because a version string does not identify
+#: a build. This milestone alone produced seven wheels; a rebuilt wheel carrying
+#: the same version would otherwise inherit a record it was never measured
+#: against, which is exactly the "qualification by label" failure the scoping
+#: exists to prevent.
+#:
+#: MCCL needs it more than openmycelium does. MCCL owns the wire protocol and
+#: the transport, so a change there moves the boundary bytes that every
+#: byte-exactness claim rests on -- and `mcclVersion` alone would have left that
+#: hole open in precisely the layer where it matters most.
 SITUATION_FIELDS = (
     "modelFingerprint",
     "adapterId",
@@ -43,6 +49,7 @@ SITUATION_FIELDS = (
     "openmyceliumVersion",
     "openmyceliumContent",
     "mcclVersion",
+    "mcclContent",
     "transport",
     "cudaRuntime",
     "rocmRuntime",
@@ -109,8 +116,9 @@ class QualificationError(AdapterError):
 def build_situation(model_fingerprint: str, adapter_id: str,
                     adapter_version: str, adapter_config_digest: str,
                     openmycelium_version: str, openmycelium_content: str,
-                    mccl_version: str, transport: str, cuda_runtime: str,
-                    rocm_runtime: str, topology: str) -> Dict[str, str]:
+                    mccl_version: str, mccl_content: str, transport: str,
+                    cuda_runtime: str, rocm_runtime: str,
+                    topology: str) -> Dict[str, str]:
     """Every field is required and none defaults.
 
     A default here would silently widen a record to cover a situation nobody
@@ -124,6 +132,7 @@ def build_situation(model_fingerprint: str, adapter_id: str,
         "openmyceliumVersion": openmycelium_version,
         "openmyceliumContent": openmycelium_content,
         "mcclVersion": mccl_version,
+        "mcclContent": mccl_content,
         "transport": transport,
         "cudaRuntime": cuda_runtime,
         "rocmRuntime": rocm_runtime,
@@ -154,7 +163,7 @@ def topology_from_manifest(manifest: Dict[str, Any]) -> str:
 def build_identity() -> Dict[str, str]:
     """Which build is asking. Version and content digest, never version alone."""
     identity = {"openmyceliumVersion": "", "openmyceliumContent": "",
-                "mcclVersion": ""}
+                "mcclVersion": "", "mcclContent": ""}
     try:
         sys.path.insert(0, os.path.join(_HERE, "..", "..", "cli"))
         from provenance import collect  # noqa: PLC0415
@@ -163,6 +172,7 @@ def build_identity() -> Dict[str, str]:
         identity["openmyceliumContent"] = str(
             record.get("installedContentSha256") or "")
         identity["mcclVersion"] = str(record.get("mcclVersion") or "")
+        identity["mcclContent"] = str(record.get("mcclContentSha256") or "")
     except Exception:                                     # noqa: BLE001
         pass
     return identity
@@ -186,7 +196,8 @@ def situation_from_manifest(manifest: Dict[str, Any],
         identity = {"openmyceliumVersion": str(recorded.get("openmycelium") or ""),
                     "openmyceliumContent": str(
                         recorded.get("openmyceliumContent") or ""),
-                    "mcclVersion": str(recorded.get("mccl") or "")}
+                    "mcclVersion": str(recorded.get("mccl") or ""),
+                    "mcclContent": str(recorded.get("mcclContent") or "")}
     identity = identity or build_identity()
     fabric = manifest.get("fabric") or {}
     pipeline = manifest.get("pipeline") or {}
@@ -198,6 +209,7 @@ def situation_from_manifest(manifest: Dict[str, Any],
         openmycelium_version=identity.get("openmyceliumVersion", ""),
         openmycelium_content=identity.get("openmyceliumContent", ""),
         mccl_version=identity.get("mcclVersion", ""),
+        mccl_content=identity.get("mcclContent", ""),
         transport=str(pipeline.get("transport") or ""),
         cuda_runtime=str(fabric.get("cudaRuntime") or ""),
         rocm_runtime=str(fabric.get("rocmRuntime") or ""),

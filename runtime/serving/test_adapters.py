@@ -236,6 +236,7 @@ class QualificationTests(unittest.TestCase):
             "openmycelium_version": "0.3.0a1",
             "openmycelium_content": "d" * 64,
             "mccl_version": "0.2.0a3",
+            "mccl_content": "m" * 64,
             "transport": "host-staged-xvendor",
             "cuda_runtime": "torch 2.11.0+cu128",
             "rocm_runtime": "torch 2.10.0+rocm7.0",
@@ -282,6 +283,10 @@ class QualificationTests(unittest.TestCase):
                 # version string alone cannot express.
                 ("openmycelium_content", "e" * 64),
                 ("mccl_version", "0.2.0a4"),
+                # The transport layer needs this most: MCCL owns the wire
+                # protocol, so the same version with different code moves the
+                # boundary bytes every byte-exactness claim rests on.
+                ("mccl_content", "n" * 64),
                 ("cuda_runtime", "torch 2.12.0+cu128"),
                 ("rocm_runtime", "torch 2.11.0+rocm7.0"),
                 ("transport", "direct-p2p"),
@@ -412,7 +417,8 @@ class SituationFromManifestTests(unittest.TestCase):
     def identity(self) -> dict:
         return {"openmyceliumVersion": "0.3.0a1",
                 "openmyceliumContent": "c" * 64,
-                "mcclVersion": "0.2.0a3"}
+                "mcclVersion": "0.2.0a3",
+                "mcclContent": "d" * 64}
 
     def test_every_field_comes_from_the_manifest_or_the_build(self):
         from adapters.qualification import (SITUATION_FIELDS,

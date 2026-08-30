@@ -227,7 +227,7 @@ def _build_identity() -> Dict[str, str]:
         return dict(_BUILD_IDENTITY)
 
     identity = {"openmycelium": "unknown", "openmyceliumContent": "unknown",
-                "mccl": "unknown"}
+                "mccl": "unknown", "mcclContent": "unknown"}
     record: Dict[str, Any] = {}
     try:
         cli = os.path.join(_HERE, "..", "cli")
@@ -246,11 +246,13 @@ def _build_identity() -> Dict[str, str]:
     # something -- and because a checkout genuinely is a different build from
     # any wheel, so it must never match a wheel's record. Sentinels, not blanks:
     # a blank would be indistinguishable from "not filled in yet".
-    content = str(record.get("installedContentSha256") or "")
-    if not content:
-        commit = str(record.get("gitCommit") or "") or "unknown"
-        content = f"source-checkout:{commit}"
-    identity["openmyceliumContent"] = content
+    commit = str(record.get("gitCommit") or "") or "unknown"
+    identity["openmyceliumContent"] = (
+        str(record.get("installedContentSha256") or "")
+        or f"source-checkout:{commit}")
+    identity["mcclContent"] = (
+        str(record.get("mcclContentSha256") or "")
+        or f"source-checkout:{commit}")
     _BUILD_IDENTITY.update(identity)
     return identity
 
