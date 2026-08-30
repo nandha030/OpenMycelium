@@ -109,3 +109,38 @@ installed-content digest, as established at `v0.3.0a5`.
 
 Plus `test_every_admitted_exit_declares_a_lease_outcome`, which fails if a future
 row is added to `ADMITTED` without saying what becomes of the lease.
+
+---
+
+## Artifact identities, recorded after closure
+
+| | |
+|---|---|
+| Version | `0.3.0a7` |
+| Canonical wheel sha256 | `f2827dcf238d836c91ade6e7a52d6bde4221df465b471c909ddeab18ba4347f7` |
+| Installed content sha256 | `1a38eb8890512e32b37bfa90baf9745d54d81e72d9ad50f80ef49f2018be97aa` |
+| MCCL content sha256 | `5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d` |
+
+### Two process gaps found while recording these
+
+**The gate-run wheel was not preserved.** D.1 built `0.3.0a7` into `/tmp` and ran
+the installed-wheel gate against it, and the distro reclaimed `/tmp` before the
+digest was captured. `build.txt` records that wheel's file hash
+(`028acea2b3367dd3a961f87da3103037c21bbefa8db0c38cd76d0764b80c5d72`) but its
+installed-content digest was never measured.
+
+The canonical wheel above is a rebuild from the same tree, preserved in `dist/`
+and verified by re-running the installed-wheel gate against it. Differing wheel
+file hashes at identical size are the ZIP-metadata effect established at
+`v0.3.0a5`; the installed content is the identity. **A build intended as
+evidence is now written to `dist/` rather than a temporary directory.**
+
+**The D.1 commit shipped disagreeing version constants.** `packaging/launcher.py`
+said `0.3.0a7` and `runtime/cli/lifecycle.py` still said `0.3.0a5`, because the
+`git add` was scoped to directories that excluded `runtime/cli/`. Since
+`openmycelium version` reads `lifecycle.py`, a wheel built from that commit would
+have reported a version that does not exist.
+
+`scripts/build_openmycelium_wheel.py` now refuses to build when the three
+constants disagree, and prints all three. It is the only place that sees them
+together.
