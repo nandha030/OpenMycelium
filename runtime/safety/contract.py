@@ -16,7 +16,30 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, Optional, Tuple
 
-CONTRACT_VERSION = "safety-contract-1"
+CONTRACT_VERSION = "safety-contract-1.1"
+
+#: Preserved, not reinterpreted. A frozen version keeps meaning what it meant;
+#: reading an old audit event against a newer table would silently misjudge the
+#: decision it records.
+CONTRACT_REVISIONS = {
+    "safety-contract-1": (
+        "Frozen at Gate C.1. ADMITTED had no incident path: a worker dying "
+        "between admission and the canary, or a breaker opening on an incident "
+        "recorded there, had nowhere to go. Events carrying this version were "
+        "produced by a Governor that raised in that window."),
+    "safety-contract-1.1": (
+        "Closes the ADMITTED incident gap. Adds ADMITTED -> FAILED on "
+        "worker_died and unresponsive, ADMITTED -> DRAINING on "
+        "hard_limit_breached in immediate mode, and ADMITTED -> QUARANTINED on "
+        "breaker_opened. Every exit from ADMITTED now declares what becomes of "
+        "its lease."),
+}
+
+#: What an exit does to the lease the state was holding. Declared per transition
+#: so "the lease was released" is a fact the table states, not something a reader
+#: has to infer from the implementation.
+LEASE_RETAINED = "retained"
+LEASE_RELEASED = "released"
 
 
 class State(str, Enum):
@@ -86,6 +109,11 @@ class Transition:
     #: Names a Policy attribute, so a deadline is stated once.
     timeout_key: Optional[str] = None
     drain_mode: Optional[DrainMode] = None
+    #: LEASE_RETAINED, LEASE_RELEASED, or None where no lease is involved.
+    #: Every exit from ADMITTED declares one: a lease that is neither carried
+    #: forward nor released is stranded, and a stranded lease is capacity the
+    #: Governor believes is in use forever.
+    lease_outcome: Optional[str] = None
     note: str = ""
 
     @property
@@ -128,16 +156,40 @@ TRANSITIONS: Tuple[Transition, ...] = (
     Transition(
         State.ADMITTED, State.RUNNING, "canary_passed", TriggerSource.GOVERNOR,
         "safety_running", "canary_deadline_seconds",
-        note="see the compute canary, contract section 4.5"),
+        lease_outcome=LEASE_RETAINED,
+        note="the work is starting; the lease carries forward into RUNNING"),
     Transition(
         State.ADMITTED, State.DRAINING, "operator_cancel", TriggerSource.OPERATOR,
-        "safety_drain_started", drain_mode=DrainMode.GRACEFUL),
+        "safety_drain_started", drain_mode=DrainMode.GRACEFUL,
+        lease_outcome=LEASE_RELEASED),
     Transition(
         State.ADMITTED, State.DRAINING, "soft_limit_sustained", TriggerSource.GOVERNOR,
-        "safety_drain_started", drain_mode=DrainMode.GRACEFUL),
+        "safety_drain_started", drain_mode=DrainMode.GRACEFUL,
+        lease_outcome=LEASE_RELEASED),
     Transition(
         State.ADMITTED, State.FAILED, "canary_failed", TriggerSource.GOVERNOR,
-        "safety_canary_failed", "canary_deadline_seconds"),
+        "safety_canary_failed", "canary_deadline_seconds",
+        lease_outcome=LEASE_RELEASED),
+    # Added in safety-contract-1.1. The window between reserving capacity and
+    # the canary passing is short, but it is where allocation and weight-load
+    # setup happen -- which is when an OOM is most likely.
+    Transition(
+        State.ADMITTED, State.FAILED, "worker_died", TriggerSource.WORKER,
+        "safety_incident", lease_outcome=LEASE_RELEASED,
+        note="nothing left to drain, and the lease must not outlive the worker"),
+    Transition(
+        State.ADMITTED, State.FAILED, "unresponsive", TriggerSource.GOVERNOR,
+        "safety_incident", "unresponsive_deadline_seconds",
+        lease_outcome=LEASE_RELEASED),
+    Transition(
+        State.ADMITTED, State.DRAINING, "hard_limit_breached", TriggerSource.GOVERNOR,
+        "safety_drain_started", drain_mode=DrainMode.IMMEDIATE,
+        lease_outcome=LEASE_RELEASED,
+        note="exhaustion during setup; SIGTERM at once, for the same reason as "
+             "from RUNNING -- the grace is what causes the failure"),
+    Transition(
+        State.ADMITTED, State.QUARANTINED, "breaker_opened", TriggerSource.GOVERNOR,
+        "safety_quarantined", lease_outcome=LEASE_RELEASED),
 
     Transition(
         State.RUNNING, State.DRAINING, "soft_limit_sustained", TriggerSource.GOVERNOR,
@@ -366,6 +418,11 @@ AUDIT_FIELDS: Tuple[str, ...] = (
     "safetyContractVersion", "safetySignals", "safetySimulated",
 )
 
+#: Recorded on any transition whose row declares a `lease_outcome`. A lease that
+#: is neither carried forward nor released is stranded, and the audit trail must
+#: say which happened rather than leaving it to be reconstructed.
+LEASE_AUDIT_FIELD = "safetyLeaseOutcome"
+
 
 # --------------------------------------------------------------------- lookup
 
@@ -379,6 +436,10 @@ def permitted(source: State, trigger: str) -> Optional[Transition]:
 
 def triggers_from(source: State) -> Tuple[str, ...]:
     return tuple(t.trigger for t in TRANSITIONS if t.source == source)
+
+
+def exits_from(source: State) -> Tuple[Transition, ...]:
+    return tuple(t for t in TRANSITIONS if t.source == source)
 
 
 def signal_rule(signal: str) -> Optional[SignalRule]:

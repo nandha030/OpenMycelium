@@ -33,8 +33,8 @@ def code(value: str) -> str:
 
 def render() -> str:
     lines = [
-        "| From | To | Trigger | Source | Timeout | Drain | Audit event |",
-        "|---|---|---|---|---|---|---|",
+        "| From | To | Trigger | Source | Timeout | Drain | Lease | Audit event |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for transition in TRANSITIONS:
         lines.append(
@@ -44,6 +44,7 @@ def render() -> str:
             f"| {transition.trigger_source.value} "
             f"| {code(transition.timeout_key) if transition.timeout_key else '—'} "
             f"| {code(transition.drain_mode.value) if transition.drain_mode else '—'} "
+            f"| {code(transition.lease_outcome) if transition.lease_outcome else '—'} "
             f"| {code(transition.audit_event)} |")
     return "\n".join(lines)
 

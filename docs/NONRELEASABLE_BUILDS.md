@@ -23,6 +23,12 @@ Each of these was installed on the qualified machine and run. They are recorded
 because "we rebuilt it and it works now" is not an account of what happened, and
 because a machine still carrying one of these needs to be identifiable.
 
+## Safety Governor milestone
+
+| Version | sha256 of the wheel | Why it is not releasable |
+|---|---|---|
+| `0.3.0a6` | `7c40f548d597f555be5b1220c1e46660b74eae79f7cc21af2bb1ba357a4bc770` | Shipped the Gate D.1 Governor built against `safety-contract-1`, whose `ADMITTED` state had no incident path. A worker dying between admission and the compute canary — the window where allocation and weight-load setup happen, and so where an OOM is most likely — had nowhere to go, and its lease could be stranded. The Governor raised rather than inventing a transition, which is correct behaviour for a defective contract but not something to ship. Superseded by `0.3.0a7` on `safety-contract-1.1`. |
+
 ### Superseded after passing
 
 | Version | sha256 of the wheel | Why it is not releasable |

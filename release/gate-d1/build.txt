@@ -1,0 +1,6 @@
+  staged 62 files
+  built openmycelium-0.3.0a7-py3-none-any.whl
+  812504 bytes
+  sha256 028acea2b3367dd3a961f87da3103037c21bbefa8db0c38cd76d0764b80c5d72
+  /tmp/d17/openmycelium-0.3.0a7-py3-none-any.whl
+  appended to /tmp/d17/SHA256SUMS

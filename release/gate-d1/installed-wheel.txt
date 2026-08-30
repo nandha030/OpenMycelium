@@ -1,0 +1,187 @@
+installed from: /tmp/v17/lib/python3.12/site-packages/openmycelium/runtime/safety
+version: 0.3.0a7
+
+test_a_state_revision_is_carried (test_contract_data.AuditFieldTests.test_a_state_revision_is_carried)
+Blocker 4: stale triggers are rejected against a revision. ... ok
+test_policy_and_contract_versions_are_both_recorded (test_contract_data.AuditFieldTests.test_policy_and_contract_versions_are_both_recorded)
+A decision is reviewable only against the rules then in force. ... ok
+test_simulation_is_marked (test_contract_data.AuditFieldTests.test_simulation_is_marked) ... ok
+test_an_undeclared_operation_gets_the_shortest_deadline (test_contract_data.DeadlineTests.test_an_undeclared_operation_gets_the_shortest_deadline) ... ok
+test_every_timeout_key_names_a_real_policy_field (test_contract_data.DeadlineTests.test_every_timeout_key_names_a_real_policy_field) ... ok
+test_operation_deadlines_are_ordered_sensibly (test_contract_data.DeadlineTests.test_operation_deadlines_are_ordered_sensibly)
+A decode deadline would fire during a legitimate weight load. ... ok
+test_the_admitted_to_running_transition_uses_that_same_name (test_contract_data.DeadlineTests.test_the_admitted_to_running_transition_uses_that_same_name) ... ok
+test_the_canary_deadline_has_a_single_value (test_contract_data.DeadlineTests.test_the_canary_deadline_has_a_single_value) ... ok
+test_the_canary_failure_transition_uses_it_too (test_contract_data.DeadlineTests.test_the_canary_failure_transition_uses_it_too) ... ok
+test_an_immediate_drain_kills_sooner_than_a_graceful_one (test_contract_data.HardLimitTests.test_an_immediate_drain_kills_sooner_than_a_graceful_one) ... ok
+test_running_to_failed_is_reserved_for_nothing_left_to_drain (test_contract_data.HardLimitTests.test_running_to_failed_is_reserved_for_nothing_left_to_drain) ... ok
+test_the_hard_limit_drain_is_immediate_with_no_grace (test_contract_data.HardLimitTests.test_the_hard_limit_drain_is_immediate_with_no_grace) ... ok
+test_the_hard_limit_drains_it_does_not_jump_to_failed (test_contract_data.HardLimitTests.test_the_hard_limit_drains_it_does_not_jump_to_failed) ... ok
+test_the_soft_limit_drain_is_graceful (test_contract_data.HardLimitTests.test_the_soft_limit_drain_is_graceful) ... ok
+test_release_is_below_enter_and_both_edges_dwell (test_contract_data.HysteresisTests.test_release_is_below_enter_and_both_edges_dwell)
+A gap alone flaps, and a dwell alone flaps. Both are required. ... ok
+test_the_hard_limit_sits_above_the_soft_limit (test_contract_data.HysteresisTests.test_the_hard_limit_sits_above_the_soft_limit) ... ok
+setUpClass (test_contract_data.ProseMatchesDataTests) ... skipped 'prose-vs-data consistency is a property of the repository. An installed wheel ships no document for the data to drift from, so there is nothing here to check. The repository suite runs these.'
+test_a_record_must_carry_a_digest_and_a_boot_id (test_contract_data.QuarantineDataTests.test_a_record_must_carry_a_digest_and_a_boot_id) ... ok
+test_incident_classes_do_not_include_the_run_id (test_contract_data.QuarantineDataTests.test_incident_classes_do_not_include_the_run_id)
+A breaker keyed on the run id would never open. ... ok
+test_scopes_are_declared_and_exclude_nothing_narrower_than_device (test_contract_data.QuarantineDataTests.test_scopes_are_declared_and_exclude_nothing_narrower_than_device) ... ok
+test_an_expected_absent_power_signal_never_blocks (test_contract_data.SignalRuleTests.test_an_expected_absent_power_signal_never_blocks)
+Gating on it would refuse all work on the only qualified platform. ... ok
+test_an_unexpectedly_absent_power_signal_does_block_admission (test_contract_data.SignalRuleTests.test_an_unexpectedly_absent_power_signal_does_block_admission) ... ok
+test_an_unreadable_quarantine_store_fails_closed_in_both_phases (test_contract_data.SignalRuleTests.test_an_unreadable_quarantine_store_fails_closed_in_both_phases) ... ok
+test_confidence_distinguishes_expected_from_unexpected_absence (test_contract_data.SignalRuleTests.test_confidence_distinguishes_expected_from_unexpected_absence) ... ok
+test_every_rule_uses_declared_dispositions (test_contract_data.SignalRuleTests.test_every_rule_uses_declared_dispositions) ... ok
+test_power_and_temperature_are_advisory_only_in_policy_v1 (test_contract_data.SignalRuleTests.test_power_and_temperature_are_advisory_only_in_policy_v1) ... ok
+test_vram_fails_closed_at_admission_and_safe_then_closed_running (test_contract_data.SignalRuleTests.test_vram_fails_closed_at_admission_and_safe_then_closed_running) ... ok
+test_every_state_has_an_exit_except_none (test_contract_data.TableCoherenceTests.test_every_state_has_an_exit_except_none)
+A state with no exit is a hang, whatever the prose says. ... ok
+test_every_state_is_reachable_from_unknown (test_contract_data.TableCoherenceTests.test_every_state_is_reachable_from_unknown) ... ok
+test_every_transition_uses_declared_states (test_contract_data.TableCoherenceTests.test_every_transition_uses_declared_states) ... ok
+test_failed_is_a_recording_state_not_a_resting_one (test_contract_data.TableCoherenceTests.test_failed_is_a_recording_state_not_a_resting_one) ... ok
+test_forbidden_transitions_resolve_to_none (test_contract_data.TableCoherenceTests.test_forbidden_transitions_resolve_to_none) ... ok
+test_no_state_and_trigger_pair_appears_twice (test_contract_data.TableCoherenceTests.test_no_state_and_trigger_pair_appears_twice)
+Two rows for one (state, trigger) is an ambiguous machine. ... ok
+test_the_eight_states_and_no_others (test_contract_data.TableCoherenceTests.test_the_eight_states_and_no_others) ... ok
+test_only_the_operator_can_source_a_quarantine_release (test_contract_data.TransitionAuthorityTests.test_only_the_operator_can_source_a_quarantine_release) ... ok
+test_the_executor_is_always_the_governor (test_contract_data.TransitionAuthorityTests.test_the_executor_is_always_the_governor) ... ok
+test_the_governor_cannot_source_its_own_quarantine_release (test_contract_data.TransitionAuthorityTests.test_the_governor_cannot_source_its_own_quarantine_release) ... ok
+test_trigger_source_is_recorded_separately_from_the_executor (test_contract_data.TransitionAuthorityTests.test_trigger_source_is_recorded_separately_from_the_executor)
+'Who noticed' and 'who decided' must not collapse into one field. ... ok
+test_workers_and_operators_only_source_triggers (test_contract_data.TransitionAuthorityTests.test_workers_and_operators_only_source_triggers) ... ok
+test_a_healthy_idle_machine_admits (test_governor_contract.AdmissionTests.test_a_healthy_idle_machine_admits) ... ok
+test_admission_refused_when_the_reserve_would_be_breached (test_governor_contract.AdmissionTests.test_admission_refused_when_the_reserve_would_be_breached) ... ok
+test_baseline_is_a_median_of_samples_not_one_reading (test_governor_contract.AdmissionTests.test_baseline_is_a_median_of_samples_not_one_reading)
+One compositor allocation must not raise the floor permanently. ... ok
+test_leases_are_counted_not_inferred_from_free_memory (test_governor_contract.AdmissionTests.test_leases_are_counted_not_inferred_from_free_memory)
+Two admissions racing between samples would each see enough room. ... ok
+test_the_reserve_floor_applies_on_small_devices (test_governor_contract.AdmissionTests.test_the_reserve_floor_applies_on_small_devices)
+max(floor, fraction * total): 3% of 16 GiB is under the 512 MiB floor. ... ok
+test_a_quarantine_prevents_another_admission (test_governor_contract.AdmittedIncidentTests.test_a_quarantine_prevents_another_admission) ... ok
+test_breaker_opening_while_admitted_quarantines (test_governor_contract.AdmittedIncidentTests.test_breaker_opening_while_admitted_quarantines) ... ok
+test_every_admitted_exit_declares_a_lease_outcome (test_governor_contract.AdmittedIncidentTests.test_every_admitted_exit_declares_a_lease_outcome)
+A lease neither carried forward nor released is stranded. ... ok
+test_hard_limit_while_admitted_drains_in_immediate_mode (test_governor_contract.AdmittedIncidentTests.test_hard_limit_while_admitted_drains_in_immediate_mode) ... ok
+test_the_canary_retains_the_lease_rather_than_releasing_it (test_governor_contract.AdmittedIncidentTests.test_the_canary_retains_the_lease_rather_than_releasing_it)
+The work is starting; the capacity is still needed. ... ok
+test_the_lease_outcome_is_recorded_on_the_transition (test_governor_contract.AdmittedIncidentTests.test_the_lease_outcome_is_recorded_on_the_transition) ... ok
+test_worker_death_cannot_strand_a_lease (test_governor_contract.AdmittedIncidentTests.test_worker_death_cannot_strand_a_lease)
+A stranded lease is capacity the Governor books forever. ... ok
+test_worker_death_while_admitted_reaches_failed (test_governor_contract.AdmittedIncidentTests.test_worker_death_while_admitted_reaches_failed) ... ok
+test_a_simulated_governor_marks_every_event (test_governor_contract.AuditTests.test_a_simulated_governor_marks_every_event)
+The escape exists and is impossible to use without leaving a mark. ... ok
+test_events_carry_per_signal_value_and_confidence (test_governor_contract.AuditTests.test_events_carry_per_signal_value_and_confidence) ... ok
+test_events_carry_the_policy_version (test_governor_contract.AuditTests.test_events_carry_the_policy_version)
+A decision is reviewable only against the thresholds then in force. ... ok
+test_a_baseline_does_not_carry_across_boots (test_governor_contract.BootDomainTests.test_a_baseline_does_not_carry_across_boots) ... ok
+test_a_boot_change_returns_the_governor_to_unknown (test_governor_contract.BootDomainTests.test_a_boot_change_returns_the_governor_to_unknown) ... ok
+test_durations_across_boots_are_refused_not_approximated (test_governor_contract.BootDomainTests.test_durations_across_boots_are_refused_not_approximated) ... ok
+test_every_event_carries_the_boot_id (test_governor_contract.BootDomainTests.test_every_event_carries_the_boot_id) ... ok
+test_incidents_outside_the_window_do_not_accumulate (test_governor_contract.CircuitBreakerTests.test_incidents_outside_the_window_do_not_accumulate) ... ok
+test_the_signature_excludes_the_run_id (test_governor_contract.CircuitBreakerTests.test_the_signature_excludes_the_run_id)
+It differs every time; a breaker keyed on it never opens. ... ok
+test_three_matching_incidents_open_the_breaker (test_governor_contract.CircuitBreakerTests.test_three_matching_incidents_open_the_breaker) ... ok
+test_two_matching_incidents_do_not (test_governor_contract.CircuitBreakerTests.test_two_matching_incidents_do_not) ... ok
+test_unrelated_failures_are_not_a_pattern (test_governor_contract.CircuitBreakerTests.test_unrelated_failures_are_not_a_pattern) ... ok
+test_cooldown_does_not_release_until_baseline_is_reverified (test_governor_contract.DrainTests.test_cooldown_does_not_release_until_baseline_is_reverified)
+A killed process does not always release VRAM promptly. ... ok
+test_drain_within_the_deadline_reaches_cooldown (test_governor_contract.DrainTests.test_drain_within_the_deadline_reaches_cooldown) ... ok
+test_exceeding_the_drain_deadline_is_an_incident_not_a_success (test_governor_contract.DrainTests.test_exceeding_the_drain_deadline_is_an_incident_not_a_success)
+SIGKILL and a clean exit are different facts about the system. ... ok
+test_grace_deadline_escalates_to_terminate (test_governor_contract.DrainTests.test_grace_deadline_escalates_to_terminate) ... ok
+test_recovery_deadline_quarantines_rather_than_waiting_forever (test_governor_contract.DrainTests.test_recovery_deadline_quarantines_rather_than_waiting_forever) ... ok
+test_a_graceful_drain_finishes_the_current_unit_first (test_governor_contract.LimitTests.test_a_graceful_drain_finishes_the_current_unit_first) ... ok
+test_a_single_spike_below_the_dwell_does_not_flap (test_governor_contract.LimitTests.test_a_single_spike_below_the_dwell_does_not_flap) ... ok
+test_an_immediate_drain_kills_on_the_shorter_deadline (test_governor_contract.LimitTests.test_an_immediate_drain_kills_on_the_shorter_deadline) ... ok
+test_release_requires_falling_below_the_lower_threshold (test_governor_contract.LimitTests.test_release_requires_falling_below_the_lower_threshold)
+A gap with no dwell flaps; a dwell with no gap flaps too. ... ok
+test_soft_limit_needs_dwell_before_it_acts (test_governor_contract.LimitTests.test_soft_limit_needs_dwell_before_it_acts) ... ok
+test_the_hard_limit_acts_immediately_with_no_dwell (test_governor_contract.LimitTests.test_the_hard_limit_acts_immediately_with_no_dwell)
+Waiting to confirm imminent exhaustion is how exhaustion happens. ... ok
+test_the_hard_limit_drain_is_immediate_with_no_grace (test_governor_contract.LimitTests.test_the_hard_limit_drain_is_immediate_with_no_grace) ... ok
+test_the_hard_limit_drains_it_does_not_jump_to_failed (test_governor_contract.LimitTests.test_the_hard_limit_drains_it_does_not_jump_to_failed)
+Blocker 1: one sequence, drain then bounded kill. ... ok
+test_utilisation_counts_other_processes_too (test_governor_contract.LimitTests.test_utilisation_counts_other_processes_too)
+Another process's memory causes an OOM just as effectively. ... ok
+test_a_complete_reset_returns_to_ready_and_is_recorded (test_governor_contract.ManualResetTests.test_a_complete_reset_returns_to_ready_and_is_recorded) ... ok
+test_reset_does_not_erase_incident_history (test_governor_contract.ManualResetTests.test_reset_does_not_erase_incident_history)
+Repeatedly clearing the same fault re-opens the breaker. ... ok
+test_reset_refused_when_the_canary_fails (test_governor_contract.ManualResetTests.test_reset_refused_when_the_canary_fails) ... ok
+test_reset_refused_while_vram_is_above_baseline_tolerance (test_governor_contract.ManualResetTests.test_reset_refused_while_vram_is_above_baseline_tolerance) ... ok
+test_reset_requires_an_actor (test_governor_contract.ManualResetTests.test_reset_requires_an_actor) ... ok
+test_reset_requires_naming_the_records_it_clears (test_governor_contract.ManualResetTests.test_reset_requires_naming_the_records_it_clears)
+A blanket reset cannot clear an incident nobody read. ... ok
+test_no_real_signal_is_ever_sent (test_governor_contract.NonGoalTests.test_no_real_signal_is_ever_sent)
+D.1 uses a fake actuator; nothing reaches the operating system. ... ok
+test_the_governor_marks_itself_simulated (test_governor_contract.NonGoalTests.test_the_governor_marks_itself_simulated)
+A simulated Governor is not qualification evidence, and says so. ... ok
+test_a_corrupt_digest_is_treated_as_quarantined (test_governor_contract.QuarantineDurabilityTests.test_a_corrupt_digest_is_treated_as_quarantined) ... ok
+test_a_leftover_partial_file_quarantines_rather_than_assuming_health (test_governor_contract.QuarantineDurabilityTests.test_a_leftover_partial_file_quarantines_rather_than_assuming_health)
+Between quarantining something fine and releasing something not, ... ok
+test_a_missing_required_field_is_treated_as_quarantined (test_governor_contract.QuarantineDurabilityTests.test_a_missing_required_field_is_treated_as_quarantined) ... ok
+test_a_record_is_written_atomically_and_fsynced (test_governor_contract.QuarantineDurabilityTests.test_a_record_is_written_atomically_and_fsynced) ... ok
+test_the_governor_never_releases_its_own_quarantine (test_governor_contract.QuarantineDurabilityTests.test_the_governor_never_releases_its_own_quarantine)
+QUARANTINED -> READY is the operator's transition alone. ... ok
+test_quarantine_is_scoped_to_the_device_not_the_machine (test_governor_contract.QuarantineTests.test_quarantine_is_scoped_to_the_device_not_the_machine) ... ok
+test_quarantine_survives_a_boot_change (test_governor_contract.QuarantineTests.test_quarantine_survives_a_boot_change)
+It is a decision, not a measurement. ... ok
+test_quarantine_survives_a_restart (test_governor_contract.QuarantineTests.test_quarantine_survives_a_restart)
+A quarantine a restart clears is not a quarantine. ... ok
+test_a_duplicate_trigger_applies_once (test_governor_contract.StateRevisionTests.test_a_duplicate_trigger_applies_once)
+work_completed delivered twice must not be attempted from COOLDOWN. ... ok
+test_a_late_heartbeat_cannot_revive_a_drained_machine (test_governor_contract.StateRevisionTests.test_a_late_heartbeat_cannot_revive_a_drained_machine) ... ok
+test_a_rejected_trigger_is_recorded_not_silently_dropped (test_governor_contract.StateRevisionTests.test_a_rejected_trigger_is_recorded_not_silently_dropped) ... ok
+test_a_stale_revision_is_rejected_idempotently (test_governor_contract.StateRevisionTests.test_a_stale_revision_is_rejected_idempotently) ... ok
+test_a_stale_trigger_cannot_release_a_newer_lease (test_governor_contract.StateRevisionTests.test_a_stale_trigger_cannot_release_a_newer_lease)
+The dangerous shape: a late release freeing work that just started. ... ok
+test_capacity_check_and_lease_are_applied_under_one_revision (test_governor_contract.StateRevisionTests.test_capacity_check_and_lease_are_applied_under_one_revision)
+Two admissions racing between samples must not both succeed. ... ok
+test_the_revision_increases_on_every_applied_transition (test_governor_contract.StateRevisionTests.test_the_revision_increases_on_every_applied_transition) ... ok
+test_a_new_governor_starts_unknown (test_governor_contract.StateTests.test_a_new_governor_starts_unknown) ... ok
+test_failed_is_a_recording_state_not_a_resting_one (test_governor_contract.StateTests.test_failed_is_a_recording_state_not_a_resting_one)
+A Governor sitting in FAILED is indistinguishable from a crashed one. ... ok
+test_the_eight_states_exist_and_no_others (test_governor_contract.StateTests.test_the_eight_states_exist_and_no_others) ... ok
+test_an_unreadable_quarantine_store_is_treated_as_quarantined (test_governor_contract.TelemetryTests.test_an_unreadable_quarantine_store_is_treated_as_quarantined)
+Otherwise corrupting one file is how a quarantine gets cleared. ... ok
+test_expected_unavailable_power_does_not_block_admission (test_governor_contract.TelemetryTests.test_expected_unavailable_power_does_not_block_admission)
+Gating on it would refuse all work on the only qualified platform. ... ok
+test_missing_amd_power_is_unavailable_never_zero (test_governor_contract.TelemetryTests.test_missing_amd_power_is_unavailable_never_zero) ... ok
+test_missing_vram_is_caught_at_preflight_before_admission (test_governor_contract.TelemetryTests.test_missing_vram_is_caught_at_preflight_before_admission)
+Fail-closed earlier than expected is still fail-closed. ... ok
+test_stale_vram_refuses_admission (test_governor_contract.TelemetryTests.test_stale_vram_refuses_admission) ... ok
+test_unexpectedly_unavailable_power_does_block_admission (test_governor_contract.TelemetryTests.test_unexpectedly_unavailable_power_does_block_admission)
+A source that should work has stopped: that is a fault, not a gap. ... ok
+test_vram_lost_while_running_degrades_before_it_drains (test_governor_contract.TelemetryTests.test_vram_lost_while_running_degrades_before_it_drains)
+Continuation fails safe: stop admitting, keep the run, then drain. ... ok
+test_a_foreign_run_or_placement_is_not_signalled (test_governor_contract.TerminationTests.test_a_foreign_run_or_placement_is_not_signalled) ... ok
+test_a_matching_worker_may_be_signalled (test_governor_contract.TerminationTests.test_a_matching_worker_may_be_signalled) ... ok
+test_a_recycled_pid_is_not_signalled (test_governor_contract.TerminationTests.test_a_recycled_pid_is_not_signalled)
+A different start time means a different process wearing that PID. ... ok
+test_an_unmatched_signal_is_abandoned_and_recorded (test_governor_contract.TerminationTests.test_an_unmatched_signal_is_abandoned_and_recorded) ... ok
+test_intent_is_recorded_before_the_signal_not_only_after (test_governor_contract.TerminationTests.test_intent_is_recorded_before_the_signal_not_only_after)
+Recording only the outcome loses the case where the Governor died. ... ok
+test_a_passing_canary_moves_admitted_to_running (test_governor_contract.TransitionTableTests.test_a_passing_canary_moves_admitted_to_running) ... ok
+test_admission_moves_ready_to_admitted (test_governor_contract.TransitionTableTests.test_admission_moves_ready_to_admitted) ... ok
+test_an_undeclared_transition_raises_rather_than_guessing (test_governor_contract.TransitionTableTests.test_an_undeclared_transition_raises_rather_than_guessing)
+A state machine that repairs itself silently cannot be reasoned about. ... ok
+test_completion_moves_running_to_cooldown (test_governor_contract.TransitionTableTests.test_completion_moves_running_to_cooldown) ... ok
+test_every_applied_transition_is_one_the_table_permits (test_governor_contract.TransitionTableTests.test_every_applied_transition_is_one_the_table_permits)
+The implementation may not invent a transition the data lacks. ... ok
+test_every_transition_records_the_canonical_audit_fields (test_governor_contract.TransitionTableTests.test_every_transition_records_the_canonical_audit_fields) ... ok
+test_preflight_moves_unknown_to_ready (test_governor_contract.TransitionTableTests.test_preflight_moves_unknown_to_ready) ... ok
+test_the_executor_is_the_governor_even_when_a_worker_sourced_it (test_governor_contract.TransitionTableTests.test_the_executor_is_the_governor_even_when_a_worker_sourced_it)
+'Who noticed' and 'who decided' must not collapse into one field. ... ok
+test_a_heartbeat_with_no_operation_uses_the_shortest_deadline (test_governor_contract.WatchdogTests.test_a_heartbeat_with_no_operation_uses_the_shortest_deadline)
+A worker that cannot say what it is doing is not evidence of work. ... ok
+test_a_repeated_counter_is_not_progress (test_governor_contract.WatchdogTests.test_a_repeated_counter_is_not_progress)
+A process claiming to be healthy is not evidence that it is. ... ok
+test_an_advancing_counter_is_progress (test_governor_contract.WatchdogTests.test_an_advancing_counter_is_progress) ... ok
+test_deadlines_are_per_operation (test_governor_contract.WatchdogTests.test_deadlines_are_per_operation)
+A decode deadline would fire during a legitimate weight load. ... ok
+test_stalled_drains_rather_than_killing (test_governor_contract.WatchdogTests.test_stalled_drains_rather_than_killing) ... ok
+test_unresponsive_fails_because_there_is_nothing_to_drain (test_governor_contract.WatchdogTests.test_unresponsive_fails_because_there_is_nothing_to_drain) ... ok
+
+----------------------------------------------------------------------
+Ran 129 tests in 0.110s
+
+OK (skipped=1)

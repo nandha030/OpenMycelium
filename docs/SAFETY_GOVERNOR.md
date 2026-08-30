@@ -1,12 +1,27 @@
 # Mycelium Safety Governor — contract
 
-**Status: FROZEN at Gate C.1**, with two identities that are deliberately not
-the same thing.
+**Status: `safety-contract-1.1`, FROZEN at Gate D.1.** Two identities that are
+deliberately not the same thing.
 
 | Identity | Covers | Status |
 |---|---|---|
-| `safety-contract-1` | states, transitions, semantics, audit shape | **FROZEN** — changing it needs the same review this had |
+| `safety-contract-1.1` | states, transitions, semantics, audit shape | **FROZEN** — changing it needs the same review this had |
 | `safety-policy-1-provisional` | the threshold *values* in §14 | **PROVISIONAL** — proposed defaults, not qualified limits |
+
+### Revision history
+
+Earlier versions are preserved, not reinterpreted. An audit event carries the
+contract version in force when it was written, and reading it against a newer
+table would silently misjudge the decision it records.
+
+| Version | Change |
+|---|---|
+| `safety-contract-1` | Frozen at Gate C.1. `ADMITTED` had **no incident path**: a worker dying between admission and the canary, or a breaker opening on an incident recorded there, had nowhere to go. A Governor carrying this version raised in that window rather than inventing a transition. |
+| `safety-contract-1.1` | Closes that gap. Adds `ADMITTED → FAILED` on `worker_died` and `unresponsive`, `ADMITTED → DRAINING` on `hard_limit_breached` in `immediate` mode, and `ADMITTED → QUARANTINED` on `breaker_opened`. Every exit from `ADMITTED` now declares what becomes of its lease. |
+
+The gap was found by the implementation refusing to guess, not by review — which
+is the argument for making a state machine raise rather than pick a plausible
+target.
 
 The split matters. The semantics were reviewed against ten blockers and are
 settled. The numbers were reasoned from the qualified hardware — 16 GiB cards,
@@ -16,9 +31,10 @@ version string rather than a footnote so that every audit event carrying it says
 so, and no record can later be read as though the limits had been qualified.
 
 A policy version becomes non-provisional only when its values are backed by
-measurement on hardware. That is Gate D or later work with its own evidence.
+measurement on hardware. That is Gate E or later work with its own evidence.
 
-No runtime behaviour exists at this freeze. Implementation is Gate D.
+The deterministic core is implemented at Gate D.1 against synthetic telemetry,
+an injected clock and a fake actuator. It has no callers: integration is Gate E.
 
 The Scheduler proposes. The Governor may veto. Nothing else in this milestone.
 
@@ -55,26 +71,28 @@ Not in scope, and not in this branch: Memory Fabric, paging, virtual heap,
 scheduling optimisation, training, MHub. The Governor decides *whether* work
 runs; it never decides *how* work is placed.
 
-### Two handoff gaps for Gate D
+### Handoff debts — paid at Gate D.1
 
-Both are silent failures if forgotten, so they are written down rather than
-remembered.
+Both were silent failures if forgotten, so they were written down and are now
+checked by `scripts/repro/contract_tests.sh` rather than remembered.
 
-**Packaging.** `runtime/safety/` is a new subsystem and is **not** in
-`scripts/build_openmycelium_wheel.py`'s `INCLUDE` tuple (`cli`, `serving`,
-`scheduler`, `fabric`). Gate D must add `safety` there, or the Governor will pass
-its tests from a checkout and be absent from every wheel.
+**Packaging.** `runtime/safety/` is in `scripts/build_openmycelium_wheel.py`'s
+`INCLUDE`. Without it the Governor passes every test from a checkout and is
+absent from every wheel.
 
-**Test suite.** `runtime/safety/` is deliberately **not** in
-`scripts/repro/run_unit_suite.sh`'s `UNITTEST_DIRS`. Its tests fail by design
-until Gate D — they are the contract, written before the implementation — and
-adding them now would turn the suite red and block everything behind it.
+**Test suite.** `runtime/safety/` is in `scripts/repro/run_unit_suite.sh`'s
+`UNITTEST_DIRS`, and its tests are required-green. Through Gate C.1 they were
+expected-red — the contract existed and the implementation did not — and that
+exclusion was a debt rather than a decision, because the suite's own rule is
+that a group reporting zero failures must not silently skip anything. The suite
+moved from 263 to 395 tests when the debt was paid.
 
-That exclusion is a debt, not a decision: the suite's own rule is that a group
-reporting zero failures must not silently skip anything. It is tolerable only
-because the omission is recorded here and the tests fail loudly when run
-directly. **Gate D adds `runtime/safety` to `UNITTEST_DIRS` in the same commit
-that makes them pass**, and the suite total moves from 263.
+### Still not integrated
+
+The Governor is a library with no callers. Nothing in `runtime/cli/`,
+`runtime/serving/` or `runtime/scheduler/` imports it, and `launcher.py` does not
+put `safety` on the path. Wiring it into the coordinator, workers, CLI, API or
+console is Gate E and is not authorized.
 
 ---
 
@@ -111,69 +129,66 @@ applies the transition — see *Source is not executor* below.
 document against the data. `test_contract_data.py` asserts both directions, so a
 stale paste is a test failure rather than a discrepancy nobody notices.
 
-| From | To | Trigger | Source | Timeout | Drain | Audit event |
-|---|---|---|---|---|---|---|
-| `UNKNOWN` | `READY` | `preflight_passed` | governor | `preflight_deadline_seconds` | — | `safety_ready` |
-| `UNKNOWN` | `FAILED` | `preflight_failed` | governor | — | — | `safety_preflight_failed` |
-| `UNKNOWN` | `QUARANTINED` | `quarantine_restored` | governor | — | — | `safety_quarantine_restored` |
-| `READY` | `ADMITTED` | `admission_granted` | governor | `admission_deadline_seconds` | — | `safety_admitted` |
-| `READY` | `READY` | `admission_refused` | governor | — | — | `safety_admission_refused` |
-| `READY` | `QUARANTINED` | `breaker_opened` | governor | — | — | `safety_quarantined` |
-| `READY` | `UNKNOWN` | `boot_changed` | governor | — | — | `safety_reset_to_unknown` |
-| `ADMITTED` | `RUNNING` | `canary_passed` | governor | `canary_deadline_seconds` | — | `safety_running` |
-| `ADMITTED` | `DRAINING` | `operator_cancel` | operator | — | `graceful` | `safety_drain_started` |
-| `ADMITTED` | `DRAINING` | `soft_limit_sustained` | governor | — | `graceful` | `safety_drain_started` |
-| `ADMITTED` | `FAILED` | `canary_failed` | governor | `canary_deadline_seconds` | — | `safety_canary_failed` |
-| `RUNNING` | `DRAINING` | `soft_limit_sustained` | governor | — | `graceful` | `safety_drain_started` |
-| `RUNNING` | `DRAINING` | `hard_limit_breached` | governor | — | `immediate` | `safety_drain_started` |
-| `RUNNING` | `DRAINING` | `progress_stalled` | governor | — | `graceful` | `safety_drain_started` |
-| `RUNNING` | `DRAINING` | `operator_drain` | operator | — | `graceful` | `safety_drain_started` |
-| `RUNNING` | `COOLDOWN` | `work_completed` | worker | — | — | `safety_completed` |
-| `RUNNING` | `FAILED` | `worker_died` | worker | — | — | `safety_incident` |
-| `RUNNING` | `FAILED` | `unresponsive` | governor | `unresponsive_deadline_seconds` | — | `safety_incident` |
-| `DRAINING` | `COOLDOWN` | `drain_completed` | governor | `drain_deadline_seconds` | — | `safety_drained` |
-| `DRAINING` | `FAILED` | `drain_timeout` | governor | `drain_deadline_seconds` | — | `safety_drain_timeout` |
-| `COOLDOWN` | `READY` | `recovered` | governor | `cooldown_period_seconds` | — | `safety_recovered` |
-| `COOLDOWN` | `COOLDOWN` | `recovery_pending` | governor | — | — | `safety_recovery_pending` |
-| `COOLDOWN` | `QUARANTINED` | `recovery_failed` | governor | `recovery_deadline_seconds` | — | `safety_recovery_failed` |
-| `COOLDOWN` | `QUARANTINED` | `breaker_opened` | governor | — | — | `safety_quarantined` |
-| `FAILED` | `COOLDOWN` | `incident_recorded` | governor | — | — | `safety_incident_recorded` |
-| `FAILED` | `QUARANTINED` | `breaker_opened` | governor | — | — | `safety_quarantined` |
-| `QUARANTINED` | `READY` | `manual_reset` | operator | — | — | `safety_manual_reset` |
+| From | To | Trigger | Source | Timeout | Drain | Lease | Audit event |
+|---|---|---|---|---|---|---|---|
+| `UNKNOWN` | `READY` | `preflight_passed` | governor | `preflight_deadline_seconds` | — | — | `safety_ready` |
+| `UNKNOWN` | `FAILED` | `preflight_failed` | governor | — | — | — | `safety_preflight_failed` |
+| `UNKNOWN` | `QUARANTINED` | `quarantine_restored` | governor | — | — | — | `safety_quarantine_restored` |
+| `READY` | `ADMITTED` | `admission_granted` | governor | `admission_deadline_seconds` | — | — | `safety_admitted` |
+| `READY` | `READY` | `admission_refused` | governor | — | — | — | `safety_admission_refused` |
+| `READY` | `QUARANTINED` | `breaker_opened` | governor | — | — | — | `safety_quarantined` |
+| `READY` | `UNKNOWN` | `boot_changed` | governor | — | — | — | `safety_reset_to_unknown` |
+| `ADMITTED` | `RUNNING` | `canary_passed` | governor | `canary_deadline_seconds` | — | `retained` | `safety_running` |
+| `ADMITTED` | `DRAINING` | `operator_cancel` | operator | — | `graceful` | `released` | `safety_drain_started` |
+| `ADMITTED` | `DRAINING` | `soft_limit_sustained` | governor | — | `graceful` | `released` | `safety_drain_started` |
+| `ADMITTED` | `FAILED` | `canary_failed` | governor | `canary_deadline_seconds` | — | `released` | `safety_canary_failed` |
+| `ADMITTED` | `FAILED` | `worker_died` | worker | — | — | `released` | `safety_incident` |
+| `ADMITTED` | `FAILED` | `unresponsive` | governor | `unresponsive_deadline_seconds` | — | `released` | `safety_incident` |
+| `ADMITTED` | `DRAINING` | `hard_limit_breached` | governor | — | `immediate` | `released` | `safety_drain_started` |
+| `ADMITTED` | `QUARANTINED` | `breaker_opened` | governor | — | — | `released` | `safety_quarantined` |
+| `RUNNING` | `DRAINING` | `soft_limit_sustained` | governor | — | `graceful` | — | `safety_drain_started` |
+| `RUNNING` | `DRAINING` | `hard_limit_breached` | governor | — | `immediate` | — | `safety_drain_started` |
+| `RUNNING` | `DRAINING` | `progress_stalled` | governor | — | `graceful` | — | `safety_drain_started` |
+| `RUNNING` | `DRAINING` | `operator_drain` | operator | — | `graceful` | — | `safety_drain_started` |
+| `RUNNING` | `COOLDOWN` | `work_completed` | worker | — | — | — | `safety_completed` |
+| `RUNNING` | `FAILED` | `worker_died` | worker | — | — | — | `safety_incident` |
+| `RUNNING` | `FAILED` | `unresponsive` | governor | `unresponsive_deadline_seconds` | — | — | `safety_incident` |
+| `DRAINING` | `COOLDOWN` | `drain_completed` | governor | `drain_deadline_seconds` | — | — | `safety_drained` |
+| `DRAINING` | `FAILED` | `drain_timeout` | governor | `drain_deadline_seconds` | — | — | `safety_drain_timeout` |
+| `COOLDOWN` | `READY` | `recovered` | governor | `cooldown_period_seconds` | — | — | `safety_recovered` |
+| `COOLDOWN` | `COOLDOWN` | `recovery_pending` | governor | — | — | — | `safety_recovery_pending` |
+| `COOLDOWN` | `QUARANTINED` | `recovery_failed` | governor | `recovery_deadline_seconds` | — | — | `safety_recovery_failed` |
+| `COOLDOWN` | `QUARANTINED` | `breaker_opened` | governor | — | — | — | `safety_quarantined` |
+| `FAILED` | `COOLDOWN` | `incident_recorded` | governor | — | — | — | `safety_incident_recorded` |
+| `FAILED` | `QUARANTINED` | `breaker_opened` | governor | — | — | — | `safety_quarantined` |
+| `QUARANTINED` | `READY` | `manual_reset` | operator | — | — | — | `safety_manual_reset` |
 
 **Every transition not in this table is forbidden.** An implementation that
 finds itself asked to make one raises rather than choosing a plausible target;
 a state machine that repairs itself silently cannot be reasoned about.
 
-### Known gap: no incident path out of `ADMITTED`
-
-Found during Gate D.1, by the implementation refusing to invent a transition
-rather than by review. **Not fixed here** — `safety-contract-1` is frozen, and
-widening a frozen table silently is the failure this rule exists to prevent.
+### Closed in 1.1: the ADMITTED incident window
 
 `ADMITTED` is the window between capacity being reserved and the compute canary
-passing. Its only exits are `canary_passed`, `canary_failed`, `operator_cancel`
-and `soft_limit_sustained`. A worker that **dies** in that window, or a circuit
-breaker that **opens** on an incident recorded there, has no transition:
+passing. It is short, but allocation and weight-load setup happen in it, which is
+exactly when an OOM is most likely.
 
-```
-ADMITTED + worker_died     -> nothing
-ADMITTED + breaker_opened  -> nothing
-```
+Under `safety-contract-1` its only exits were `canary_passed`, `canary_failed`,
+`operator_cancel` and `soft_limit_sustained`. A worker dying there, or a breaker
+opening on an incident recorded there, had nowhere to go, and the Governor raised
+`GovernorError` naming the permitted triggers rather than routing the incident
+through a neighbouring transition.
 
-The window is short but real — allocation and weight-load setup happen in it,
-which is exactly when an OOM is most likely.
+That raise is what surfaced the gap: the implementation refused to guess, and the
+refusal was the report. It is the argument for a state machine that raises rather
+than picking a plausible target.
 
-Current behaviour, and it is deliberate: `SafetyGovernor` raises
-`GovernorError` naming the permitted triggers. It does not route the incident
-through a neighbouring transition, because a state machine that quietly picks a
-plausible target is one nobody can reason about — and the raise is what surfaced
-the gap in the first place.
-
-Resolution needs a contract amendment, reviewed like any other, most likely
-adding `ADMITTED → FAILED` on `worker_died` and `ADMITTED → QUARANTINED` on
-`breaker_opened`. Until then, callers reaching an incident from `ADMITTED` must
-handle the raise.
+`safety-contract-1.1` adds the four rows above. **Every exit from `ADMITTED` now
+declares a lease outcome**, because a lease that is neither carried forward nor
+released is stranded, and a stranded lease is capacity the Governor believes is
+in use forever. The outcome is applied under the same revision as the state
+change, so there is no window in which the state says the work is over and the
+capacity is still booked.
 
 ### Source is not executor
 

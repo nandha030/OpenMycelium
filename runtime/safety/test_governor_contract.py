@@ -154,6 +154,96 @@ class TransitionTableTests(unittest.TestCase):
             self.assertEqual(transition.target.value, event["safetyState"])
 
 
+# ------------------------------------------------- the ADMITTED incident window
+
+class AdmittedIncidentTests(unittest.TestCase):
+    """safety-contract-1.1. The window between reserving and computing.
+
+    Short, but it is where allocation and weight-load setup happen, which is
+    when an OOM is most likely. Under safety-contract-1 an incident here had
+    nowhere to go and the Governor raised.
+    """
+
+    def _admitted(self, telemetry=None, clock=None):
+        handle = ready(telemetry=telemetry, clock=clock) if (telemetry or clock) \
+            else ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        self.assertEqual(handle.state, State.ADMITTED)
+        return handle
+
+    def test_worker_death_while_admitted_reaches_failed(self):
+        handle = self._admitted()
+        handle.report_incident("worker_death", device=CUDA)
+        self.assertIn(handle.state, (State.COOLDOWN, State.QUARANTINED))
+
+    def test_worker_death_cannot_strand_a_lease(self):
+        """A stranded lease is capacity the Governor books forever."""
+        handle = self._admitted()
+        handle.report_incident("worker_death", device=CUDA)
+        handle.force_state(State.READY)
+        self.assertTrue(handle.admit(CUDA, requested_bytes=1 << 30),
+                        "the dead worker's lease was never released")
+
+    def test_the_lease_outcome_is_recorded_on_the_transition(self):
+        handle = self._admitted()
+        handle.report_incident("worker_death", device=CUDA)
+        event = [e for e in handle.events
+                 if e.get("safetyPreviousState") == "ADMITTED"][-1]
+        self.assertEqual(event["safetyLeaseOutcome"], "released")
+        self.assertTrue(event["releasedLeases"],
+                        "the audit trail must say what was released")
+
+    def test_the_canary_retains_the_lease_rather_than_releasing_it(self):
+        """The work is starting; the capacity is still needed."""
+        handle = self._admitted()
+        handle.canary_passed(CUDA)
+        event = handle.events[-1]
+        self.assertEqual(event["safetyLeaseOutcome"], "retained")
+
+    def test_hard_limit_while_admitted_drains_in_immediate_mode(self):
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = self._admitted(telemetry=telemetry)
+        telemetry.set(CUDA, healthy(used=int(TOTAL * 0.98)))
+        handle.poll()
+        self.assertEqual(handle.state, State.DRAINING)
+        self.assertEqual(handle.drain_mode, DrainMode.IMMEDIATE)
+        self.assertEqual(handle.escalation, "SIGTERM",
+                         "no grace when memory is already gone")
+
+    def test_breaker_opening_while_admitted_quarantines(self):
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        for _ in range(Policy().breaker_threshold):
+            handle.force_state(State.READY)
+            handle.admit(CUDA, requested_bytes=1 << 30)
+            handle.report_incident("oom", device=CUDA)
+            clock.advance(10)
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_a_quarantine_prevents_another_admission(self):
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        for _ in range(Policy().breaker_threshold):
+            handle.force_state(State.READY)
+            handle.admit(CUDA, requested_bytes=1 << 30)
+            handle.report_incident("oom", device=CUDA)
+            clock.advance(10)
+        self.assertEqual(handle.state, State.QUARANTINED)
+        with self.assertRaises(GovernorError):
+            handle.admit(CUDA, requested_bytes=1 << 30)
+
+    def test_every_admitted_exit_declares_a_lease_outcome(self):
+        """A lease neither carried forward nor released is stranded."""
+        from contract import exits_from
+        for transition in exits_from(State.ADMITTED):
+            self.assertIsNotNone(
+                transition.lease_outcome,
+                f"ADMITTED -> {transition.target.value} on "
+                f"{transition.trigger} does not say what becomes of the lease")
+
+
 # ------------------------------------------------------- revision and racing
 
 class StateRevisionTests(unittest.TestCase):
@@ -204,6 +294,37 @@ class StateRevisionTests(unittest.TestCase):
         handle.heartbeat(operation="decode_step", counter=99,
                          expect_revision=revision)
         self.assertNotEqual(handle.state, State.RUNNING)
+
+    def test_a_stale_trigger_cannot_release_a_newer_lease(self):
+        """The dangerous shape: a late release freeing work that just started.
+
+        A worker dies, its incident is recorded, a new admission takes a fresh
+        lease -- and then the dead worker's delayed trigger arrives naming the
+        revision it saw. Applied, it would release capacity belonging to the
+        run that replaced it.
+        """
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        stale = handle.state_revision
+        handle.report_incident("worker_death", device=CUDA)
+
+        handle.force_state(State.READY)
+        self.assertTrue(handle.admit(CUDA, requested_bytes=1 << 30))
+        revision_now = handle.state_revision
+        self.assertEqual(handle.state, State.ADMITTED)
+
+        handle.completed(expect_revision=stale)          # the late arrival
+        self.assertEqual(handle.state, State.ADMITTED,
+                         "a stale trigger moved the state")
+        self.assertEqual(handle.state_revision, revision_now)
+        self.assertTrue(any(e.get("event") == "safety_trigger_stale"
+                            for e in handle.events))
+
+        # The newer lease must still be held: the machine is busy.
+        handle.force_state(State.READY)
+        self.assertFalse(
+            handle.admit(ROCM, requested_bytes=TOTAL),
+            "capacity accounting was disturbed by the stale trigger")
 
     def test_capacity_check_and_lease_are_applied_under_one_revision(self):
         """Two admissions racing between samples must not both succeed."""

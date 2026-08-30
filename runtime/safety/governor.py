@@ -1,6 +1,6 @@
 """The Safety Governor: a deterministic core with no side effects on hardware.
 
-Implements `safety-contract-1`. Every transition is looked up in
+Implements `safety-contract-1.1`. Every transition is looked up in
 `contract.TRANSITIONS` rather than encoded again here -- a second copy of the
 table is a second thing to keep in step, and the one that drifts is always the
 one nobody is reading.
@@ -27,7 +27,8 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 from contract import (ADVISORY_ONLY_SIGNALS, AUDIT_FIELDS,  # noqa: E402
-                      CONTRACT_VERSION, INCIDENT_CLASSES,
+                      CONTRACT_VERSION, INCIDENT_CLASSES, LEASE_AUDIT_FIELD,
+                      LEASE_RELEASED, LEASE_RETAINED,
                       QUARANTINE_RECORD_FIELDS, TRANSITION_EXECUTOR,
                       Confidence, DrainMode, Policy, State, TriggerSource,
                       permitted)
@@ -378,6 +379,19 @@ class SafetyGovernor:
         self._revision += 1
         if transition.drain_mode is not None:
             self.drain_mode = transition.drain_mode
+
+        # The lease is settled in the same step that moves the state, under the
+        # same revision. Doing it afterwards leaves a window in which the state
+        # says the work is over and the capacity is still booked -- and if the
+        # process dies in that window, the lease is stranded forever.
+        if transition.lease_outcome == LEASE_RELEASED:
+            released = dict(self._leases)
+            self._leases.clear()
+            fields[LEASE_AUDIT_FIELD] = LEASE_RELEASED
+            fields["releasedLeases"] = released
+        elif transition.lease_outcome == LEASE_RETAINED:
+            fields[LEASE_AUDIT_FIELD] = LEASE_RETAINED
+
         self._emit(transition.audit_event, previous, trigger,
                    transition.trigger_source,
                    signals=signals or {}, **fields)
@@ -564,19 +578,20 @@ class SafetyGovernor:
             raise GovernorError(
                 f"{incident_class!r} is not a declared incident class; "
                 f"the contract lists {list(INCIDENT_CLASSES)}")
-        trigger = "worker_died" if incident_class == "worker_death" else "worker_died"
-        if self._state is State.RUNNING:
-            self._apply(trigger)
-        elif self._state in (State.ADMITTED, State.READY):
-            # Reaching FAILED from a non-RUNNING state is not in the table, so
-            # the incident is recorded without a transition and evaluated by
-            # the breaker below.
-            pass
+        # safety-contract-1.1 gives ADMITTED the same incident exits RUNNING
+        # has, so the window between reserving capacity and the canary passing
+        # is no longer a place an incident has nowhere to go.
+        if self._state in (State.RUNNING, State.ADMITTED):
+            self._apply("worker_died", device=device,
+                        incidentClass=incident_class)
 
         self._incidents.append({
             "incidentClass": incident_class, "device": device,
             "at": self.clock.now(), "bootId": self.boot_id,
         })
+        # The transition released the lease under its own revision. This is the
+        # belt for the paths that record an incident without one -- READY, say --
+        # and is a no-op when the transition already cleared it.
         self._leases.pop(device, None)
 
         if self._breaker_open(incident_class, device):
