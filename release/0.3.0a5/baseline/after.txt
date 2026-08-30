@@ -1,0 +1,3 @@
+orphanWorkers 0
+0
+cudaAfter NVIDIA GeForce RTX 5060 Ti, 1266 MiB, 16311 MiB

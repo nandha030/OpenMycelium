@@ -1,0 +1,36 @@
+{
+  "generatedTokens": [
+    49256,
+    9332,
+    24227,
+    56455,
+    31587,
+    9985,
+    7523,
+    1750,
+    113422,
+    8832,
+    9055,
+    6056,
+    1408,
+    2801,
+    47910,
+    1307,
+    20534,
+    7176,
+    3816,
+    56309,
+    1317,
+    3398,
+    3486,
+    1505
+  ],
+  "text": "Cross-vendor GPU inference allows running pre-trained machine learning models on different brands of GPUs without needing to retrain or",
+  "ttftMs": 142.4,
+  "decodeTokensPerSecond": 11.06,
+  "interTokenMs": {
+    "p50": 89.03,
+    "p95": 92.21,
+    "p99": 105.02
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "records": [
+    {
+      "evidence": {
+        "decodeTokensPerSecond": 9.41,
+        "evidencePath": "/var/log/om-qual-evidence.json",
+        "failures": 0,
+        "gate": "adapter-sdk-0.3.0a4",
+        "generatedTokens": [
+          49256,
+          9332,
+          24227,
+          56455,
+          31587,
+          9985,
+          7523,
+          1750,
+          113422,
+          8832,
+          9055,
+          6056,
+          1408,
+          2801,
+          47910,
+          1307,
+          20534,
+          7176,
+          3816,
+          56309,
+          1317,
+          3398,
+          3486,
+          1505
+        ],
+        "qualificationReason": "Adapter SDK 0.3.0a4 hardware qualification",
+        "qualifiedBy": "nandhavignesh",
+        "text": "Cross-vendor GPU inference allows running pre-trained machine learning models on different brands of GPUs without needing to retrain or",
+        "ttftMs": 985.5
+      },
+      "qualifiedAt": 1787984694.76,
+      "recordId": "9f64219e2479bc1efbd17368132c821879905d88e7e873be82a8cf1e5aa3e063",
+      "situation": {
+        "adapterConfigDigest": "f230a7c1dea09ad930957d1fb7a446b69f85279941cb39a95bada043706c2d4a",
+        "adapterId": "mistral",
+        "adapterVersion": "1",
+        "cudaRuntime": "2.11.0+cu128",
+        "mcclVersion": "0.2.0a3",
+        "modelFingerprint": "ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adcc7be",
+        "openmyceliumContent": "16c2df1cadadbd2061b265e1027cc44f47d3a2902fb35149abaeacfcacd960f5",
+        "openmyceliumVersion": "0.3.0a4",
+        "rocmRuntime": "2.10.0+rocm7.0",
+        "topology": "cuda:nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033 + rocm:amd:pci-0000:04:00.0, boundary after layer 19",
+        "transport": "host-staged-xvendor"
+      }
+    },
+    {
+      "evidence": {
+        "decodeTokensPerSecond": 11.22,
+        "evidencePath": "/var/log/om-full-gate/qualify-evidence.json",
+        "exitCode": 0,
+        "failures": 0,
+        "gate": "full-gate-qualification",
+        "generatedTokens": [
+          49256,
+          9332,
+          24227,
+          56455,
+          31587,
+          9985,
+          7523,
+          1750,
+          113422,
+          8832,
+          9055,
+          6056,
+          1408,
+          2801,
+          47910,
+          1307,
+          20534,
+          7176,
+          3816,
+          56309,
+          1317,
+          3398,
+          3486,
+          1505
+        ],
+        "qualificationReason": "full gate",
+        "qualifiedBy": "nandhavignesh",
+        "text": "Cross-vendor GPU inference allows running pre-trained machine learning models on different brands of GPUs without needing to retrain or",
+        "ttftMs": 144.3
+      },
+      "qualifiedAt": 1787987128.449,
+      "recordId": "482b3f189d52937f174e186a730c6d360656793f54ea0c1990e89ea6c5edb1b2",
+      "situation": {
+        "adapterConfigDigest": "f230a7c1dea09ad930957d1fb7a446b69f85279941cb39a95bada043706c2d4a",
+        "adapterId": "mistral",
+        "adapterVersion": "1",
+        "cudaRuntime": "2.11.0+cu128",
+        "mcclContent": "5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d",
+        "mcclVersion": "0.2.0a3",
+        "modelFingerprint": "ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adcc7be",
+        "openmyceliumContent": "e2eccbbe6de9aa8fdc342bbed015cede325a84161269dfa719c6f3f97c0011bf",
+        "openmyceliumVersion": "0.3.0a5",
+        "rocmRuntime": "2.10.0+rocm7.0",
+        "topology": "cuda:nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033 + rocm:amd:pci-0000:04:00.0, boundary after layer 19",
+        "transport": "host-staged-xvendor"
+      }
+    }
+  ],
+  "schemaVersion": 1
+}

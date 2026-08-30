@@ -361,6 +361,13 @@ def summarise_placement(manifest: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "placementId": manifest.get("placementId"),
         "manifestDigest": manifest.get("manifestDigest"),
+        # Additive, and lifted to the top level rather than left inside
+        # `manifest`: the Plan screen renders this object by iteration, so a
+        # field only reaches a person if it is here.
+        "schemaVersion": manifest.get("schemaVersion"),
+        "adapterId": manifest.get("adapterId"),
+        "adapterVersion": manifest.get("adapterVersion"),
+        "adapterConfigDigest": manifest.get("adapterConfigDigest"),
         "pipeline": manifest.get("pipeline", {}),
         "exclusive": not overlap,
         "overlapCount": len(overlap),

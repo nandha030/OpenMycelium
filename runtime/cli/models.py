@@ -167,7 +167,37 @@ def describe(path: str) -> Dict[str, Any]:
             "hidden": raw.get("hidden_size"),
             "dtype": raw.get("torch_dtype"),
         })
+        record.update(_compatibility(raw))
     return record
+
+
+def _compatibility(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Additive adapter metadata. Read-only, and it always answers.
+
+    Inspection must describe a model it cannot run -- that is the whole point
+    of separating compatibility from execution -- so this reports a status
+    rather than raising, and reports one even when the adapters package cannot
+    be imported at all.
+    """
+    try:
+        serving = os.path.join(os.path.dirname(_HERE), "serving")
+        if serving not in sys.path:
+            sys.path.insert(0, serving)
+        from adapters import describe_compatibility  # noqa: PLC0415
+        from adapters.qualification import QualificationStatus  # noqa: PLC0415
+        fields = describe_compatibility(raw)
+        fields.setdefault("architectures", raw.get("architectures") or [])
+        # Qualification is a property of a whole situation -- checkpoint,
+        # runtimes, device pair, boundary -- and none of that is known from a
+        # config file. `openmycelium qualify status` answers it properly; here
+        # the honest answer is that this view cannot tell.
+        fields["qualificationStatus"] = QualificationStatus.UNQUALIFIED
+        fields["qualificationScope"] = "not evaluated from config alone"
+        return fields
+    except Exception as error:                            # noqa: BLE001
+        return {"compatibilityStatus": "ADAPTER_UNAVAILABLE",
+                "compatibilityReason": f"{type(error).__name__}: {error}",
+                "adapterId": None, "adapterVersion": None}
 
 
 def cmd_list(args) -> int:

@@ -211,6 +211,51 @@ RUNS = RunManager()
 
 # ------------------------------------------------------------------- gating
 
+def _qualification_gate(plan: Dict[str, Any]) -> Dict[str, Any]:
+    """Has anything actually measured this exact situation on this machine?
+
+    Answered from the compiled placement, so it is the situation a run would
+    execute rather than a guess from the model name. An explicit override is
+    reported as passing *and* named, because a gate that quietly went green on
+    an override would hide the one thing worth seeing.
+    """
+    gate = {"id": "qualification", "label": "Adapter qualified here",
+            "ok": False, "detail": "no placement to evaluate"}
+    if not plan.get("ok"):
+        return gate
+    try:
+        from adapters.qualification import (find_record,
+                                            override_from_environment,
+                                            situation_from_manifest)
+        situation = situation_from_manifest(plan.get("manifest") or {})
+        record = find_record(situation)
+        if record is not None:
+            gate.update(ok=True,
+                        detail=f"record {str(record.get('recordId'))[:16]}, "
+                               f"{situation['adapterId']}@"
+                               f"{situation['adapterVersion']}")
+            return gate
+        override = override_from_environment()
+        if override:
+            gate.update(ok=True,
+                        detail=f"UNQUALIFIED, overridden by "
+                               f"{override.get('actor')} "
+                               f"({override.get('mode')})")
+            return gate
+        # Naming the command matters: this is the one gate an operator cannot
+        # clear from the console, so a detail that only says "run the hardware
+        # gate" leaves them with no next step.
+        gate["detail"] = (
+            "no record covers this checkpoint, these runtimes and this device "
+            "pair. Qualify it from a terminal: "
+            "OM_QUALIFICATION_MODE=qualify OM_QUALIFICATION_ACTOR=<you> "
+            "openmycelium run --model <MODEL> ... then "
+            "openmycelium qualify record --model <MODEL> --evidence <gate.json>")
+    except Exception as error:                                # noqa: BLE001
+        gate["detail"] = f"could not be evaluated: {str(error)[:120]}"
+    return gate
+
+
 def run_readiness(model: str) -> Dict[str, Any]:
     """Everything that must be true before a run may be offered."""
     gates: List[Dict[str, Any]] = []
@@ -237,6 +282,11 @@ def run_readiness(model: str) -> Dict[str, Any]:
                              f"{plan.get('totalTensors')} tensors, "
                              f"overlap {plan.get('overlapCount')}"
                              if plan.get("ok") else plan.get("detail", ""))})
+
+    # Rendered by iteration like every other gate, so this reaches the operator
+    # without a frontend change -- and it tells them *before* they press Run
+    # what the coordinator would otherwise refuse afterwards.
+    gates.append(_qualification_gate(plan))
 
     busy = service.workloads()
     idle = not busy.get("busy") and not RUNS.active()

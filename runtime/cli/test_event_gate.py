@@ -368,3 +368,57 @@ def test_gate_summary_counts_both_outcomes():
     assert summary["admitted"] == 1
     assert summary["rejected"] == 1
     assert summary["rolesSeen"] == ["cuda"]
+
+
+# --------------------------------------------------- qualification overrides
+
+OVERRIDE = {"mode": "override", "actor": "an-operator", "reason": "measuring",
+            "againstRecord": None,
+            "situation": {"adapterId": "mistral", "adapterVersion": "1",
+                          "modelFingerprint": FINGERPRINT}}
+
+
+def test_an_override_decided_before_binding_is_held_until_binding():
+    """The decision happens during validation; the identity exists after it.
+
+    Emitting immediately would attribute an event to a manifest that had not
+    been verified, which the writer refuses outright. Dropping it would lose
+    the one record that says a run went ahead unqualified. So it waits.
+    """
+    handle, stream = writer(bind=False)
+    handle.emit_qualification_override(OVERRIDE)
+    assert records(stream) == [], "nothing may be written before binding"
+
+    handle.bind_placement(manifest(), Stage())
+    written = [r for r in records(stream) if r["event"] == "qualification_override"]
+    assert len(written) == 1
+    assert written[0]["qualificationActor"] == "an-operator"
+    assert written[0]["qualificationMode"] == "override"
+    assert written[0]["modelFingerprint"] == FINGERPRINT
+    assert written[0]["againstRecord"] is None
+
+
+def test_a_refused_run_writes_no_override_event():
+    """No binding means no run; a held event must not leak into the trail."""
+    handle, stream = writer(bind=False)
+    handle.emit_qualification_override(OVERRIDE)
+    assert records(stream) == []
+
+
+def test_an_override_after_binding_is_written_immediately():
+    handle, stream = writer()
+    handle.emit_qualification_override(OVERRIDE)
+    written = [r for r in records(stream) if r["event"] == "qualification_override"]
+    assert len(written) == 1
+
+
+def test_the_placement_summary_carries_the_adapter_identity():
+    handle, stream = writer()
+    placement = manifest()
+    placement.update({"adapterId": "mistral", "adapterVersion": "1",
+                      "adapterConfigDigest": "c" * 64})
+    handle.emit_placement_summary(placement, Stage(), "/tmp/placement.json")
+    summary = [r for r in records(stream) if r["event"] == "placement_validated"][-1]
+    assert summary["adapterId"] == "mistral"
+    assert summary["adapterVersion"] == "1"
+    assert summary["adapterConfigDigest"] == "c" * 64

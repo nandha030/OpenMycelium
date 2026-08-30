@@ -1,0 +1,27 @@
+  == install the wheel ==
+  [PASS] installed
+    
+      openmycelium            0.3.0a4
+      mccl                    0.2.0a3
+
+  == the port must be free before we claim anything ==
+  [PASS] port 11507 is free
+
+  == the console starts from the installed entry point ==
+  [PASS] console reachable on 127.0.0.1:11507
+  [PASS] the console we started is the one still running
+    assets served from inside the package:
+      /                  HTTP 200
+      /assets/app.js     HTTP 200
+      /assets/styles.css HTTP 200
+
+  == gate, then one real run on both GPUs ==
+      ok Readiness checks
+      ok Model verified
+      ok Placement compiles
+      ok Adapter qualified here
+      ok No other workload active
+      cuda  layers 0-19  11.41 GiB on nvidia:GPU-cbb3d045-9d5f-a22
+      rocm  layers 20-39  11.41 GiB on amd:pci-0000:04:00.0
+  [PASS] gate permits the run
+  [PASS] run accepted

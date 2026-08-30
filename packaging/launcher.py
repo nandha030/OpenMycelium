@@ -13,7 +13,7 @@ import runpy
 import sys
 from typing import Dict, List, Tuple
 
-VERSION = "0.2.0a5"
+VERSION = "0.3.0a5"
 
 #: subcommand -> (module file under runtime/, implicit first argument)
 COMMANDS: Dict[str, Tuple[str, str]] = {
@@ -32,6 +32,7 @@ COMMANDS: Dict[str, Tuple[str, str]] = {
     "provision": ("cli/provision.py", ""),
     "config":  ("cli/config_cli.py", ""),
     "console": ("cli/console.py", ""),
+    "qualify": ("cli/qualify_cli.py", ""),
 }
 
 #: Convenience spellings, expanded before dispatch.
@@ -67,6 +68,10 @@ USAGE = """
     openmycelium chat --model MODEL        loads once, then prompt freely
     openmycelium serve --model MODEL       OpenAI-compatible API on 11500
     openmycelium console                   local operator console on 11501
+
+  Qualification
+    openmycelium qualify status --model MODEL   is this exact situation proven
+    openmycelium qualify list                   records on this machine
 
   Lifecycle
     openmycelium ps                        running runtimes
@@ -127,8 +132,21 @@ def main(argv: List[str] = None) -> int:
     sys.argv = [target] + ([implicit] if implicit else []) + rest
     try:
         runpy.run_path(target, run_name="__main__")
-    except SystemExit as exit_code:
-        return int(exit_code.code or 0)
+    except SystemExit as stop:
+        # `SystemExit` may carry a message instead of a status -- that is what
+        # `raise SystemExit("...")` means in Python, and `sys.exit("...")` too.
+        # Coercing it with int() turned a clear diagnostic into a ValueError
+        # traceback that hid the real message, so the message is printed and
+        # reported as failure, which is what the interpreter itself would do.
+        code = stop.code
+        if code is None:
+            return 0
+        if isinstance(code, bool):
+            return int(code)
+        if isinstance(code, int):
+            return code
+        print(code, file=sys.stderr)
+        return 1
     return 0
 
 

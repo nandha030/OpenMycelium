@@ -1,0 +1,6 @@
+ranAt 2026-08-29T06:53:15+00:00
+bootId 75a1077f-b05d-494a-af24-b00e2847d61c
+sessions 3
+"installedContentSha256":"16c2df1cadadbd2061b265e1027cc44f47d3a2902fb35149abaeacfcacd960f5",
+"mcclVersion":"0.2.0a3",
+"openmycelium":"0.3.0a4",

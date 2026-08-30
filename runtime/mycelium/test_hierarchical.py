@@ -1,6 +1,16 @@
+import os
+import sys
 import unittest
 
-from mycelium.hierarchical import (
+# See the note in test_adapter.py: `runtime/` must be on the path for the bare
+# `mycelium.` spelling to resolve, whatever directory the suite is run from.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_RUNTIME = os.path.dirname(_HERE)
+for _root in (os.path.dirname(_RUNTIME), _RUNTIME):
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+
+from mycelium.hierarchical import (  # noqa: E402
     HierarchicalCollective,
     HierarchyConfig,
     Topology,

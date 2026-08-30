@@ -1,0 +1,37 @@
+  == full gate ==
+    "installedContentSha256":"e2eccbbe6de9aa8fdc342bbed015cede325a84161269dfa719c6f3f97c0011bf",
+    "mcclContentSha256":"5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d",
+    "mcclVersion":"0.2.0a3",
+    "openmycelium":"0.3.0a5",
+
+  -- 0. qualification --
+  qualify        already qualified; no new record needed
+
+  -- 1. unit suite --
+  unit           
+
+  -- 2. performance --
+  performance    REPLAYED, PASSED
+        bootId          NOT RECORDED PER RUN -- cannot prove the machine did not restart mid-campaign
+        output          identical, matches the frozen sequence
+        mean position   a4 4.50, a5 4.50 (imbalance 0.00)
+        == primary gate: position-balanced mean TTFT regression ==
+          a4         n=4  mean  154.85 ms  sd  20.57  [140.1, 141.1, 154.0, 184.2]
+          a5         n=4  mean  157.62 ms  sd  23.58  [136.1, 139.0, 172.6, 182.8]
+          regression   +1.8%   allowed <= 20.0%
+          a4         median 11.115 tok/s  [10.87, 10.95, 11.28, 11.34]  ok
+          a5         median 11.170 tok/s  [10.65, 11.11, 11.23, 11.26]  ok
+        == paired campaign PASSED ==
+
+  -- 3. adapter refusal --
+  refusal        PASSED
+
+  -- 4. qualification lifecycle --
+  lifecycle      PASSED
+
+  -- 5. baseline comparison --
+  comparison     PASSED
+        == comparison PASSED: computation identical, pinning present ==
+
+  == full gate PASSED ==
+  evidence in /var/log/om-gateb

@@ -41,6 +41,7 @@ from greedy import greedy_token, ranked_candidates  # noqa: E402
 from audit import (AuditError, EventWriter, prompt_ids_hash,  # noqa: E402
                    valid_run_id)
 from profiler import METHODS, OFF, Profiler  # noqa: E402
+from adapters import AdapterError  # noqa: E402
 from model_inspect import GIB, MIB, inspect_model  # noqa: E402
 from placement import (ManifestError, load_placement, stage_assignment,  # noqa: E402
                        validate_for_worker)
@@ -142,8 +143,25 @@ def logit_summary(logits: Any, torch: Any) -> Dict[str, Any]:
 
 # -------------------------------------------------------------------- stages
 
-def _failure_phase(message: str) -> str:
+#: Phase per machine-readable code. Preferred over reading the prose, which is
+#: what this had to do before the exceptions carried codes -- and which would
+#: classify "adapter mismatch: ... schema ..." by whichever word came first.
+_PHASE_BY_CODE = {
+    "LEGACY_UNPINNED_MANIFEST": "schema",
+    "UNSUPPORTED_MANIFEST_SCHEMA": "schema",
+    "INVALID_MANIFEST": "schema",
+    "ADAPTER_MISMATCH": "adapter",
+    "ADAPTER_UNAVAILABLE": "adapter",
+    "UNSUPPORTED_ARCHITECTURE": "adapter",
+    "AMBIGUOUS_ADAPTER": "adapter",
+    "ADAPTER_UNQUALIFIED": "qualification",
+}
+
+
+def _failure_phase(message: str, error_code: str = "") -> str:
     """Classify a manifest rejection so the audit trail says what went wrong."""
+    if error_code in _PHASE_BY_CODE:
+        return _PHASE_BY_CODE[error_code]
     text = message.lower()
     for needle, phase in (("digest", "digest"), ("schema", "schema"),
                           ("fingerprint", "fingerprint"),
@@ -1262,12 +1280,21 @@ def main() -> int:
     stream = open(args.events, "a", encoding="utf-8") if args.events else None
     args.audit = EventWriter(stream, args.run_id, args.role) if stream else None
 
-    def reject(phase: str, reason: str, code: int) -> int:
+    def reject(phase: str, reason: str, code: int,
+               error_code: str = "", remediation: str = "") -> int:
         if args.audit is not None:
             args.audit.emit_pre_validation_failure(args.placement, phase, reason)
             args.audit.close()
-        print(json.dumps({"role": args.role, "error": reason,
-                          "failurePhase": phase, "runId": args.run_id}))
+        payload = {"role": args.role, "error": reason,
+                   "failurePhase": phase, "runId": args.run_id}
+        # Additive: existing consumers read `error` and ignore what they do not
+        # know. A caller that wants to branch on the cause matches `errorCode`
+        # rather than the prose.
+        if error_code:
+            payload["errorCode"] = error_code
+        if remediation:
+            payload["remediation"] = remediation
+        print(json.dumps(payload))
         return code
 
     try:
@@ -1276,10 +1303,24 @@ def main() -> int:
         return reject("read", f"{type(error).__name__}: {error}", 65)
     try:
         placement = load_placement(args.placement)
-        assigned_stage = validate_for_worker(placement, model, args.role)
-    except ManifestError as error:
-        phase = _failure_phase(str(error))
-        return reject(phase, str(error), 66)
+        assigned_stage = validate_for_worker(
+            placement, model, args.role,
+            runtime_version=str(getattr(torch, "__version__", "")),
+            audit=args.audit)
+    # `AdapterError` alongside `ManifestError` because qualification refusal is
+    # not a manifest defect -- the manifest is perfectly valid, it just has no
+    # evidence behind it here. Both carry the same three attributes, so one
+    # handler serves both without asking which it caught.
+    except (ManifestError, AdapterError) as error:
+        code = getattr(error, "error_code", "") or ""
+        phase = _failure_phase(str(error), code)
+        # The exception declares its own status. Every condition that existed
+        # before still carries 66, because that is what `ManifestError` still
+        # declares; only the new refusals differ, and they differ by being a
+        # different class rather than by a branch here.
+        return reject(phase, str(error),
+                      getattr(error, "exit_code", 66), code,
+                      getattr(error, "remediation", "") or "")
     except OSError as error:
         return reject("read", str(error), 65)
 

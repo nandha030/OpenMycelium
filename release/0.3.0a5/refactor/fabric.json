@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "devices": [
+    {
+      "vendor": "nvidia",
+      "identity": "nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033",
+      "identity_source": "uuid",
+      "name": "NVIDIA GeForce RTX 5060 Ti",
+      "runtime": "cuda",
+      "runtime_index": 0,
+      "total_bytes": 17102864384,
+      "free_bytes": 15894315008,
+      "pci_bus": "00000000:01:00.0",
+      "uuid": "GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033",
+      "uuid_trusted": true,
+      "driver_version": "591.86",
+      "torch_version": "2.11.0+cu128",
+      "arch": "NVIDIA GeForce RTX 5060 Ti",
+      "power_watts": 24.61,
+      "power_limit_watts": 180.0,
+      "power_source": "nvidia-smi",
+      "notes": [],
+      "identityConfidence": "strong",
+      "totalGiB": 15.93,
+      "freeGiB": 14.8
+    },
+    {
+      "vendor": "amd",
+      "identity": "amd:pci-0000:04:00.0",
+      "identity_source": "pci",
+      "name": "AMD Radeon RX 9060 XT",
+      "runtime": "rocm",
+      "runtime_index": 0,
+      "total_bytes": 16974905344,
+      "free_bytes": 16892866560,
+      "pci_bus": "0000:04:00.0",
+      "uuid": "61353962-3739-3433-3630-306438396535",
+      "uuid_trusted": false,
+      "driver_version": "",
+      "torch_version": "2.10.0+rocm7.0",
+      "arch": "gfx1200",
+      "power_watts": null,
+      "power_limit_watts": null,
+      "power_source": "unavailable",
+      "notes": [
+        "UUID reported by the ROCm runtime is not stable across processes and is recorded for evidence only; identity is the PCI bus",
+        "power telemetry unavailable under WSL: rocm-smi needs the amdgpu kernel module, and WSL exposes /dev/dxg instead"
+      ],
+      "identityConfidence": "slot-stable",
+      "totalGiB": 15.81,
+      "freeGiB": 15.73
+    }
+  ],
+  "unavailable": {},
+  "totalBytes": 34077769728,
+  "freeBytes": 32787181568,
+  "vendors": [
+    "amd",
+    "nvidia"
+  ],
+  "crossVendor": true,
+  "duplicateIdentities": [],
+  "identitiesUnique": true,
+  "probedAt": 1788050073.294,
+  "fromCache": true
+}

@@ -1,0 +1,1 @@
+    CUDA before: 1272 MiB

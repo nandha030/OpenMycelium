@@ -5,10 +5,25 @@ set -uo pipefail
 _here=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)
 REPO=${OM_REPO:-$(cd "$_here/../.." 2>/dev/null && pwd)}
 DIST=${OM_DIST:-$REPO/dist}
-WHEEL="$DIST/openmycelium-0.2.0a5-py3-none-any.whl"
-MCCL="$DIST/openmycelium_mccl-0.2.0a3-py3-none-any.whl"
+# The version under test is a parameter; the default is unchanged, so running
+# this gate with no arguments still tests exactly the artifact it always did.
+# Without this the gate can only ever test one version, and "run the unchanged
+# gate against the new build" would be impossible to say truthfully.
+OM_VERSION=${OM_VERSION:-0.2.0a5}
+MCCL_VERSION=${OM_MCCL_VERSION:-0.2.0a3}
+WHEEL="$DIST/openmycelium-$OM_VERSION-py3-none-any.whl"
+MCCL="$DIST/openmycelium_mccl-$MCCL_VERSION-py3-none-any.whl"
+if [ ! -f "$WHEEL" ]; then
+  echo "  the wheel under test does not exist: $WHEEL" >&2
+  echo "  set OM_DIST to the dist directory and OM_VERSION to the build" >&2
+  exit 78
+fi
 OM=/opt/om/venv
-PORT=11501
+# The default is the console's own port, so an unadorned run tests exactly what
+# it always did. Overridable because the gate must be able to run beside a
+# console an operator is already using -- the alternative is killing their
+# session, and a gate that demands that will be run less often.
+PORT=${OM_CONSOLE_PORT:-11501}
 MODEL=Mistral-Nemo-Instruct-2407
 FAIL=0
 export PATH="$OM/bin:$PATH"

@@ -1,0 +1,73 @@
+    set aside 2 existing record(s)
+  == qualification lifecycle ==
+    ledger /var/lib/openmycelium/xvendor_qualification.json
+    model  Mistral-Nemo-Instruct-2407
+
+  -- 1. no record: execution refuses before allocation --
+    VRAM before 696 MiB, workers 0
+    exit 65
+      placement refused: mistral@1 has no qualification record for this situation (digest 482b3f189d52937f...): the checkpoint, the runtimes, the device pair and the boundary are all part of what is qualified. Run the hardware gate with OM_QUALIFICATION_MODE=qualify and OM_QUALIFICATION_ACTOR set, or ex
+    ok    refused (exit 65)
+    ok    refused as unqualified
+    ok    no worker spawned (0 -> 0)
+    ok    VRAM unchanged (696 -> 698 MiB)
+
+  -- 2. qualification mode runs the hardware gate --
+    exit 0
+    generated 8 tokens, ttft 180.5 ms, decode 11.75 tok/s
+    ok    qualification mode permitted the run
+
+  -- 3. a passing gate writes a tuple-scoped record --
+      recorded 482b3f189d52937f in /var/lib/openmycelium/xvendor_qualification.json
+        modelFingerprint       ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adcc7be
+        adapterId              mistral
+        adapterVersion         1
+        adapterConfigDigest    f230a7c1dea09ad930957d1fb7a446b69f85279941cb39a95bada043706c2d4a
+        openmyceliumVersion    0.3.0a5
+        openmyceliumContent    e2eccbbe6de9aa8fdc342bbed015cede325a84161269dfa719c6f3f97c0011bf
+        mcclVersion            0.2.0a3
+        mcclContent            5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d
+        transport              host-staged-xvendor
+        cudaRuntime            2.11.0+cu128
+        rocmRuntime            2.10.0+rocm7.0
+        topology               cuda:nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033 + rocm:amd:pci-0000:04:00.0, boundary after layer 19
+        situationDigest        482b3f189d52937f174e186a730c6d360656793f54ea0c1990e89ea6c5edb1b2
+    ok    record written
+    ok    no partial file left behind
+    ledger sections: ['adapterQualification', 'provision']
+    adapter records: 1
+    provision section still present
+    ok    the provisioning section survived the write
+
+  -- 4. normal execution, with no mode set --
+    exit 0
+    ok    normal execution succeeds once qualified
+
+  -- 5. an altered tuple refuses again --
+    rewrote openmyceliumContent in 1 record(s)
+    exit 65
+    ok    a record for a different build does not apply
+    ok    refused as unqualified again
+
+  -- 6. an explicit override is permitted and recorded --
+    exit 0
+    ok    override permitted the unqualified situation
+    audit trail /opt/openmycelium/events.jsonl
+    actor  'adapter-sdk-gate'  mode 'override'  situation 482b3f189d52937f
+    ok    the audit entry names the actor
+    ok    the override is bound to the verified placement
+    ok    the override appears in the audit trail, attributed and bound
+
+    restored the ledger's original adapter section
+      ledger  /var/lib/openmycelium/xvendor_qualification.json
+        9f64219e2479bc1e  mistral@1  0.3.0a4  model ff74ccb7c5e6
+        482b3f189d52937f  mistral@1  0.3.0a5  model ff74ccb7c5e6
+
+  == qualification lifecycle PASSED ==
+    failures 0
+    step1 refuse exit 65
+    step2 qualify exit 0
+    step3 record exit 0
+    step4 permitted exit 0
+    step5 altered exit 65
+    step6 override exit 0
