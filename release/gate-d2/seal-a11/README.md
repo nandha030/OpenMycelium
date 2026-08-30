@@ -195,6 +195,15 @@ needs the position-balanced campaign pre-registered for D.3.
 
 No enforcement, no canary, no default enforcement. No worker, CLI, API or
 console integration beyond the one coordinator observation point. No Memory
-Fabric, pager, MHub or training. No extended GPU campaign. **Not published** —
-this is an alpha baseline, and authorization to merge and tag is not
-authorization to publish a binary.
+Fabric, pager, MHub or training. No extended GPU campaign.
+
+**The wheel bytes are not published; the source and tags are.** The commits and
+both tag messages are pushed to GitHub and readable, along with every digest
+recorded in them. Only the canonical wheel bytes are withheld — they exist in
+the gitignored `dist/`, in the preserved artifact directory outside the
+repository, and in the qualified machine's virtualenv. Authorization to merge and
+tag was not authorization to publish a binary, and none was published.
+
+The tag message for `v0.3.0a11` says "Not published" without that qualification.
+It is wrong as written and cannot be corrected without moving the tag, which is
+not done. This paragraph is the correction.

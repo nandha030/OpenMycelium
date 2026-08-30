@@ -3,6 +3,8 @@
 **Status: SUPERSEDED. The canonical artifact is `0.3.0a11`, recorded in
 [`../seal-a11/`](../seal-a11/README.md) — read that first.**
 
+See [`NONRELEASABLE.txt`](NONRELEASABLE.txt) in this directory.
+
 `0.3.0a10` is non-releasable: it was built from a working tree whose line
 endings differed from the commit, so its installed-content digest names a tree
 no checkout can reproduce. Every file was byte-for-byte the committed program;
@@ -167,8 +169,10 @@ merge. A gate whose verdict depends on how much has landed since is not
 verifying what it claims to. It now finds the merge commit that has the branch
 tip as a parent, and names which commit it judged.
 
-**Not published.** `v0.3.0a10` is an alpha baseline; no binary is published, and
-nothing here authorizes one.
+**The wheel bytes are not published; the source and tags are.** No binary was
+published and nothing here authorizes one. See `../seal-a11/README.md` for the
+full statement — "not published" without qualification is wrong about a
+repository that has been pushed.
 
 ---
 

@@ -1,0 +1,70 @@
+*******************************************************************************
+*                                                                             *
+*   0.3.0a11 IS THE CANONICAL SHADOW-MODE RELEASE.                            *
+*                                                                             *
+*   0.3.0a10 IS NOT RELEASABLE. DO NOT SHIP, INSTALL OR MEASURE AGAINST IT.   *
+*                                                                             *
+*******************************************************************************
+
+The evidence in this directory describes 0.3.0a10. It is retained because a
+build found on a machine must always be identifiable, including the ones that
+were wrong. It is not a release record.
+
+    non-releasable   0.3.0a10
+      wheel sha256   36e6cd8f5a1047df47f84c19237a170f22453d8d5d67df0d0be610c8de076ac8
+      content sha256 9053f992c39cbbb41a0af0969b03f8c6de19659f45d1a19ccd29d9c2a74f3466
+      tag            v0.3.0a10 -> 5287154e59ade01d2eea8cbcf35cfa53933945ad
+
+    canonical        0.3.0a11
+      wheel sha256   4cfcaf023f2917e22d1f2cacacd42afb1283afaf106d5b834766d75acb453d28
+      content sha256 249e1ba255d9f5648914334cc34453d2ff62fd4b368742d0ba4af6a483823e5e
+      tag            v0.3.0a11 -> 3b3758c4a6f31a32b67b05bb9be775c3303aa978
+      record         ../seal-a11/README.md
+
+WHY
+---
+0.3.0a10 cannot be reproduced from the commit it names.
+
+It was built from a working tree where 42 shipped modules carried CRLF and the
+rest carried LF. `.gitattributes` declares no rule for `.py`, so the checked-out
+bytes depend on `core.autocrlf` -- true for the Windows git on this machine,
+unset for the WSL git -- and the build ran across a mixture of the two.
+
+Every one of those files was byte-for-byte the committed program. There were
+ZERO content differences. The defect is reproducibility, not behaviour: no
+single checkout produces that mixture, so the installed-content digest above
+names a tree that cannot be recreated, and the entire identity model rests on
+that digest naming the committed source.
+
+Every gate passed on this build. That is the point. The program was identical,
+so 443 unit tests, 220 installed-wheel tests, both scope reviews and the paired
+hardware smoke all passed and nothing looked wrong. The defect surfaced only
+because an unrelated `git reset --hard` normalised the working tree, after which
+the installed-vs-checkout comparison began to fail.
+
+THE TAG
+-------
+v0.3.0a10 remains on the remote and points at the Gate D.2 merge commit. It is
+NOT deleted and NOT moved: tags are records, and moving one to hide a mistake
+destroys the record. Deleting or moving it requires separate authorization.
+
+Its message reads as a clean seal and does not mention any of this. Anyone
+reading tags must read this file and docs/NONRELEASABLE_BUILDS.md alongside it.
+
+WHAT CHANGED SO THIS CANNOT RECUR SILENTLY
+------------------------------------------
+  scripts/build_openmycelium_wheel.py   check_tree_matches_index() refuses to
+                                        build when the tree differs from the
+                                        index; OM_ALLOW_DIRTY=1 bypasses it and
+                                        that build is not releasable
+  scripts/repro/classify_installed_difference.py
+                                        separates line-ending differences from
+                                        content differences, because merging
+                                        them invites treating the second as the
+                                        first
+  scripts/repro/verify_rebuild_reproducible.py
+                                        proves the installed-content digest is
+                                        reproducible across rebuilds
+
+Still open: `.gitattributes` should declare `*.py text eol=lf`, for the same
+reason it already declares `*.cmd text eol=crlf`.

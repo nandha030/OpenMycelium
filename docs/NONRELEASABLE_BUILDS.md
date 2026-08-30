@@ -29,8 +29,7 @@ because a machine still carrying one of these needs to be identifiable.
 |---|---|---|
 | `0.3.0a6` | `7c40f548d597f555be5b1220c1e46660b74eae79f7cc21af2bb1ba357a4bc770` | Shipped the Gate D.1 Governor built against `safety-contract-1`, whose `ADMITTED` state had no incident path. A worker dying between admission and the compute canary — the window where allocation and weight-load setup happen, and so where an OOM is most likely — had nowhere to go, and its lease could be stranded. The Governor raised rather than inventing a transition, which is correct behaviour for a defective contract but not something to ship. Superseded by `0.3.0a7` on `safety-contract-1.1`. |
 | `0.3.0a8` | `937d56dd9bc8343c8716c2299d93ffb0c480ed65d3b477b522f1c06adae9aec0` | First shadow-mode build. Observations reached stderr but were never persisted, so a run left no durable record of what the Governor would have done -- which is the entire output of shadow mode. Superseded by `0.3.0a9`, which writes them to `safety-shadow.jsonl`. |
-| `0.3.0a9` | `4f78d005fc4a1e1c5fc8299082a0351eb0dd028045928e221ae33cd970d2ca79` | Persisted observations that could not be correlated. The record carried `bootId` and device identity but no schema version, run id, placement id or timestamp, so an observation could not be matched against the audit trail of the run it described — and comparing predicted actions against actual outcomes is the whole output of shadow mode. Separately, inserting the observer split `prepare_placement` and stranded its `run_id` assignment after a `return`, where nothing reached it; dead code rather than a live fault, because `Coordinator.__init__` also issues a run id and every caller constructs one before reading `args.run_id` — but a milestone that promised to leave the `off` path unchanged had silently deleted a statement from it. Superseded by `0.3.0a10`. |
-
+| `0.3.0a9` | `4f78d005fc4a1e1c5fc8299082a0351eb0dd028045928e221ae33cd970d2ca79` | Persisted observations that could not be correlated. The record carried `bootId` and device identity but no schema version, run id, placement id or timestamp, so an observation could not be matched against the audit trail of the run it described — and comparing predicted actions against actual outcomes is the whole output of shadow mode. Separately, inserting the observer split `prepare_placement` and stranded its `run_id` assignment after a `return`, where nothing reached it; dead code rather than a live fault, because `Coordinator.__init__` also issues a run id and every caller constructs one before reading `args.run_id` — but a milestone that promised to leave the `off` path unchanged had silently deleted a statement from it. Superseded by `0.3.0a10`, which is itself non-releasable; the canonical build is `0.3.0a11`. |
 | `0.3.0a10` | `36e6cd8f5a1047df47f84c19237a170f22453d8d5d67df0d0be610c8de076ac8` | Not reproducible from its own commit. Built from a working tree where 42 shipped modules carried CRLF and the rest LF: `.gitattributes` declares no rule for `.py`, so the checked-out bytes depend on `core.autocrlf` — `true` for the Windows git on this machine, unset for the WSL git — and the build ran over a mixture of the two. **Every file was byte-for-byte the committed program; zero content differences.** The artifact still cannot be reproduced, because no single checkout produces that mixture, and the identity model rests on the installed-content digest naming the committed source. This is the failure the digest exists to catch and the one it is worst at announcing: the program is identical, so every gate passes and nothing looks wrong. It surfaced only when a `git reset --hard` during an unrelated test normalised the tree and the installed-vs-checkout comparison began to fail. Tagged `v0.3.0a10` before the defect was found; the tag is left in place as a record and is superseded by `v0.3.0a11`. |
 
 ### Superseded after passing
@@ -40,12 +39,31 @@ because a machine still carrying one of these needs to be identifiable.
 | `0.3.0a4` | `0d668aefd9c9b37e5c46c2e324be9cb0895d7419421a1160cd38ac2b3d7e99cb` | Passed every gate and carries no known defect. Superseded by `0.3.0a5`, which pins `mcclContent` in the qualification tuple — `0.3.0a4` records only `mcclVersion`, leaving qualification-by-label open in the transport layer, which is the layer that decides what crosses the activation boundary. Retained as the incumbent in the Gate A paired campaign. |
 | `0.3.0a7` | `f2827dcf238d836c91ade6e7a52d6bde4221df465b471c909ddeab18ba4347f7` | The Gate D.1 candidate. Passed D.1 and carries no known defect; superseded by the shadow-mode line. **The wheel D.1 actually gated is not this file.** D.1 built into `/tmp` and the directory was reclaimed before its digest was captured, so the hash above is a later rebuild of the same committed source. It is recorded so a build found on a machine can be identified, and it is not evidence of what D.1 measured. Evidence builds go to `dist/` since. |
 
-## The complete artifact
+## The complete artifacts
 
-`0.3.0a5` — installed content
+**`0.3.0a11` — the canonical shadow-mode release.** Installed content
+`249e1ba255d9f5648914334cc34453d2ff62fd4b368742d0ba4af6a483823e5e`,
+canonical wheel sha256
+`4cfcaf023f2917e22d1f2cacacd42afb1283afaf106d5b834766d75acb453d28`,
+MCCL `0.2.0a3` content `5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d`.
+Tag `v0.3.0a11`. Its installed content is reproducible: three builds from one
+commit gave three wheel byte streams and one content digest.
+
+**`0.3.0a5` — the Adapter SDK baseline.** Installed content
 `e2eccbbe6de9aa8fdc342bbed015cede325a84161269dfa719c6f3f97c0011bf`,
 canonical wheel sha256 `3eeaed3e229226f4d1408826fc42934057878fa48a91fc7fbb89900a88a04871`,
 MCCL `0.2.0a3` content `5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d`.
+Tag `v0.3.0a5`.
+
+**A caution on `0.3.0a5`.** It was built on this machine before the
+line-ending defect was understood, so its recorded digest may share the
+condition that made `0.3.0a10` non-releasable — a working tree whose bytes
+depend on which `git` wrote it. This has **not** been re-checked, and
+`0.3.0a5` is **not** reclassified here on suspicion. Gate B did verify that a
+rebuild reproduced `e2eccbbe…`, but that rebuild ran in the same session and
+on the same tree, so it does not settle the question. The `.py text eol=lf`
+change should re-examine it; until then this note stands rather than a claim in
+either direction.
 
 ### The tree must match the commit, not merely contain the same program
 
