@@ -1,0 +1,7 @@
+
+  installed: /opt/om/venv/lib/python3.12/site-packages/openmycelium
+  checkout:  /mnt/c/Users/User/Documents/Open_Mycelium
+
+  ok    58 shipped module(s) identical
+
+  == the installed wheel is this checkout ==

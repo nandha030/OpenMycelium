@@ -1,10 +1,20 @@
 # Gate D.2 — shadow-mode integration
 
-**Status: CLOSED for review.** The Governor is integrated into one real
-coordinator path as an **observer**. It enforces nothing.
+**Status: SEALED. The canonical artifact is `0.3.0a10`, recorded in
+[`seal/`](seal/README.md) — read that first.**
 
-Candidate `0.3.0a9`. Contract `safety-contract-1.1`, policy
-`safety-policy-1-provisional`.
+This file is the review record for candidate **`0.3.0a9`**, which is
+**non-releasable**: its observations carried no schema version, run id,
+placement id or timestamp, so they could not be correlated with the audit trail
+of the run they described. `seal/` records the build that carries them, the
+identities D.2 was missing, and the scope review.
+
+Two statements below are corrected in `seal/`: the byte-exact boundary was not
+measured under shadow mode, and the `off` path had lost a statement it promised
+to keep. Both are left in place here rather than edited, because a review record
+that is quietly corrected after the fact is not a record.
+
+Contract `safety-contract-1.1`, policy `safety-policy-1-provisional`.
 
 ## What shadow mode is, and is not
 

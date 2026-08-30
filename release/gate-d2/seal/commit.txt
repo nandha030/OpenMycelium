@@ -1,0 +1,13 @@
+The wheel 0.3.0a10 was built from the tree at this commit:
+
+  44b09d2  feat(safety): make shadow observations correlatable; seal as 0.3.0a10
+
+Full:  44b09d2b450d553a109fbbd12d8b2564f23d45af
+
+Harness commit (no shipped content):  6046af12d488682c8fd793278bdc9c77df463456
+
+The commit that records this file is a descendant of both, which is the
+unavoidable self-reference: a commit cannot contain its own id. Neither this
+file nor the evidence around it changes any shipped module, and
+verify_installed_matches_checkout.py confirms the installed wheel is this
+checkout file for file.

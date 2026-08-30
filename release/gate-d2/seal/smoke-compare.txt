@@ -1,0 +1,42 @@
+
+Gate D.2 seal -- paired 24-token smoke, 0.3.0a10
+
+  correctness across the arms
+  ok    token sequence equal -- [49256, 9332, 24227, 56455, 31587, 9985, 7523, 1750, 113422,
+  ok    decoded text equal -- Cross-vendor GPU inference allows running pre-trained machin
+  ok    prompt tokens equal -- 14
+  ok    stop reason equal -- length
+  ok    tensor count equal -- 363
+  ok    model fingerprint equal -- ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adc
+  ok    boundary layer equal -- 19
+  ok    transport equal -- host-staged-xvendor
+  ok    adapter identity equal -- mistral
+  ok    adapter config digest equal -- f230a7c1dea09ad930957d1fb7a446b69f85279941cb39a95bada043706c
+  ok    stage ownership equal -- cuda 181 tensors, layers 0-19; rocm 182 tensors, layers 20-39
+  ok    layer overlap is zero
+  ok    tensor overlap is zero
+  ok    every model tensor is owned exactly once -- 363 owned, model reports 363
+  ok    both workers exited cleanly -- off {'rocm': 0, 'cuda': 0} shadow {'rocm': 0, 'cuda': 0}
+
+  observation
+  ok    the shadow arm produced exactly one observation -- 1 record(s)
+  ok    every required field is present -- missing []
+  ok    the schema version is the current one -- 1
+  ok    placementId is the placement the run used -- pl-df30f5976b95405b vs pl-df30f5976b95405b
+  ok    manifestDigest is the manifest the run used -- 1cbeb21a0fdd92ebbe071d7c
+  ok    runId is the run the audit trail attributes its events to -- observation a60c4c73-b0e8-47ab-a88d-767b8d4e757c; audit ['a60c4c73-b0e8-47ab-a88d-767b8d4e757c']
+  ok    bootId is this boot -- 02484ee7-d706-4725-a7aa-163e3e294c86
+  ok    wallTimeUtc and monotonicNs are both recorded -- 1788074697.206 / 668694061397
+  ok    nothing was enforced
+  ok    AMD power is null with UNAVAILABLE_EXPECTED, not zero -- None / Confidence.UNAVAILABLE_EXPECTED
+  ok    NVIDIA power is a value with AVAILABLE -- 13.64 W / Confidence.AVAILABLE
+
+  off arm
+  ok    the off arm produced no observation file
+  ok    the off arm printed no observation line
+
+  timing (reported, not judged)
+    off     TTFT 174.5  decode 10.85
+    shadow  TTFT 181.2  decode 11.11
+
+  == D.2 seal smoke PASSED ==
