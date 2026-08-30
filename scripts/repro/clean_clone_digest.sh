@@ -85,9 +85,16 @@ measure() {
     dirty=$( cd "$dir" && git status --porcelain --untracked-files=no \
              | grep -c '\.py$' )
 
-    printf '  autocrlf=%-5s  %3s shipped .py, %s with CR, %s dirty .py, %s dirty non-.py\n' \
+    printf '  autocrlf=%-5s  %3s shipped .py, %s with CR, %s dirty .py, ~%s dirty non-.py\n' \
         "$setting" "$pyfiles" "$pycr" "$dirty" "$othercr"
-    printf '                 content %s\n' "$content"
+    # "checkout digest", never installedContentSha256. This hashes checked-out
+    # paths; that one hashes wheel entry names. The two are different functions
+    # and must not be compared to each other -- only the two arms of one run are
+    # comparable, which is the whole question being asked.
+    #
+    # The non-.py count is approximate and moves between runs, so it is printed
+    # with a tilde and used only as a signal that the category is non-empty.
+    printf '                 checkout digest %s\n' "$content"
     echo "$content" > "$WORK/digest-$setting.txt"
     echo "$othercr"  > "$WORK/othercr-$setting.txt"
 }
