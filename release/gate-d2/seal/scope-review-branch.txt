@@ -1,0 +1,86 @@
+
+Branch scope review -- main...HEAD
+
+  69 file(s) changed
+
+  changed paths
+    A   +88     -0      docs/GATE_PROCESS.md
+    M   +9      -0      docs/NONRELEASABLE_BUILDS.md
+    A   +837    -0      docs/SAFETY_GOVERNOR.md
+    M   +1      -1      packaging/launcher.py
+    A   +104    -0      release/gate-c1/README.md
+    A   +7      -0      release/gate-c1/contract-tests.txt
+    A   +1      -0      release/gate-c1/gpu-after.txt
+    A   +1      -0      release/gate-c1/gpu-before.txt
+    A   +20     -0      release/gate-c1/no-gpu-imports.txt
+    A   +8      -0      release/gate-c1/unit-suite.txt
+    A   +146    -0      release/gate-d1/README.md
+    A   +6      -0      release/gate-d1/build.txt
+    A   +8      -0      release/gate-d1/contract-tests.txt
+    A   +187    -0      release/gate-d1/installed-wheel.txt
+    A   +8      -0      release/gate-d1/static-verification.txt
+    A   +9      -0      release/gate-d1/unit-suite.txt
+    A   +160    -0      release/gate-d2/README.md
+    A   +2      -0      release/gate-d2/boundary.txt
+    A   +8      -0      release/gate-d2/contract-tests.txt
+    A   +1      -0      release/gate-d2/gpu-after.txt
+    A   +9      -0      release/gate-d2/run-off.err
+    A   +638    -0      release/gate-d2/run-off.json
+    A   +10     -0      release/gate-d2/run-shadow.err
+    A   +638    -0      release/gate-d2/run-shadow.json
+    A   +1      -0      release/gate-d2/safety-shadow.jsonl
+    A   +287    -0      release/gate-d2/seal/README.md
+    A   +1      -0      release/gate-d2/seal/boot-after.txt
+    A   +1      -0      release/gate-d2/seal/boot-before.txt
+    A   +1      -0      release/gate-d2/seal/boot-off.txt
+    A   +1      -0      release/gate-d2/seal/boot-shadow.txt
+    A   +13     -0      release/gate-d2/seal/commit.txt
+    A   +38     -0      release/gate-d2/seal/events-off.jsonl
+    A   +38     -0      release/gate-d2/seal/events-shadow.jsonl
+    A   +2      -0      release/gate-d2/seal/gpu-after.txt
+    A   +2      -0      release/gate-d2/seal/gpu-baseline.txt
+    A   +12     -0      release/gate-d2/seal/identities.json
+    A   +7      -0      release/gate-d2/seal/installed-matches-checkout.txt
+    A   +10     -0      release/gate-d2/seal/installed-wheel-tests.txt
+    A   +1      -0      release/gate-d2/seal/orphans.txt
+    A   +483    -0      release/gate-d2/seal/placement-shadow.json
+    A   +9      -0      release/gate-d2/seal/run-off.err
+    A   +638    -0      release/gate-d2/seal/run-off.json
+    A   +10     -0      release/gate-d2/seal/run-shadow.err
+    A   +638    -0      release/gate-d2/seal/run-shadow.json
+    A   +1      -0      release/gate-d2/seal/safety-shadow-shadow.jsonl
+    A   +84     -0      release/gate-d2/seal/scope-review-branch.txt
+    A   +18     -0      release/gate-d2/seal/scope-review.txt
+    A   +42     -0      release/gate-d2/seal/smoke-compare.txt
+    A   +9      -0      release/gate-d2/seal/unit-suite.txt
+    A   +9      -0      release/gate-d2/unit-suite.txt
+    M   +64     -0      runtime/cli/coordinator.py
+    M   +1      -1      runtime/cli/lifecycle.py
+    A   +449    -0      runtime/safety/contract.py
+    A   +887    -0      runtime/safety/governor.py
+    A   +311    -0      runtime/safety/shadow.py
+    A   +380    -0      runtime/safety/test_contract_data.py
+    A   +1064   -0      runtime/safety/test_governor_contract.py
+    A   +408    -0      runtime/safety/test_shadow_mode.py
+    M   +39     -2      scripts/build_openmycelium_wheel.py
+    A   +98     -0      scripts/repro/contract_tests.sh
+    A   +201    -0      scripts/repro/d2_seal_compare.py
+    A   +75     -0      scripts/repro/d2_seal_smoke.sh
+    A   +42     -0      scripts/repro/installed_identity.py
+    A   +92     -0      scripts/repro/installed_wheel_tests.sh
+    A   +72     -0      scripts/repro/render_safety_table.py
+    M   +1      -1      scripts/repro/run_unit_suite.sh
+    A   +173    -0      scripts/repro/scope_review_branch.py
+    A   +181    -0      scripts/repro/scope_review_d2.py
+    A   +77     -0      scripts/repro/verify_installed_matches_checkout.py
+
+  ok    no file is deleted
+  ok    no frozen release evidence is modified
+  ok    every release/ path is an addition
+  ok    no foreign subsystem is touched
+  ok    later-gate symbols are named only where they are forbidden -- 8 mention(s), all in docs/GATE_PROCESS.md
+  ok    no file changed only in whitespace or line endings
+  ok    every changed path belongs to this milestone
+  FAIL  no later-gate symbol appears in code -- scripts/repro/scope_review_branch.py: ['EvictionPolicy', 'MemoryObject', 'PrefetchPolicy', 'ResidencyManager', 'TransportBackend', 'WorkingSet', 'advise_access_pattern', 'bind_working_set', 'create_memory_object', 'memoryMode', 'query_residency']
+
+  == branch scope review FAILED: 1 check(s) ==
