@@ -1,0 +1,89 @@
+Hygiene clone proof: a fresh clone must be clean, identical, executable,
+buildable and green under core.autocrlf=true and unset alike.
+
+Two runs of one script. The second is the counterfactual: run against the ref
+WITHOUT the end-of-line policy it must fail, or it proves nothing.
+
+=============================================================================
+RUN 1 -- WITH the policy (chore/py-eol-lf)
+=============================================================================
+
+Hygiene clone proof -- ref chore/py-eol-lf (ada6b3312550)
+
+  core.autocrlf=true
+    ok    [true] the clone is on chore/py-eol-lf -- on ada6b3312550, wanted ada6b3312550
+    ok    [true] git status is clean -- 0 dirty path(s): 
+    ok    [true] shipped python digested -- 58 files, 6fc8aac1121acc6c...
+    ok    [true] no .sh has a CR in its shebang -- 173 scripts; bad: []
+    ok    [true] a .sh executes directly via its shebang -- none
+    ok    [true] openmycelium.cmd retains CRLF -- 102 CRLF
+    ok    [true] install.cmd retains CRLF -- 67 CRLF
+    ok    [true] the dirty-tree guard permits the clone -- permitted
+    ok    [true] the clone builds a wheel -- openmycelium-0.3.0a11-py3-none-any.whl
+    ok    [true] the unit suite passes -- == unit suite PASSED: 443 tests, 0 failures ==
+    ok    [true] frozen evidence digested -- 348 files, 44f7a923e9a2e930...
+
+  core.autocrlf=false
+    ok    [false] the clone is on chore/py-eol-lf -- on ada6b3312550, wanted ada6b3312550
+    ok    [false] git status is clean -- 0 dirty path(s): 
+    ok    [false] shipped python digested -- 58 files, 6fc8aac1121acc6c...
+    ok    [false] no .sh has a CR in its shebang -- 173 scripts; bad: []
+    ok    [false] a .sh executes directly via its shebang -- none
+    ok    [false] openmycelium.cmd retains CRLF -- 102 CRLF
+    ok    [false] install.cmd retains CRLF -- 67 CRLF
+    ok    [false] the dirty-tree guard permits the clone -- permitted
+    ok    [false] the clone builds a wheel -- openmycelium-0.3.0a11-py3-none-any.whl
+    ok    [false] the unit suite passes -- == unit suite PASSED: 443 tests, 0 failures ==
+    ok    [false] frozen evidence digested -- 348 files, 44f7a923e9a2e930...
+
+  across the two clones
+    ok    the shipped python content is identical -- 6fc8aac1121acc6cdcf30c17d96823c0
+    ok    no frozen file changed against main -- 347 shared file(s); changed: 
+    ok    no frozen file was removed
+    note  1 file(s) added by this branch: release/hygiene/clean-clone-proof.txt
+    ok    both clones agree on frozen evidence -- 44f7a923e9a2e9308bc88c8537d09780
+
+  == hygiene clone proof PASSED: 26 checks ==
+
+=============================================================================
+
+RUN 2 -- WITHOUT the policy (main), the counterfactual
+
+=============================================================================
+
+Hygiene clone proof -- ref main (3b3758c4a6f3)
+
+  core.autocrlf=true
+    ok    [true] the clone is on main -- on 3b3758c4a6f3, wanted 3b3758c4a6f3
+    FAIL  [true] git status is clean -- 154 dirty path(s): cripts/repro/console_wheel_gate.sh, scripts/repro/contract_tests.sh, scripts/repro/cuda_toolkit_root_from_pip.sh, scripts/repro/d2_seal_compare.py
+    ok    [true] shipped python digested -- 58 files, b5f339bfa4b86bcf...
+    FAIL  [true] no .sh has a CR in its shebang -- 172 scripts; bad: ['install.sh', 'rocm_torch_patch.sh', 'install.sh']
+    FAIL  [true] a .sh executes directly via its shebang -- /usr/bin/env: ‘bash\r’: No such file or directory
+/usr/bin/e
+    ok    [true] openmycelium.cmd retains CRLF -- 102 CRLF
+    ok    [true] install.cmd retains CRLF -- 67 CRLF
+    ok    [true] the dirty-tree guard permits the clone -- permitted
+    ok    [true] the clone builds a wheel -- openmycelium-0.3.0a11-py3-none-any.whl
+    FAIL  [true] the unit suite passes
+    ok    [true] frozen evidence digested -- 347 files, 2b88ad2e8fcdab64...
+
+  core.autocrlf=false
+    ok    [false] the clone is on main -- on 3b3758c4a6f3, wanted 3b3758c4a6f3
+    ok    [false] git status is clean -- 0 dirty path(s): 
+    ok    [false] shipped python digested -- 58 files, 6fc8aac1121acc6c...
+    ok    [false] no .sh has a CR in its shebang -- 172 scripts; bad: []
+    ok    [false] a .sh executes directly via its shebang -- none
+    ok    [false] openmycelium.cmd retains CRLF -- 102 CRLF
+    ok    [false] install.cmd retains CRLF -- 67 CRLF
+    ok    [false] the dirty-tree guard permits the clone -- permitted
+    ok    [false] the clone builds a wheel -- openmycelium-0.3.0a11-py3-none-any.whl
+    ok    [false] the unit suite passes -- == unit suite PASSED: 443 tests, 0 failures ==
+    ok    [false] frozen evidence digested -- 347 files, 428d2d72132d4180...
+
+  across the two clones
+    FAIL  the shipped python content is identical -- b5f339bfa4b86bcf38641b790d43ef5f
+    FAIL  no frozen file changed against main -- 347 shared file(s); changed: release/0.1.0/RELEASE_NOTES.md, release/0.1.0/SBOM.cyclonedx.json, release/0.1.0/SHA256SUMS.frozen, release/0.1.0/provenance.json
+    ok    no frozen file was removed
+    FAIL  both clones agree on frozen evidence -- 2b88ad2e8fcdab640c07bfb318f0f324
+
+  == hygiene clone proof FAILED: 7 check(s) ==

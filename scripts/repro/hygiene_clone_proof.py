@@ -30,6 +30,10 @@ REPO = os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
 REF = sys.argv[1] if len(sys.argv) > 1 else "chore/py-eol-lf"
 WORK = sys.argv[2] if len(sys.argv) > 2 else "/tmp/om-hygiene-proof"
+#: The ref this change is measured against -- frozen evidence must be identical
+#: to it. Compared against a clone of that ref, never against the working
+#: repository, which carries gitignored artifacts a clone never has.
+BASELINE = sys.argv[3] if len(sys.argv) > 3 else "main"
 PYTEST_PY = os.environ.get("PYTEST_PY", "/opt/hetenv/bin/python3")
 
 #: Subtrees the wheel ships, mirroring INCLUDE in the build script.
@@ -56,24 +60,41 @@ def run(args, cwd=None, env=None):
 
 
 def tree_digest(root: str, relative_dirs, suffix=".py") -> tuple[str, int]:
-    """Digest of every matching file: sorted relative path, then bytes."""
+    """Digest of every TRACKED matching file: sorted relative path, then bytes.
+
+    Tracked only, via `git ls-files`. Walking the filesystem compared a working
+    repository against a clone and reported a difference that was 90 gitignored
+    wheelhouse downloads -- present locally, never in a clone. A frozen-evidence
+    check that fails on files git does not track is measuring the wrong thing.
+    """
+    listing = run(["git", "ls-files", "-z", "--"] + list(relative_dirs), cwd=root)
     entries = []
-    for relative in relative_dirs:
-        base = os.path.join(root, relative)
-        for directory, dirs, files in os.walk(base):
-            dirs[:] = [d for d in dirs if d not in ("__pycache__", ".git")]
-            for name in sorted(files):
-                if suffix and not name.endswith(suffix):
-                    continue
-                path = os.path.join(directory, name)
-                entries.append((os.path.relpath(path, root).replace("\\", "/"),
-                                path))
+    for name in listing.stdout.split("\0"):
+        if not name or (suffix and not name.endswith(suffix)):
+            continue
+        path = os.path.join(root, name)
+        if os.path.isfile(path):
+            entries.append((name, path))
     running = hashlib.sha256()
     for name, path in sorted(entries):
         running.update(name.encode("utf-8"))
         with open(path, "rb") as handle:
             running.update(handle.read())
     return running.hexdigest(), len(entries)
+
+
+def file_digests(root: str, relative_dirs) -> dict:
+    """sha256 per tracked file, so an addition is distinguishable from a change."""
+    listing = run(["git", "ls-files", "-z", "--"] + list(relative_dirs), cwd=root)
+    digests = {}
+    for name in listing.stdout.split("\0"):
+        if not name:
+            continue
+        path = os.path.join(root, name)
+        if os.path.isfile(path):
+            with open(path, "rb") as handle:
+                digests[name] = hashlib.sha256(handle.read()).hexdigest()
+    return digests
 
 
 def clone(setting: str) -> str:
@@ -186,11 +207,31 @@ def main() -> int:
           results.get("true") and results.get("true") == results.get("false"),
           results.get("true", "")[:32])
 
-    canonical, _ = tree_digest(REPO, ("release",), suffix="")
-    check("frozen evidence is unchanged in both clones",
-          results.get("frozen-true") == results.get("frozen-false")
-          == canonical,
-          f"{canonical[:32]}...")
+    # The baseline is a clone of the ref BEFORE this change, not the working
+    # repository. The question is whether the end-of-line policy altered frozen
+    # bytes, and only a pre-change checkout answers it.
+    baseline_path = os.path.join(WORK, "baseline")
+    run(["git", "clone", "--quiet", "--no-local", "--branch", BASELINE,
+         "--single-branch", REPO, baseline_path])
+    # Per file, not one digest over the tree. A single digest cannot tell an
+    # added file from a changed one, and this branch legitimately adds evidence
+    # under release/. Only a *changed* frozen file is a failure.
+    before = file_digests(baseline_path, ("release",))
+    after = file_digests(os.path.join(WORK, "autocrlf-true"), ("release",))
+    changed = sorted(n for n in set(before) & set(after) if before[n] != after[n])
+    added = sorted(set(after) - set(before))
+    removed = sorted(set(before) - set(after))
+
+    check(f"no frozen file changed against {BASELINE}", not changed,
+          f"{len(before)} shared file(s); changed: " + ", ".join(changed[:4]))
+    check("no frozen file was removed", not removed, ", ".join(removed[:4]))
+    if added:
+        print(f"    note  {len(added)} file(s) added by this branch: "
+              + ", ".join(added[:3]))
+
+    check("both clones agree on frozen evidence",
+          results.get("frozen-true") == results.get("frozen-false"),
+          results.get("frozen-true", "")[:32])
 
     print()
     if failures:
