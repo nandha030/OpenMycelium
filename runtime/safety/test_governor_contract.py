@@ -285,7 +285,7 @@ class QuarantineDurabilityTests(unittest.TestCase):
         store = {"records": [{"recordId": "r1", "incidentClass": "oom",
                               "scope": "device", "scopeIdentity": CUDA,
                               "reason": "x", "openedAt": 1.0, "bootId": BOOT,
-                              "policyVersion": "safety-policy-1",
+                              "policyVersion": "safety-policy-1-provisional",
                               "digest": "wrong"}]}
         handle = governor(quarantine_store=store)
         with self.assertRaises(GovernorError):

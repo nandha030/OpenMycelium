@@ -1,8 +1,24 @@
 # Mycelium Safety Governor — contract
 
-**Status: DRAFT, for review.** Not frozen. No runtime behaviour exists. This
-document and its failing tests are Gate C.1 in full; implementation is Gate D and
-begins only on explicit authorization.
+**Status: FROZEN at Gate C.1**, with two identities that are deliberately not
+the same thing.
+
+| Identity | Covers | Status |
+|---|---|---|
+| `safety-contract-1` | states, transitions, semantics, audit shape | **FROZEN** — changing it needs the same review this had |
+| `safety-policy-1-provisional` | the threshold *values* in §14 | **PROVISIONAL** — proposed defaults, not qualified limits |
+
+The split matters. The semantics were reviewed against ten blockers and are
+settled. The numbers were reasoned from the qualified hardware — 16 GiB cards,
+~11.4 GiB stages, 22.84 GiB weight loads taking minutes — and **not derived from
+observed failures, because none have been observed**. `-provisional` is in the
+version string rather than a footnote so that every audit event carrying it says
+so, and no record can later be read as though the limits had been qualified.
+
+A policy version becomes non-provisional only when its values are backed by
+measurement on hardware. That is Gate D or later work with its own evidence.
+
+No runtime behaviour exists at this freeze. Implementation is Gate D.
 
 The Scheduler proposes. The Governor may veto. Nothing else in this milestone.
 
@@ -671,7 +687,7 @@ Hardware validation belongs to Gate D. This milestone stresses no GPU.
 
 ## 14. Policy defaults
 
-Version `safety-policy-1`. Thresholds are data; changing one is a policy version
+Version `safety-policy-1-provisional`. Thresholds are data; changing one is a policy version
 bump, not a code change.
 
 Field names are those of `contract.Policy`, which is the authority. This block is
@@ -679,7 +695,7 @@ a transcription of it; `test_contract_data.py` fails if a timeout named by a
 transition is not a real field.
 
 ```
-version                          safety-policy-1
+version                          safety-policy-1-provisional
 
 preflight_deadline_seconds       60
 admission_deadline_seconds       30

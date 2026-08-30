@@ -1,0 +1,20 @@
+Complete import set across runtime/safety/*.py
+
+from __future__ import annotations
+from contract import (ADVISORY_ONLY_SIGNALS, AUDIT_FIELDS,  # noqa: E402
+from contract import (AUDIT_FIELDS, Confidence, DrainMode,  # noqa: E402
+from dataclasses import dataclass, field
+from enum import Enum
+from governor import (GovernorError, SafetyGovernor,  # noqa: E402
+from the hardware and never measured against a failure, and a record
+from typing import Dict, Optional, Tuple
+import os
+import re
+import sys
+import unittest
+
+GPU/accelerator imports (torch, pynvml, nvidia, rocm, cupy, pycuda):
+  NONE
+
+subprocess / smi invocations:
+  NONE (one mention of rocm-smi appears inside a comment)

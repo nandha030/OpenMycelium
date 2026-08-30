@@ -334,6 +334,23 @@ class ProseMatchesDataTests(unittest.TestCase):
         self.assertIn(CONTRACT_VERSION, self.text)
         self.assertIn(Policy().version, self.text)
 
+    def test_the_policy_version_carries_its_provisional_status(self):
+        """In the string, not a footnote: every event carrying it says so.
+
+        The semantics were reviewed and are frozen. The numbers were reasoned
+        from the hardware and never measured against a failure, and a record
+        must not later read as though they had been.
+        """
+        self.assertTrue(Policy().version.endswith("-provisional"),
+                        f"{Policy().version} does not declare itself provisional")
+        self.assertNotIn("-provisional", CONTRACT_VERSION,
+                         "the contract semantics are frozen, not provisional")
+
+    def test_the_document_states_both_identities_and_their_status(self):
+        self.assertIn("FROZEN", self.flat)
+        self.assertIn("PROVISIONAL", self.flat)
+        self.assertIn("not derived from observed failures", self.flat)
+
     def test_the_canary_section_reference_is_right(self):
         """Blocker 8: the compute canary is 4.5, not 4.4."""
         canary = self.text.index("### 4.5 Compute canary")

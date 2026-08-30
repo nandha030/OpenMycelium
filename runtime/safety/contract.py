@@ -211,7 +211,7 @@ TRANSITIONS: Tuple[Transition, ...] = (
 class Policy:
     """Thresholds are data. Changing one is a policy version bump, not a patch."""
 
-    version: str = "safety-policy-1"
+    version: str = "safety-policy-1-provisional"
 
     preflight_deadline_seconds: int = 60
     admission_deadline_seconds: int = 30
