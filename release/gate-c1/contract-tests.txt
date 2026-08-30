@@ -1,0 +1,7 @@
+  == contract tests ==
+  transition table vs document       ok  all 27 transition rows present and identical
+  contract data (expected PASS)      ok    50 tests
+  governor behaviour (expected RED)  ok    red for the right reason
+      ModuleNotFoundError: No module named 'governor' -- Gate D implements it
+
+  == contract tests PASSED: data green, behaviour red as designed ==

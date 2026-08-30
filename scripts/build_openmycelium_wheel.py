@@ -23,12 +23,12 @@ import tempfile
 from typing import List
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = "0.3.0a5"
+VERSION = "0.3.0a10"
 MCCL_PIN = "openmycelium-mccl==0.2.0a3"
 
 #: Runtime subtrees the CLI needs. `mccl` is deliberately absent: it ships as
 #: its own distribution and is depended on by version, not vendored.
-INCLUDE = ("cli", "serving", "scheduler", "fabric")
+INCLUDE = ("cli", "serving", "scheduler", "fabric", "safety")
 
 #: Never shipped: caches, tests that import development-only fixtures, and the
 #: checkout's own build outputs.
@@ -76,6 +76,41 @@ refused rather than ignored.
 """
 
 
+#: Every file that declares the version. They must agree, and this is checked
+#: before a wheel is produced rather than noticed afterwards.
+VERSION_SOURCES = (
+    os.path.join("packaging", "launcher.py"),
+    os.path.join("runtime", "cli", "lifecycle.py"),
+)
+
+
+def check_versions() -> None:
+    """Refuse to build when the version constants disagree.
+
+    They are bumped by hand in three places, and a `git add` scoped to the wrong
+    directories once committed `launcher.py` at 0.3.0a7 with `lifecycle.py` still
+    at 0.3.0a5 -- a wheel whose `openmycelium version` would have reported an
+    artifact that does not exist. Cheap to check here, and the only place that
+    sees all three at once.
+    """
+    found = {"scripts/build_openmycelium_wheel.py": VERSION}
+    for relative in VERSION_SOURCES:
+        path = os.path.join(REPO, relative)
+        with open(path, "r", encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("VERSION = "):
+                    found[relative] = line.split("=", 1)[1].strip().strip('"')
+                    break
+            else:
+                raise SystemExit(f"  {relative} declares no VERSION")
+
+    if len(set(found.values())) != 1:
+        listing = "\n".join(f"    {name:<42} {value}"
+                            for name, value in sorted(found.items()))
+        raise SystemExit(
+            f"  version constants disagree; refusing to build:\n{listing}")
+
+
 def stage(destination: str, verbose: bool = True) -> List[str]:
     package = os.path.join(destination, "openmycelium")
     os.makedirs(package, exist_ok=True)
@@ -119,6 +154,8 @@ def main() -> int:
     parser.add_argument("--out", default=os.path.join(REPO, "dist"))
     parser.add_argument("--list-only", action="store_true")
     args = parser.parse_args()
+
+    check_versions()
 
     staging = tempfile.mkdtemp(prefix="om-wheel-")
     shipped = stage(staging)

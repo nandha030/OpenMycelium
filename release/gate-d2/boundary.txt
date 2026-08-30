@@ -1,0 +1,2 @@
+boundary check under shadow mode:
+  sha256 sent/received c1467cd33c52032932ae4a39661a8136 on both transfers, byteExact=True

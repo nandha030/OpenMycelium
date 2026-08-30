@@ -1,0 +1,18 @@
+Gate D.2 scope review -- no enforcement path entered this milestone
+
+  ok    ShadowObserver exposes no acting method -- public: ['active', 'observe', 'summary']
+  ok    observe() returns nothing on every path -- a return value is how an observer becomes a decision-maker
+  ok    shadow builds exactly one Governor
+  ok    ...with a no-op actuator
+  ok    ...with a throwaway in-memory quarantine store
+  ok    ...marked simulated
+  ok    shadow calls no acting Governor method -- found []
+  ok    shadow issues no device query of its own -- consumes the existing snapshot
+  ok    no production module calls an acting Governor method
+  ok    the off path is the first thing _shadow_observe does -- importing a module to discover you are switched off is already a difference
+  ok    nothing is imported before the off check
+  ok    prepare_placement assigns args.run_id
+  ok    ...before the shadow observation, so the record can carry it
+  ok    the observation schema declares run, placement, boot and time -- missing []
+
+  == scope review PASSED: 14 checks ==

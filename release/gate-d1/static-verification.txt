@@ -1,0 +1,8 @@
+GPU/accelerator imports:
+  NONE
+
+subprocess / os.kill / signal:
+governor.py:301:        """True when any device has lost its VRAM signal."""
+
+callers outside runtime/safety:
+  NONE

@@ -1,0 +1,8 @@
+  == contract tests ==
+  transition table vs document       ok  all 31 transition rows present and identical
+  contract data (required PASS)      ok    50 tests
+  governor behaviour (required PASS) ok    91 tests
+  runtime/safety in the wheel        ok
+  runtime/safety in the suite        ok
+
+  == contract tests PASSED: contract self-consistent, implementation obeys it ==
