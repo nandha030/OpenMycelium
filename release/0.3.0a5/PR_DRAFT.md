@@ -4,8 +4,16 @@ Prepared for review. Opening, merging and tagging are external actions and are
 not performed without explicit authorization.
 
 **Base:** `main`  **Head:** `feature/model-adapter-sdk`
-**Merge style:** merge commit — a squash or rebase would strand the `v0.1.0`
-annotated tag's ancestry, which is why PR #2 used one.
+**Merge style:** merge commit.
+
+Not for the reason first given here. An earlier revision said a squash would
+strand the `v0.1.0` tag's ancestry; that is wrong — `v0.1.0` is already reachable
+from `main` and a squash of this branch would not change that.
+
+The actual reason is that Gate B validated **these exact commit identities**.
+Every gate result, evidence path and digest in `release/0.3.0a5/` is bound to the
+commits as they stand. Squashing or rebasing rewrites them, and the evidence
+would then describe commits that no longer exist.
 
 ---
 
@@ -60,6 +68,26 @@ is a tuple — checkpoint, adapter, config digest, both content digests, both to
 runtimes, transport, device pair and boundary — not a label on a name. Overrides
 are explicit, attributed, and land in the audit trail.
 
+## Identities
+
+Full values, unabbreviated, so this PR identifies the artifact it validated
+without a reader having to go and look them up.
+
+| | |
+|---|---|
+| Version | `0.3.0a5` |
+| Canonical wheel SHA-256 | `3eeaed3e229226f4d1408826fc42934057878fa48a91fc7fbb89900a88a04871` |
+| Installed content SHA-256 | `e2eccbbe6de9aa8fdc342bbed015cede325a84161269dfa719c6f3f97c0011bf` |
+| MCCL version | `0.2.0a3` |
+| MCCL content SHA-256 | `5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d` |
+| Model fingerprint | `ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adcc7be` |
+| Adapter config digest | `f230a7c1dea09ad930957d1fb7a446b69f85279941cb39a95bada043706c2d4a` |
+| Placement schema | `2` |
+| Hardware | `nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033` + `amd:pci-0000:04:00.0` |
+
+The canonical wheel is the one the Gate A paired campaign measured. It is not
+rebuilt or replaced by merging or tagging.
+
 ## Evidence
 
 `release/0.3.0a5/`, with the pre-refactor baseline at `d76334a` alongside this
@@ -75,7 +103,8 @@ build measured by the same script.
 
 Identical to baseline: the frozen 24-token sequence, ownership `181/182`, 363
 tensors, overlap 0, boundary byte digest `c1467cd33c52032932ae4a39661a8136`,
-fingerprint `ff74ccb7c5e6…`, zero orphans.
+fingerprint `ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adcc7be`,
+zero orphans.
 
 Changed as intended: schema 1 → 2, and `mistral@1` pinned with its config digest.
 
