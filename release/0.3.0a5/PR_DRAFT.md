@@ -105,14 +105,19 @@ gives different wheel hashes at identical size and one installed-content digest.
 | `b142598` | `docs(perf)` TTFT judged paired against the incumbent |
 | `8bc9359` | `test(repro)` paired harness, per-run evidence and boot identity |
 | `f823daa` | `chore(release)` seal `0.3.0a5` with Gate A and Gate B evidence |
+| `1ba82b0` | `docs(release)` this PR draft |
+| `0ea59e6` | `docs(release)` correct this file's own commit accounting |
 
 on top of the seven already pushed at `569df55`.
 
+A fixed total is deliberately not written here. An earlier revision said "four",
+having been written before it was itself committed; correcting the number then
+added a commit and made the new number wrong too. `git log 569df55..HEAD` is the
+answer, and it cannot go stale.
+
 ---
 
-## Before this can be opened
+## Authorization state
 
-The four commits above are **local only**. Pushing the branch is itself an
-outward-facing action and has not been performed.
-
-Required authorizations, in order: push the branch, open the PR, merge, tag.
+Push and open: **authorized**. Merge and tag: **not yet** — those remain external
+actions awaiting explicit approval.
