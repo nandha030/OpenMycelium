@@ -1,10 +1,96 @@
-*.docx binary
-*.pdf binary
-*.png binary
+# End-of-line policy.
+#
+# The checked-out bytes must not depend on who cloned. `0.3.0a10` was built from
+# a tree where 42 shipped modules carried CRLF and the rest LF, because nothing
+# here declared `.py` and the bytes therefore followed the cloner's
+# `core.autocrlf` -- true for a Windows clone, unset for a Linux one. Every file
+# was byte-for-byte the same program, and the installed-content digest still
+# named a tree no checkout can reproduce. Identity is asserted on installed
+# content, so the content must be a property of the commit and not of the
+# machine that read it.
+#
+# Later lines win, so this file reads top to bottom as: a baseline, then the
+# exceptions, then the things that must never be touched at all.
 
-# Windows batch must reach the disk with CRLF. An LF-only .cmd made batch label
-# resolution fail intermittently once already -- `rm` broke while `models`
-# worked. Today this happens to work because Windows clones default to
-# core.autocrlf=true; this states it so it does not depend on the cloner's
-# configuration.
+# --------------------------------------------------------------- 1. baseline
+#
+# Everything git detects as text reaches the disk with LF. Declared as a
+# baseline rather than a list because a list only covers the extensions someone
+# remembered: `.cu`, `.mod`, `.sum`, `.tpl`, `Dockerfile`, `LICENSE`, `NOTICE`
+# and the extensionless files are all text this repository maintains, and any
+# one of them left undeclared makes a Windows clone dirty on arrival and
+# unbuildable under the dirty-tree guard.
+* text=auto eol=lf
+
+# ------------------------------------------------- 2. maintained source types
+#
+# Redundant with the baseline and stated anyway. If the baseline is ever
+# narrowed, the intent for these types should survive the edit rather than
+# quietly change with it.
+*.py    text eol=lf
+*.sh    text eol=lf
+*.c     text eol=lf
+*.h     text eol=lf
+*.cpp   text eol=lf
+*.cu    text eol=lf
+*.go    text eol=lf
+*.js    text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+*.toml  text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+
+# `.sh` above is load-bearing. A shell script with CRLF fails at the shebang:
+# the kernel takes the trailing carriage return as part of the interpreter path
+# and reports "bad interpreter: /usr/bin/env bash^M: no such file or directory".
+# Every repro script in `scripts/repro/` is run directly on Linux.
+
+# ------------------------------------------------------- 3. Windows scripts
+#
+# Windows batch must reach the disk with CRLF. An LF-only `.cmd` made batch
+# label resolution fail intermittently once already -- `rm` broke while `models`
+# worked. That used to work by accident because Windows clones default to
+# core.autocrlf=true; it is stated here so it does not depend on that.
+#
+# `.ps1` is grouped with them deliberately. PowerShell tolerates either ending,
+# but these are Windows-side scripts (`install.ps1`, `agents/windows/*.ps1`) and
+# an undeclared type is exactly the gap this whole file exists to close.
 *.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# --------------------------------------------------------------- 4. binaries
+#
+# Declared explicitly rather than left to the `text=auto` heuristic. The
+# heuristic is good and it is still a guess, and `.whl` files here are release
+# artifacts whose hashes are published.
+*.docx  binary
+*.pdf   binary
+*.png   binary
+*.pptx  binary
+*.whl   binary
+*.gz    binary
+*.tar   binary
+*.zip   binary
+*.exe   binary
+*.so    binary
+*.bin   binary
+*.safetensors binary
+
+# ---------------------------------------------------- 5. frozen evidence, last
+#
+# `-text` means no end-of-line conversion in either direction: a checkout
+# reproduces the exact bytes that were committed, whatever `core.autocrlf` says.
+#
+# This is not tidiness. `release/` holds frozen evidence whose SHA-256 values are
+# published in release records and tag messages, and `SHA256SUMS.frozen` files
+# that verify them. Normalising those bytes would change hashes that other
+# documents assert, which is the one thing this repository never does. Last in
+# the file so it overrides every rule above.
+release/**      -text
+docs/evidence/** -text
