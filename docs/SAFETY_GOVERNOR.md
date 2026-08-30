@@ -86,41 +86,83 @@ indistinguishable from one that had crashed.
 
 ## 3. Transition table
 
-Actors: **G** Governor (automatic), **O** operator (explicit human action),
-**W** worker (reports a fact the Governor acts on).
+`Source` is who reports the trigger: `governor` (it noticed), `operator` (a
+human asked) or `worker` (it reported a fact about itself). It is never who
+applies the transition — see *Source is not executor* below.
 
-| From | To | Trigger | Actor | Timeout | Audit event |
-|---|---|---|---|---|---|
-| `UNKNOWN` | `READY` | preflight passed: device identities resolved, baseline VRAM sampled, required telemetry available | G | `preflightDeadline` 60 s | `safety_ready` |
-| `UNKNOWN` | `FAILED` | preflight failed: identity unresolvable, no device, baseline unsamplable | G | — | `safety_preflight_failed` |
-| `UNKNOWN` | `QUARANTINED` | a quarantine record from a previous boot is unresolved | G | — | `safety_quarantine_restored` |
-| `READY` | `ADMITTED` | admission granted (§4) | G | `admissionDeadline` 30 s | `safety_admitted` |
-| `READY` | `READY` | admission refused; the machine is not at fault | G | — | `safety_admission_refused` |
-| `READY` | `QUARANTINED` | circuit breaker opened (§7) | G | — | `safety_quarantined` |
-| `READY` | `UNKNOWN` | boot domain changed, or required telemetry became unavailable | G | — | `safety_reset_to_unknown` |
-| `ADMITTED` | `RUNNING` | compute canary passed (§4.4) | G | `canaryDeadline` 120 s | `safety_running` |
-| `ADMITTED` | `DRAINING` | soft limit breached before compute began, or operator cancel | G/O | — | `safety_drain_started` |
-| `ADMITTED` | `FAILED` | canary failed or exceeded `canaryDeadline` | G | — | `safety_canary_failed` |
-| `RUNNING` | `DRAINING` | soft limit sustained past hysteresis (§5), progress stalled (§6), or operator drain | G/O | — | `safety_drain_started` |
-| `RUNNING` | `COOLDOWN` | work completed normally | W | — | `safety_completed` |
-| `RUNNING` | `FAILED` | hard limit breached, worker died, or unresponsive past `unresponsiveDeadline` | G/W | — | `safety_incident` |
-| `DRAINING` | `COOLDOWN` | drain completed within `drainDeadline` | G | `drainDeadline` 120 s | `safety_drained` |
-| `DRAINING` | `FAILED` | `drainDeadline` exceeded; forced termination (§5.3) | G | — | `safety_drain_timeout` |
-| `COOLDOWN` | `READY` | `cooldownPeriod` elapsed **and** baseline reverified (§8) | G | `cooldownPeriod` 60 s | `safety_recovered` |
-| `COOLDOWN` | `QUARANTINED` | circuit breaker opened while evaluating the incident | G | — | `safety_quarantined` |
-| `COOLDOWN` | `COOLDOWN` | baseline not yet reverified; retry until `recoveryDeadline` | G | `recoveryDeadline` 600 s | `safety_recovery_pending` |
-| `COOLDOWN` | `QUARANTINED` | `recoveryDeadline` exceeded without reaching baseline | G | — | `safety_recovery_failed` |
-| `FAILED` | `COOLDOWN` | incident recorded; breaker not open | G | — | `safety_incident_recorded` |
-| `FAILED` | `QUARANTINED` | incident recorded; breaker threshold reached | G | — | `safety_quarantined` |
-| `QUARANTINED` | `READY` | manual reset with evidence (§8) | **O** | — | `safety_manual_reset` |
+**Generated from `runtime/safety/contract.py`.** Do not edit by hand:
+`scripts/repro/render_safety_table.py` prints it and `--check` verifies the
+document against the data. `test_contract_data.py` asserts both directions, so a
+stale paste is a test failure rather than a discrepancy nobody notices.
+
+| From | To | Trigger | Source | Timeout | Drain | Audit event |
+|---|---|---|---|---|---|---|
+| `UNKNOWN` | `READY` | `preflight_passed` | governor | `preflight_deadline_seconds` | — | `safety_ready` |
+| `UNKNOWN` | `FAILED` | `preflight_failed` | governor | — | — | `safety_preflight_failed` |
+| `UNKNOWN` | `QUARANTINED` | `quarantine_restored` | governor | — | — | `safety_quarantine_restored` |
+| `READY` | `ADMITTED` | `admission_granted` | governor | `admission_deadline_seconds` | — | `safety_admitted` |
+| `READY` | `READY` | `admission_refused` | governor | — | — | `safety_admission_refused` |
+| `READY` | `QUARANTINED` | `breaker_opened` | governor | — | — | `safety_quarantined` |
+| `READY` | `UNKNOWN` | `boot_changed` | governor | — | — | `safety_reset_to_unknown` |
+| `ADMITTED` | `RUNNING` | `canary_passed` | governor | `canary_deadline_seconds` | — | `safety_running` |
+| `ADMITTED` | `DRAINING` | `operator_cancel` | operator | — | `graceful` | `safety_drain_started` |
+| `ADMITTED` | `DRAINING` | `soft_limit_sustained` | governor | — | `graceful` | `safety_drain_started` |
+| `ADMITTED` | `FAILED` | `canary_failed` | governor | `canary_deadline_seconds` | — | `safety_canary_failed` |
+| `RUNNING` | `DRAINING` | `soft_limit_sustained` | governor | — | `graceful` | `safety_drain_started` |
+| `RUNNING` | `DRAINING` | `hard_limit_breached` | governor | — | `immediate` | `safety_drain_started` |
+| `RUNNING` | `DRAINING` | `progress_stalled` | governor | — | `graceful` | `safety_drain_started` |
+| `RUNNING` | `DRAINING` | `operator_drain` | operator | — | `graceful` | `safety_drain_started` |
+| `RUNNING` | `COOLDOWN` | `work_completed` | worker | — | — | `safety_completed` |
+| `RUNNING` | `FAILED` | `worker_died` | worker | — | — | `safety_incident` |
+| `RUNNING` | `FAILED` | `unresponsive` | governor | `unresponsive_deadline_seconds` | — | `safety_incident` |
+| `DRAINING` | `COOLDOWN` | `drain_completed` | governor | `drain_deadline_seconds` | — | `safety_drained` |
+| `DRAINING` | `FAILED` | `drain_timeout` | governor | `drain_deadline_seconds` | — | `safety_drain_timeout` |
+| `COOLDOWN` | `READY` | `recovered` | governor | `cooldown_period_seconds` | — | `safety_recovered` |
+| `COOLDOWN` | `COOLDOWN` | `recovery_pending` | governor | — | — | `safety_recovery_pending` |
+| `COOLDOWN` | `QUARANTINED` | `recovery_failed` | governor | `recovery_deadline_seconds` | — | `safety_recovery_failed` |
+| `COOLDOWN` | `QUARANTINED` | `breaker_opened` | governor | — | — | `safety_quarantined` |
+| `FAILED` | `COOLDOWN` | `incident_recorded` | governor | — | — | `safety_incident_recorded` |
+| `FAILED` | `QUARANTINED` | `breaker_opened` | governor | — | — | `safety_quarantined` |
+| `QUARANTINED` | `READY` | `manual_reset` | operator | — | — | `safety_manual_reset` |
 
 **Every transition not in this table is forbidden.** An implementation that
 finds itself asked to make one raises rather than choosing a plausible target;
 a state machine that repairs itself silently cannot be reasoned about.
 
-`QUARANTINED → READY` is the only transition whose actor is the operator alone.
-The Governor never releases its own quarantine — that is the entire point of
-having one.
+### Source is not executor
+
+**Only the Governor mutates state.** A worker reporting its own death does not
+move the machine; it reports a fact the Governor acts on. The `Source` column is
+who reported the trigger. The executor is always `governor`, recorded on every
+event as `safetyTransitionExecutor`.
+
+Keeping them separate is what makes an audit trail answerable to *who did this*.
+Collapsed into one "actor" field — as an earlier draft had it — a worker-sourced
+transition and a worker-executed one become indistinguishable, and the second
+never happens.
+
+`QUARANTINED → READY` is the only transition an operator alone can cause. The
+Governor never releases its own quarantine; that is the entire point of having
+one.
+
+### State revision and idempotence
+
+Every state carries a **monotonically increasing `stateRevision`**, incremented
+on each applied transition and recorded on every event.
+
+A trigger names the revision it observed. The Governor applies it only if that
+revision is still current — compare-and-swap. Otherwise it is **rejected
+idempotently**: no state change, no error to the caller, one
+`safety_trigger_stale` event recording what was rejected and why.
+
+This is what makes duplicate, out-of-order and late-arriving triggers safe.
+Without it, a worker's `work_completed` delivered twice moves `RUNNING →
+COOLDOWN` and then attempts it again from `COOLDOWN`, and a stalled worker's
+late heartbeat can revive a machine that has already drained.
+
+**Lease admission is atomic**: the capacity check and the lease record are
+applied under the same revision, so two admissions racing between telemetry
+samples cannot both observe enough room. §4.3.
 
 ---
 
@@ -146,10 +188,10 @@ not reused (§10).
 Admission requires, per device:
 
 ```
-free_bytes - requested_bytes >= max(reserveFloorBytes, reserveFraction * total_bytes)
+free_bytes - requested_bytes >= max(reserve_floor_bytes, reserve_fraction * total_bytes)
 ```
 
-with `reserveFloorBytes` = 512 MiB and `reserveFraction` = 0.03. On the qualified
+with `reserve_floor_bytes` = 512 MiB and `reserve_fraction` = 0.03. On the qualified
 16 GiB cards that is ~512 MiB, since 3% is ~490 MiB.
 
 The reserve is not spare capacity for the workload. It is headroom for the
@@ -164,7 +206,7 @@ Governor refuses admission when granting it would exceed capacity **counting
 leases it has already granted**, not merely observed free memory: two admissions
 racing between samples would each see enough room.
 
-This build serves one request at a time, so `maxConcurrentLeases` is 1 per
+This build serves one request at a time, so `max_concurrent_leases` is 1 per
 device. The check is written against a count, not against that constant, because
 the constant is the thing most likely to change.
 
@@ -174,8 +216,8 @@ Each signal carries one of three states — never a value that implies a
 measurement was taken:
 
 ```
-AVAILABLE    sampled within maxSignalAgeSeconds, from a working source
-STALE        last sample older than maxSignalAgeSeconds (30 s)
+AVAILABLE    sampled within max_signal_age_seconds, from a working source
+STALE        last sample older than max_signal_age_seconds (30 s)
 UNAVAILABLE  no source, or the source failed
 ```
 
@@ -205,8 +247,18 @@ The canary is also the readmission test after any incident (§8).
 
 | | Threshold | Meaning | Action |
 |---|---|---|---|
-| Soft | device VRAM utilisation ≥ `softLimitFraction` 0.90 | approaching exhaustion | stop admitting; if sustained, drain |
-| Hard | device VRAM utilisation ≥ `hardLimitFraction` 0.97 | exhaustion imminent | drain immediately, no dwell |
+| Soft | device VRAM utilisation ≥ `soft_limit_fraction` 0.90 | approaching exhaustion | stop admitting; if sustained past dwell, `RUNNING → DRAINING` (`graceful`) |
+| Hard | device VRAM utilisation ≥ `hard_limit_fraction` 0.97 | exhaustion imminent | `RUNNING → DRAINING` (`immediate`), no dwell |
+
+**Both limits drain. Neither jumps to `FAILED`.** An earlier draft said the hard
+limit drained immediately while the transition table sent `RUNNING → FAILED`,
+which are two different sequences and cannot both be the contract.
+
+The resolution: exhaustion goes `RUNNING → DRAINING` with drain mode
+`immediate` — SIGTERM at once, no finish-current-unit grace — and reaches
+`FAILED` only if `hard_drain_deadline_seconds` (30 s) elapses without the workers
+exiting. `RUNNING → FAILED` directly is reserved for `worker_died` and
+`unresponsive`, the two cases where there is nothing left to drain.
 
 Utilisation is `(total - free) / total` on the device, not the process's own
 allocation: another process's memory is equally capable of causing an OOM.
@@ -233,16 +285,27 @@ imminent exhaustion is how the exhaustion happens.
 
 ### 5.3 Drain and forced termination
 
-Drain is deliberate, bounded stopping. Escalation, at these deadlines from drain
-start:
+Drain is deliberate, bounded stopping. Two modes, chosen by the trigger:
+
+**`graceful`** — soft limit, stall, operator drain:
 
 ```
 0 s      stop admitting; signal workers to finish the current unit
-30 s     drainGraceDeadline   -- SIGTERM to workers that have not exited
-120 s    drainDeadline        -- SIGKILL, transition to FAILED
+30 s     drain_grace_deadline_seconds   SIGTERM to workers still running
+120 s    drain_deadline_seconds         SIGKILL, transition to FAILED
 ```
 
-`drainDeadline` is a **deadline, not a target**. Exceeding it is an incident and
+**`immediate`** — hard limit only:
+
+```
+0 s      stop admitting; SIGTERM at once, no finish-current-unit grace
+30 s     hard_drain_deadline_seconds    SIGKILL, transition to FAILED
+```
+
+The grace period is the thing that causes the failure when memory is already
+exhausted, so exhaustion does not get one.
+
+Either deadline is a **deadline, not a target**. Exceeding it is an incident and
 is recorded as one (`safety_drain_timeout`), even though the outcome — workers
 gone — matches the successful case. A drain that needed SIGKILL and one that did
 not are different facts about the system.
@@ -252,22 +315,50 @@ baseline before `COOLDOWN → READY` (§8). A killed process does not always rel
 VRAM promptly, and treating the kill as completion is how a leak becomes the next
 run's baseline.
 
+### Who may be signalled
+
+A signal may target **only a process the Governor owns**, and ownership is
+re-checked immediately before the signal against all of:
+
+```
+pid                  the process id
+processStartTime     /proc/<pid>/stat field 22, in jiffies
+runId                the run that spawned it
+placementId          the placement it is executing
+bootId               the boot domain both were recorded in
+```
+
+**PIDs are reused.** A worker that exited during the drain window frees its PID,
+and the kernel may hand it to something else within milliseconds. Signalling on
+PID alone kills whatever inherited it — on a developer machine as likely an
+editor as a worker. `processStartTime` is what makes the check sound: it cannot
+be reused, because a recycled PID belongs to a process that started later.
+
+If any element fails to match, **the signal is not sent** and a
+`safety_termination_abandoned` event records which element diverged. A worker
+that cannot be identified is a worker that has already gone.
+
+The Governor records `safety_termination_intent` **before** signalling and
+`safety_termination_outcome` after. Recording only the outcome loses the case
+where the Governor died between deciding and acting, which is precisely the case
+where an unexplained process death needs explaining.
+
 ---
 
 ## 6. Progress watchdog
 
 ### Definitions
 
-**Making progress** — within `progressIntervalSeconds` (15 s), at least one of:
+**Making progress** — within `progress_interval_seconds` (15 s), at least one of:
 a heartbeat with an advanced monotonic counter; a completed compute step; or
 transport bytes moved. All three are counters that only increase, so "progress"
 never depends on a process claiming to be healthy.
 
-**Stalled** — no progress signal for `stallDeadlineSeconds` (60 s), while the
+**Stalled** — no progress signal for `stall_deadline_seconds` (60 s), while the
 process still responds. The work is not advancing; the process is alive.
 → `RUNNING → DRAINING`.
 
-**Unresponsive** — no signal of any kind for `unresponsiveDeadline` (180 s), or
+**Unresponsive** — no signal of any kind for `unresponsive_deadline_seconds` (180 s), or
 the process is gone. Nothing to drain gracefully.
 → `RUNNING → FAILED`.
 
@@ -331,6 +422,44 @@ directory and restored during preflight (`UNKNOWN → QUARANTINED`). A quarantin
 that a restart clears is not a quarantine, and restarting is the first thing
 anyone does.
 
+### Durability of the write
+
+A quarantine that is lost to a crash mid-write is worse than one never taken:
+the machine comes back believing itself healthy, having decided otherwise.
+
+```
+1. serialise the record, including a sha256 `digest` over every other field
+2. write to <path>.partial
+3. flush(), then os.fsync(fd)          -- the data reaches the device
+4. os.replace(<path>.partial, <path>)  -- atomic on POSIX and on NTFS
+5. fsync the containing directory      -- the rename itself is durable
+```
+
+Step 5 is the one usually omitted. Without it the file's contents survive a
+crash and the directory entry pointing at them may not.
+
+Required fields: `recordId`, `incidentClass`, `scope`, `scopeIdentity`,
+`reason`, `openedAt`, `bootId`, `policyVersion`, `digest`.
+
+**Recovery.** On preflight the Governor reads the store and, for each record:
+
+| Condition | Treated as |
+|---|---|
+| digest matches, fields complete | a valid quarantine — restore it |
+| digest mismatches | corrupt — **quarantine**, class `telemetry_loss`, reason recorded |
+| a required field is missing | corrupt — **quarantine** |
+| the file is unreadable or unparseable | **quarantine** (§11) |
+| a `.partial` file is present | the previous write was interrupted; delete it and quarantine |
+
+Every corruption path ends in quarantine, never in "assume healthy". Otherwise
+the cheapest way to clear a quarantine is to damage the file that records it,
+and a crash during the write becomes a silent release.
+
+A `.partial` left behind is not itself proof the record was needed — the crash
+may have happened before anything was decided — but the Governor cannot tell
+which, and between "quarantine something that was fine" and "release something
+that was not", only the first is recoverable by an operator.
+
 ---
 
 ## 8. Manual reset
@@ -345,7 +474,7 @@ Required, all of them, or the reset is refused:
 2. **Acknowledged incidents** — the reset names the quarantine record id it
    clears. A blanket reset cannot clear an incident nobody read.
 3. **Baseline reverified** — every device back within
-   `baselineToleranceBytes` (256 MiB) of its recorded baseline.
+   `baseline_tolerance_bytes` (256 MiB) of its recorded baseline.
 4. **Canary passed** — §4.5, on every device in scope, after the baseline check.
 
 Recorded as `safety_manual_reset` carrying the actor, the cleared record ids, the
@@ -381,9 +510,33 @@ alarming and false. The distinction between "measured zero" and "not measured" i
 the whole reason confidence is tracked, and collapsing it is the single most
 likely way this contract gets violated in implementation.
 
-Consequently **power and temperature are advisory, not admission gates**, on any
-platform where they are `UNAVAILABLE_EXPECTED`. Gating on them would make the
-Governor refuse all work on its only qualified platform.
+### Policy v1 claim boundary
+
+**In policy v1 these signals are recorded and never acted on — on any platform,
+including NVIDIA where they are available:**
+
+```
+power              temperature              throttle_reasons
+```
+
+Declared as data in `contract.ADVISORY_ONLY_SIGNALS`, and asserted by
+`test_contract_data.py`, so the boundary is checkable rather than a sentence
+someone has to remember.
+
+The reason is not that the signals are useless. It is that the qualified
+platform is one NVIDIA card plus one AMD card under WSL, and **the AMD card has
+no power or thermal signal at all** — `rocm-smi` needs the `amdgpu` kernel
+module and WSL exposes `/dev/dxg`. A policy that acted on thermal data would
+protect one card and not the other, while describing itself as thermal
+protection.
+
+So policy v1 states plainly: **it performs no thermal protection and no power
+protection.** It cannot, on half its hardware. Firmware and driver protections
+remain the only thermal authority, as §0 says.
+
+A future policy version may gate on these signals for a device that has them,
+after that device's telemetry is qualified. That is a policy version bump with
+its own evidence, not a default that quietly arrives.
 
 ### Identity confidence
 
@@ -433,7 +586,7 @@ work; failing to stop an exhausting one costs more than either.
 |---|---|---|
 | Device enumeration | **closed** — refuse | **closed** — incident |
 | Device identity | **closed** — refuse | **closed** — incident |
-| VRAM free/total | **closed** — refuse | **safe → closed**: mark degraded, stop admitting, keep running; if unavailable > `degradedDeadline` 120 s, drain |
+| VRAM free/total | **closed** — refuse | **safe → closed**: mark degraded, stop admitting, keep running; if unavailable > `degraded_deadline_seconds` 120 s, drain |
 | Baseline VRAM | **closed** — refuse | n/a, sampled at preflight |
 | Compute canary | **closed** — refuse | n/a, admission only |
 | Worker heartbeat | n/a | **closed** — stall then unresponsive (§6) |
@@ -521,39 +674,54 @@ Hardware validation belongs to Gate D. This milestone stresses no GPU.
 Version `safety-policy-1`. Thresholds are data; changing one is a policy version
 bump, not a code change.
 
+Field names are those of `contract.Policy`, which is the authority. This block is
+a transcription of it; `test_contract_data.py` fails if a timeout named by a
+transition is not a real field.
+
 ```
-preflightDeadlineSeconds        60
-admissionDeadlineSeconds        30
-canaryDeadlineSeconds          120
-drainGraceDeadlineSeconds       30
-drainDeadlineSeconds           120
-cooldownPeriodSeconds           60
-recoveryDeadlineSeconds        600
-degradedDeadlineSeconds        120
+version                          safety-policy-1
 
-reserveFloorBytes              536870912      512 MiB
-reserveFraction                0.03
-baselineToleranceBytes         268435456      256 MiB
-baselineSampleCount            5
-baselineSampleIntervalSeconds  1
+preflight_deadline_seconds       60
+admission_deadline_seconds       30
+canary_deadline_seconds          10
+drain_grace_deadline_seconds     30
+drain_deadline_seconds           120
+hard_drain_deadline_seconds      30
+cooldown_period_seconds          60
+recovery_deadline_seconds        600
+degraded_deadline_seconds        120
 
-softLimitFraction              0.90
-softReleaseFraction            0.85
-softDwellSeconds               10
-softReleaseDwellSeconds        30
-hardLimitFraction              0.97
+reserve_floor_bytes              536870912    512 MiB
+reserve_fraction                 0.03
+baseline_tolerance_bytes         268435456    256 MiB
+baseline_sample_count            5
+baseline_sample_interval_seconds 1
 
-maxSignalAgeSeconds            30
-progressIntervalSeconds        15
-stallDeadlineSeconds           60
-unresponsiveDeadlineSeconds   180
+soft_limit_fraction              0.90
+soft_release_fraction            0.85
+soft_dwell_seconds               10
+soft_release_dwell_seconds       30
+hard_limit_fraction              0.97
 
-breakerThreshold               3
-breakerWindowSeconds        3600
-maxConcurrentLeases            1
+max_signal_age_seconds           30
+progress_interval_seconds        15
+stall_deadline_seconds           60
+unresponsive_deadline_seconds    180
+
+breaker_threshold                3
+breaker_window_seconds           3600
+max_concurrent_leases            1
 ```
 
-Operation deadlines are in §6.
+`canary_deadline_seconds` is **10**, and is the single value used by the
+`ADMITTED → RUNNING` and `ADMITTED → FAILED` transitions and by the `canary`
+operation deadline. An earlier draft carried 10 s in §6 and 120 s here and in the
+transition table, which is three places for one number and two of them wrong. The
+canary is a small BF16 matmul; 120 s was the time allowed to *reach* `RUNNING`,
+which is a different thing that no longer has a separate name because nothing
+needed one.
+
+Operation deadlines are in §6. Contract version: `safety-contract-1`.
 
 ---
 

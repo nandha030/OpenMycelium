@@ -21,8 +21,15 @@ for _root in (_HERE, os.path.join(_RUNTIME, "serving")):
     if _root not in sys.path:
         sys.path.insert(0, _root)
 
-from governor import (Confidence, GovernorError, Policy,  # noqa: E402
-                      SafetyGovernor, State, SyntheticTelemetry, TestClock)
+from contract import (AUDIT_FIELDS, Confidence, DrainMode,  # noqa: E402
+                      Policy, State, TRANSITION_EXECUTOR, TriggerSource,
+                      permitted)
+
+# Only the runtime surface is unresolved. States, policy and confidence come
+# from the canonical contract, so these tests cannot disagree with the table
+# they are meant to be testing.
+from governor import (GovernorError, SafetyGovernor,  # noqa: E402
+                      SyntheticTelemetry, TestClock)
 
 BOOT = "75a1077f-b05d-494a-af24-b00e2847d61c"
 OTHER_BOOT = "12c60700-b2e9-4c5c-824f-6ec7f679b58e"
@@ -111,15 +118,194 @@ class TransitionTableTests(unittest.TestCase):
         with self.assertRaises(GovernorError):
             handle.admit(CUDA, requested_bytes=1 << 30)
 
-    def test_every_transition_records_from_to_trigger_and_actor(self):
+    def test_every_transition_records_the_canonical_audit_fields(self):
         handle = governor()
         handle.preflight()
         event = handle.events[-1]
-        for field in ("safetyPreviousState", "safetyState", "safetyTrigger",
-                      "safetyActor", "safetyPolicyVersion"):
+        for field in AUDIT_FIELDS:
             self.assertIn(field, event, f"{field} missing from a transition event")
         self.assertEqual(event["safetyPreviousState"], "UNKNOWN")
         self.assertEqual(event["safetyState"], "READY")
+
+    def test_the_executor_is_the_governor_even_when_a_worker_sourced_it(self):
+        """'Who noticed' and 'who decided' must not collapse into one field."""
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.completed()                       # worker-sourced
+        event = handle.events[-1]
+        self.assertEqual(event["safetyTriggerSource"], TriggerSource.WORKER.value)
+        self.assertEqual(event["safetyTransitionExecutor"], TRANSITION_EXECUTOR)
+
+    def test_every_applied_transition_is_one_the_table_permits(self):
+        """The implementation may not invent a transition the data lacks."""
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.completed()
+        for event in handle.events:
+            source = State(event["safetyPreviousState"])
+            transition = permitted(source, event["safetyTrigger"])
+            self.assertIsNotNone(
+                transition,
+                f"{source.value} -> {event['safetyState']} on "
+                f"{event['safetyTrigger']} is not in the table")
+            self.assertEqual(transition.target.value, event["safetyState"])
+
+
+# ------------------------------------------------------- revision and racing
+
+class StateRevisionTests(unittest.TestCase):
+    """Blocker 4: duplicate, stale and out-of-order triggers are safe."""
+
+    def test_the_revision_increases_on_every_applied_transition(self):
+        handle = governor()
+        first = handle.state_revision
+        handle.preflight()
+        self.assertGreater(handle.state_revision, first)
+
+    def test_a_stale_revision_is_rejected_idempotently(self):
+        handle = ready()
+        stale = handle.state_revision
+        handle.admit(CUDA, requested_bytes=1 << 30)          # revision moves on
+        before = handle.state_revision
+        handle.completed(expect_revision=stale)              # late arrival
+        self.assertEqual(handle.state_revision, before,
+                         "a stale trigger must not change state")
+        self.assertEqual(handle.state, State.ADMITTED)
+
+    def test_a_rejected_trigger_is_recorded_not_silently_dropped(self):
+        handle = ready()
+        stale = handle.state_revision
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.completed(expect_revision=stale)
+        self.assertTrue(any(e.get("safetyTrigger") == "trigger_stale"
+                            or e.get("event") == "safety_trigger_stale"
+                            for e in handle.events))
+
+    def test_a_duplicate_trigger_applies_once(self):
+        """work_completed delivered twice must not be attempted from COOLDOWN."""
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        revision = handle.state_revision
+        handle.completed(expect_revision=revision)
+        handle.completed(expect_revision=revision)           # the duplicate
+        self.assertEqual(handle.state, State.COOLDOWN)
+
+    def test_a_late_heartbeat_cannot_revive_a_drained_machine(self):
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        revision = handle.state_revision
+        handle.drain(reason="operator")
+        handle.workers_exited()
+        handle.heartbeat(operation="decode_step", counter=99,
+                         expect_revision=revision)
+        self.assertNotEqual(handle.state, State.RUNNING)
+
+    def test_capacity_check_and_lease_are_applied_under_one_revision(self):
+        """Two admissions racing between samples must not both succeed."""
+        handle = ready()
+        revision = handle.state_revision
+        self.assertTrue(handle.admit(CUDA, requested_bytes=1 << 30,
+                                     expect_revision=revision))
+        self.assertFalse(handle.admit(CUDA, requested_bytes=1 << 30,
+                                      expect_revision=revision),
+                         "the second admission observed a stale revision")
+
+
+# ------------------------------------------------------------- termination
+
+class TerminationTests(unittest.TestCase):
+    """Blocker 5: PIDs are reused, so identity is checked before signalling."""
+
+    def _draining_with_worker(self):
+        handle = ready()
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.register_worker(pid=4242, process_start_time=99999,
+                               run_id="run-1", placement_id="pl-1")
+        handle.drain(reason="operator")
+        return handle
+
+    def test_a_matching_worker_may_be_signalled(self):
+        handle = self._draining_with_worker()
+        self.assertTrue(handle.may_signal(pid=4242, process_start_time=99999,
+                                          run_id="run-1", placement_id="pl-1"))
+
+    def test_a_recycled_pid_is_not_signalled(self):
+        """A different start time means a different process wearing that PID."""
+        handle = self._draining_with_worker()
+        self.assertFalse(handle.may_signal(pid=4242, process_start_time=123456,
+                                           run_id="run-1", placement_id="pl-1"))
+
+    def test_a_foreign_run_or_placement_is_not_signalled(self):
+        handle = self._draining_with_worker()
+        self.assertFalse(handle.may_signal(pid=4242, process_start_time=99999,
+                                           run_id="run-2", placement_id="pl-1"))
+        self.assertFalse(handle.may_signal(pid=4242, process_start_time=99999,
+                                           run_id="run-1", placement_id="pl-2"))
+
+    def test_an_unmatched_signal_is_abandoned_and_recorded(self):
+        handle = self._draining_with_worker()
+        handle.may_signal(pid=4242, process_start_time=123456,
+                          run_id="run-1", placement_id="pl-1")
+        self.assertTrue(any(e.get("event") == "safety_termination_abandoned"
+                            for e in handle.events))
+
+    def test_intent_is_recorded_before_the_signal_not_only_after(self):
+        """Recording only the outcome loses the case where the Governor died."""
+        handle = self._draining_with_worker()
+        handle.terminate(pid=4242, process_start_time=99999,
+                         run_id="run-1", placement_id="pl-1", signal="SIGTERM")
+        events = [e.get("event") for e in handle.events]
+        self.assertIn("safety_termination_intent", events)
+        self.assertIn("safety_termination_outcome", events)
+        self.assertLess(events.index("safety_termination_intent"),
+                        events.index("safety_termination_outcome"))
+
+
+# ------------------------------------------------------- durable quarantine
+
+class QuarantineDurabilityTests(unittest.TestCase):
+    """Blocker 6: a quarantine lost to a crash is worse than one never taken."""
+
+    def test_a_record_is_written_atomically_and_fsynced(self):
+        handle = ready()
+        handle.quarantine("oom", device=CUDA, reason="test")
+        write = handle.last_quarantine_write
+        self.assertTrue(write["fsyncedFile"])
+        self.assertTrue(write["fsyncedDirectory"],
+                        "without this the rename itself is not durable")
+        self.assertTrue(write["atomicRename"])
+        self.assertFalse(write["partialRemains"])
+
+    def test_a_corrupt_digest_is_treated_as_quarantined(self):
+        store = {"records": [{"recordId": "r1", "incidentClass": "oom",
+                              "scope": "device", "scopeIdentity": CUDA,
+                              "reason": "x", "openedAt": 1.0, "bootId": BOOT,
+                              "policyVersion": "safety-policy-1",
+                              "digest": "wrong"}]}
+        handle = governor(quarantine_store=store)
+        with self.assertRaises(GovernorError):
+            handle.preflight()
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_a_missing_required_field_is_treated_as_quarantined(self):
+        store = {"records": [{"recordId": "r1", "incidentClass": "oom"}]}
+        handle = governor(quarantine_store=store)
+        with self.assertRaises(GovernorError):
+            handle.preflight()
+        self.assertEqual(handle.state, State.QUARANTINED)
+
+    def test_a_leftover_partial_file_quarantines_rather_than_assuming_health(self):
+        """Between quarantining something fine and releasing something not,
+        only the first is recoverable by an operator."""
+        handle = governor(quarantine_partial_present=True)
+        with self.assertRaises(GovernorError):
+            handle.preflight()
+        self.assertEqual(handle.state, State.QUARANTINED)
 
     def test_the_governor_never_releases_its_own_quarantine(self):
         """QUARANTINED -> READY is the operator's transition alone."""
@@ -292,6 +478,50 @@ class LimitTests(unittest.TestCase):
         telemetry.set(CUDA, self._at(0.98))
         handle.poll()
         self.assertEqual(handle.state, State.DRAINING)
+
+    def test_the_hard_limit_drains_it_does_not_jump_to_failed(self):
+        """Blocker 1: one sequence, drain then bounded kill."""
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        telemetry.set(CUDA, self._at(0.98))
+        handle.poll()
+        self.assertEqual(handle.state, State.DRAINING)
+        self.assertNotEqual(handle.state, State.FAILED)
+
+    def test_the_hard_limit_drain_is_immediate_with_no_grace(self):
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        telemetry.set(CUDA, self._at(0.98))
+        handle.poll()
+        self.assertEqual(handle.drain_mode, DrainMode.IMMEDIATE)
+        self.assertEqual(handle.escalation, "SIGTERM",
+                         "no finish-current-unit grace when memory is gone")
+
+    def test_an_immediate_drain_kills_on_the_shorter_deadline(self):
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        telemetry.set(CUDA, self._at(0.98))
+        handle.poll()
+        clock.advance(Policy().hard_drain_deadline_seconds + 1)
+        handle.poll()
+        self.assertEqual(handle.escalation, "SIGKILL")
+
+    def test_a_graceful_drain_finishes_the_current_unit_first(self):
+        clock = TestClock(start=1000.0)
+        telemetry = SyntheticTelemetry({CUDA: healthy(), ROCM: healthy()})
+        handle = ready(clock=clock, telemetry=telemetry)
+        handle.admit(CUDA, requested_bytes=1 << 30)
+        handle.canary_passed(CUDA)
+        handle.drain(reason="operator")
+        self.assertEqual(handle.drain_mode, DrainMode.GRACEFUL)
+        self.assertIsNone(handle.escalation, "no signal until the grace deadline")
 
     def test_utilisation_counts_other_processes_too(self):
         """Another process's memory causes an OOM just as effectively."""
