@@ -1,0 +1,9 @@
+    transfer 0: [1, 1, 5120] torch.bfloat16 10240 B
+      sha256 sent     c1467cd33c52032932ae4a39661a8136
+      sha256 received c1467cd33c52032932ae4a39661a8136
+      byte-exact
+    transfer 1: [1, 1, 5120] torch.bfloat16 10240 B
+      sha256 sent     c1467cd33c52032932ae4a39661a8136
+      sha256 received c1467cd33c52032932ae4a39661a8136
+      byte-exact
+    2 transfer(s), byteExact=True

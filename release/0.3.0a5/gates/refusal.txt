@@ -1,0 +1,40 @@
+  == adapter refusal gate ==
+    ranAt 2026-08-30T00:33:10+00:00
+    bootId c7801d67-0eef-4ad2-a0d3-f61ab4ce1491
+    openmycelium {  "configFile": null,  "configuration": {    "cuda_python": {      "source": "discovered(provisioned)",      "value": "/var/lib/openmycelium/s
+    fixture architecture: ['LlamaForCausalLM']
+
+  -- test 1: planning path, before any allocation --
+    VRAM before 697 MiB, matching worker processes 0
+    exit 65
+    saw code: UNSUPPORTED_ARCHITECTURE
+    ok    planning refused (exit 65)
+    ok    refused as UNSUPPORTED_ARCHITECTURE
+    ok    not INVALID_CHECKPOINT: the architecture is what was rejected
+    ok    message names the architecture found
+    ok    message names what is installed
+    ok    no worker spawned (0 -> 0)
+    ok    VRAM unchanged within 32 MiB (697 -> 697 MiB)
+    ok    no placement was written
+
+  -- test 2: direct-worker path, before stage construction --
+    manifest schemaVersion 1, adapterId None
+    VRAM before 697 MiB, matching worker processes 0
+    worker module: /opt/om/venv/lib/python3.12/site-packages/openmycelium/runtime/serving/pipeline_run.py
+    worker interpreter: /var/lib/openmycelium/state/env/cuda/bin/python
+    exit 65
+    {"role": "cuda", "error": "placement schema 1 predates adapter pinning and cannot be executed; it remains readable and audit-replayable. Regenerate it with `openmycelium plan`.", "failurePhase": "schema", "runId": "8e172036-370c-483b-8304-091fce75d99b", "errorCode": "LEGACY_UNPINNED_MANIFEST", "remediation": "REPLAN_REQUIRED"}
+
+    ok    worker refused (exit 65)
+    ok    exit 65, as the contract specifies
+    ok    errorCode LEGACY_UNPINNED_MANIFEST
+    ok    remediation REPLAN_REQUIRED
+    ok    exactly one manifest error code reported
+    ok    exited before stage construction
+    ok    no orphan left (0 -> 0)
+    ok    VRAM returned to baseline within 32 MiB (697 -> 696 MiB)
+
+  == adapter refusal gate PASSED ==
+    failures 0
+    test1 exit 65 vram 697 -> 697 workers 0 -> 0
+    test2 exit 65 vram 697 -> 696 workers 0 -> 0

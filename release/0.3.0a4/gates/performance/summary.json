@@ -1,0 +1,27 @@
+{
+  "decodeMedian": 11.13,
+  "decodeSamples": [
+    11.23,
+    11.11,
+    11.13
+  ],
+  "failures": 0,
+  "thresholds": {
+    "decodeHigh": 11.3,
+    "decodeLow": 10.9,
+    "ttftMaxMs": 173.2
+  },
+  "tokenCounts": [
+    24,
+    24,
+    24
+  ],
+  "ttftMedian": 142.5,
+  "ttftSamples": [
+    140.3,
+    172.5,
+    142.5
+  ],
+  "unusableSessions": [],
+  "usableSessions": 3
+}

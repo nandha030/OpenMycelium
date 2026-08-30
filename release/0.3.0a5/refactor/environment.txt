@@ -1,0 +1,5 @@
+capturedAt 2026-08-30T00:34:57+00:00
+bootId c7801d67-0eef-4ad2-a0d3-f61ab4ce1491
+uptimeSeconds 333
+distro Ubuntu 24.04.4 LTS
+kernel 6.18.33.2-microsoft-standard-WSL2

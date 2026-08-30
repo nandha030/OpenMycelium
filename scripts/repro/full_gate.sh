@@ -95,7 +95,7 @@ echo "  -- 1. unit suite --"
 # test runner into the environment under test changes the thing being tested.
 PYTEST_PY="${PYTEST_PY:-/opt/om-test-tools/bin/python}" \
   bash "$H/run_unit_suite.sh" > "$OUT/unit-suite.txt" 2>&1 \
-  && report "unit" "$(tail -2 "$OUT/unit-suite.txt" | head -1 | sed 's/^ *//')" \
+  && report "unit" "$(grep -E '== unit suite' "$OUT/unit-suite.txt" | tail -1 | sed 's/^ *//')" \
   || { report "unit" "FAILED"; tail -12 "$OUT/unit-suite.txt" | sed 's/^/      /'
        FAILED="$FAILED unit"; }
 

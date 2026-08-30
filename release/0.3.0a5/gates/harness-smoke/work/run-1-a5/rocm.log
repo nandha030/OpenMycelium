@@ -1,0 +1,2 @@
+LoadLib(libhsa-amd-aqlprofile64.so) failed: libhsa-amd-aqlprofile64.so: cannot open shared object file: No such file or directory
+Warning: Resource leak detected by SharedSignalPool, 2 Signals leaked.

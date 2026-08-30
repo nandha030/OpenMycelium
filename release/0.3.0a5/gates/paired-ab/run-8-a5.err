@@ -1,0 +1,9 @@
+[STARTING] placement pl-3e783d366cfa4aa2 boundary=19 digest=b64b0b2ae4fb
+[STARTING] launching ROCm stage (second half of the model)
+[LOADING_ROCM] rocm=LOADING_ROCM  cuda=STARTING
+[LOADING_CUDA] ROCm stage bound; launching CUDA stage
+[LOADING_CUDA] rocm=READY (11680 MiB)  cuda=LOADING_CUDA
+[QUALIFYING] rocm=READY (11680 MiB)  cuda=QUALIFYING (11680 MiB)
+[QUALIFYING] transport connected; warming both runtimes (first BF16 kernels are slow to select)
+[QUALIFYING] runtimes warmed in 2.5 s
+[READY] rocm=READY (11680 MiB)  cuda=READY (11680 MiB)
