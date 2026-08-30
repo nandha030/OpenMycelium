@@ -12,8 +12,16 @@ from `main` and a squash of this branch would not change that.
 
 The actual reason is that Gate B validated **these exact commit identities**.
 Every gate result, evidence path and digest in `release/0.3.0a5/` is bound to the
-commits as they stand. Squashing or rebasing rewrites them, and the evidence
-would then describe commits that no longer exist.
+commits as they stand.
+
+Squashing would not delete those commits outright — they would survive on the
+feature branch. What it would do is prevent them from ever becoming reachable
+from `main`. Deleting the feature branch afterwards, which is routine, would then
+leave the evidence-linked history hard to retain and eventually unreachable.
+
+A merge commit makes the validated commits ancestors of `main`, so the evidence
+and the history it refers to stay attached to each other without depending on a
+branch nobody has deleted yet.
 
 ---
 
