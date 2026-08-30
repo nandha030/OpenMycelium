@@ -126,10 +126,12 @@ TTFT is now judged paired against the incumbent at ≤20% mean regression. The
 justification is same-build measurements pre-registered as drift diagnostics
 before any candidate outcome was known — see `gates/gate-a-verdict.md`.
 
-**Seven wheels were built and six are recorded non-releasable**, with hashes and
-the specific reason each failed, in `docs/NONRELEASABLE_BUILDS.md`. Identity is
-asserted on installed content, not wheel bytes: rebuilding one committed source
-gives different wheel hashes at identical size and one installed-content digest.
+**All failed or superseded candidates are recorded**, with hashes and the
+specific reason for each decision, in `docs/NONRELEASABLE_BUILDS.md`. This
+includes `0.2.0a6`–`0.2.0a8` and `0.3.0a1`–`0.3.0a4`; `0.3.0a5` is the
+canonical validated artifact. Identity is asserted on installed content, not
+wheel bytes: rebuilding one committed source can produce different wheel hashes
+at identical size while yielding the same installed-content digest.
 ```
 
 ---
