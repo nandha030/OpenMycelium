@@ -61,6 +61,8 @@ the defect is reintroduced.
 |---|---|
 | Version | `0.3.0a10` |
 | Commit | `44b09d2b450d553a109fbbd12d8b2564f23d45af` (see `commit.txt`) |
+| Merge commit | `5287154e59ade01d2eea8cbcf35cfa53933945ad` |
+| Tag | `v0.3.0a10` (annotated, on the merge commit) |
 | Wheel sha256 | `36e6cd8f5a1047df47f84c19237a170f22453d8d5d67df0d0be610c8de076ac8` |
 | Wheel size | 823 571 bytes |
 | Installed content sha256 | `9053f992c39cbbb41a0af0969b03f8c6de19659f45d1a19ccd29d9c2a74f3466` |
@@ -115,6 +117,31 @@ document anywhere else is a hard failure. A class-level skip removes its tests
 from unittest's "Ran" count entirely, so the runner reports skips explicitly —
 a total that shrinks with nothing to show for it is how a gate comes to pass
 because its evidence vanished.
+
+---
+
+## Merge and tag
+
+The order `GATE_PROCESS.md` fixes — scope review, merge, ancestry verification,
+tag — was followed, and each step has preserved output rather than a recollection
+that it happened.
+
+| Step | Evidence |
+|---|---|
+| Branch scope review | `scope-review-branch.txt`, 8 checks, **before** the merge |
+| Merge | `5287154`, `--no-ff`; the gates validated these exact commit identities, so a squash would produce ids nothing has validated |
+| Ancestry verification | `ancestry.txt`, 8 checks — 12 validated commits reachable by their own ids, all four tags reachable, merged tree identical to the branch tree |
+| Tag | `v0.3.0a10`, annotated, on the merge commit — the same convention as `v0.3.0a5` |
+
+The ancestry script needed a fix on its second run: it had taken the tip of
+`main` as the merge commit, and `main` had already advanced by one commit — the
+evidence for that very check — so it reported three failures for a correct
+merge. A gate whose verdict depends on how much has landed since is not
+verifying what it claims to. It now finds the merge commit that has the branch
+tip as a parent, and names which commit it judged.
+
+**Not published.** `v0.3.0a10` is an alpha baseline; no binary is published, and
+nothing here authorizes one.
 
 ---
 
