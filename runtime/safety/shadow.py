@@ -33,6 +33,22 @@ MODE_OFF = "off"
 MODE_SHADOW = "shadow"
 MODES = (MODE_OFF, MODE_SHADOW)
 
+#: The observation record's own schema. Separate from the contract version and
+#: the policy version, because the three change for different reasons: the shape
+#: of the record, the meaning of a transition, and the value of a threshold.
+#: A reader that cannot tell which changed cannot safely parse an old file.
+SHADOW_SCHEMA_VERSION = 1
+
+#: Every observation carries these. An observation that cannot be tied to a run,
+#: a placement, a boot and a moment is an anecdote: it cannot be correlated with
+#: the audit trail, compared against what actually happened, or ordered against
+#: its neighbours -- which is the entire use of shadow evidence.
+REQUIRED_FIELDS = (
+    "schemaVersion", "runId", "placementId", "manifestDigest", "bootId",
+    "wallTimeUtc", "monotonicNs", "safetyMode", "safetyContractVersion",
+    "safetyPolicyVersion", "safetySignals", "wouldTransition", "wouldAction",
+)
+
 #: Development flag. Deliberately not a CLI option, a config file key or a
 #: console control: shadow mode is for gathering evidence, and a surface that
 #: invites operators to turn it on invites them to expect it to do something.
@@ -129,8 +145,9 @@ class ShadowObserver:
 
     def __init__(self, mode: str = MODE_OFF, policy: Optional[Policy] = None,
                  boot_id: str = "unknown", clock: Optional[Any] = None,
-                 emit: Optional[Any] = None):
+                 emit: Optional[Any] = None, run_id: str = ""):
         self.mode = mode if mode in MODES else MODE_OFF
+        self.run_id = run_id
         self.policy = policy or Policy()
         self.boot_id = boot_id
         self.clock = clock or SystemClock()
@@ -173,7 +190,7 @@ class ShadowObserver:
             clock=self.clock, telemetry=telemetry, policy=self.policy,
             boot_id=self.boot_id, quarantine_store={},
             actuator=FakeProcessActuator(), simulated=True,
-            run_id=(manifest or {}).get("placementId", "shadow"),
+            run_id=self.run_id or "shadow",
             placement_id=(manifest or {}).get("placementId", "shadow"),
             manifest_digest=(manifest or {}).get("manifestDigest", ""),
             model_fingerprint=((manifest or {}).get("model") or {})
@@ -196,8 +213,26 @@ class ShadowObserver:
                 "temperatureConfidence": str(reading.get("temperatureConfidence")),
             }
 
+        import time  # noqa: PLC0415
+
+        manifest = manifest or {}
         record = {
             "event": "safety_shadow_observation",
+            "schemaVersion": SHADOW_SCHEMA_VERSION,
+            # Correlation. Without these the observation cannot be matched to
+            # the run it describes, and shadow evidence exists to be compared
+            # against what actually happened.
+            "runId": self.run_id,
+            "placementId": manifest.get("placementId", ""),
+            "manifestDigest": manifest.get("manifestDigest", ""),
+            "modelFingerprint": (manifest.get("model") or {}).get(
+                "fingerprint", ""),
+            "bootId": self.boot_id,
+            # Both clocks, for the reason audit.py already documents: wall time
+            # orders events for a human and can step backwards; monotonic is
+            # only comparable within one boot, which `bootId` identifies.
+            "wallTimeUtc": round(time.time(), 3),
+            "monotonicNs": time.clock_gettime_ns(time.CLOCK_MONOTONIC),
             "safetyMode": MODE_SHADOW,
             "safetyContractVersion": CONTRACT_VERSION,
             "safetyPolicyVersion": self.policy.version,
@@ -206,10 +241,14 @@ class ShadowObserver:
             "wouldTransition": would_transition,
             "wouldAction": would_action,
             "wouldDetail": detail,
-            "bootId": self.boot_id,
             "safetySimulated": True,
             "safetyEnforced": False,
         }
+        missing = [name for name in REQUIRED_FIELDS if name not in record]
+        if missing:
+            raise ValueError(
+                f"shadow observation is missing {missing}; an observation that "
+                "cannot be correlated is an anecdote")
         self.observations.append(record)
         if self._emit is not None:
             self._emit(record)

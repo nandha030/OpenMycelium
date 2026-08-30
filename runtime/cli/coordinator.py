@@ -424,6 +424,15 @@ def prepare_placement(args) -> None:
     from placement import require_qualified_manifest  # noqa: PLC0415
     args.qualification = require_qualified_manifest(args.placement_manifest)
 
+    # One coordinator attempt. Correlation metadata only: independent of the
+    # placement id and excluded from the manifest digest, so re-running the same
+    # placement produces a new run id while the digest is unchanged.
+    #
+    # Before the shadow observation, so the observation can carry the run id --
+    # and because `serve` reads `args.run_id` after this function returns.
+    if not getattr(args, "run_id", None):
+        args.run_id = new_run_id()   # idempotent; Coordinator also guarantees it
+
     args.safety_observer = _shadow_observe(args, fabric_report)
 
 
@@ -476,6 +485,7 @@ def _shadow_observe(args, fabric_report: Dict[str, Any]):
                   file=sys.stderr)
 
         observer = ShadowObserver(mode=mode, boot_id=boot_id(),
+                                  run_id=getattr(args, "run_id", "") or "",
                                   emit=record_observation)
         observer.observe("admission", fabric_report,
                          manifest=args.placement_manifest, force=True)
@@ -484,13 +494,6 @@ def _shadow_observe(args, fabric_report: Dict[str, Any]):
         print(f"  [safety/shadow] observation skipped: "
               f"{type(error).__name__}: {error}", file=sys.stderr)
         return None
-
-    # One coordinator attempt. Correlation metadata only: independent of the
-    # placement id and excluded from the manifest digest, so re-running the same
-    # placement produces a new run id while the digest is unchanged.
-    if not getattr(args, "run_id", None):
-        args.run_id = new_run_id()   # idempotent; Coordinator also guarantees it
-
 
 
 def _apply_config(args) -> None:

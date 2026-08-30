@@ -697,6 +697,44 @@ deferral mechanism added for qualification overrides. **No new bypass is
 introduced**, and the existing invariant stands: no event carries an identity
 taken from a manifest that has not been verified.
 
+### The shadow observation record
+
+Shadow mode writes to its own file, `safety-shadow.jsonl` in the run's work
+directory, and never to the production audit trail. Two reasons: the audit
+writer refuses events before a manifest is bound, which is exactly when the
+observer runs; and shadow mode must not alter the stream a real run's evidence
+is read from.
+
+`SHADOW_SCHEMA_VERSION` — currently **1** — versions the record's *shape*. It is
+deliberately separate from `safetyContractVersion` and `safetyPolicyVersion`,
+because the three change for different reasons: the shape of the record, the
+meaning of a transition, and the value of a threshold. A reader that cannot tell
+which of the three moved cannot safely parse an old file.
+
+`REQUIRED_FIELDS` in `runtime/safety/shadow.py` is the canonical list and the
+writer refuses to emit a record missing any of it. Every observation carries:
+
+| Field | Why it is required |
+|---|---|
+| `schemaVersion` | which shape this record is |
+| `runId` | the attempt the observation belongs to |
+| `placementId`, `manifestDigest`, `modelFingerprint` | what was about to run |
+| `bootId` | the domain `monotonicNs` is comparable within |
+| `wallTimeUtc`, `monotonicNs` | ordering for a human; ordering that cannot step backwards |
+| `safetyMode`, `safetyContractVersion`, `safetyPolicyVersion` | which rules produced the prediction |
+| `safetySignals` | per-device reading **with its confidence beside every value** |
+| `wouldTransition`, `wouldAction`, `wouldDetail` | the prediction, and why |
+| `safetySimulated`, `safetyEnforced` | that nothing was done |
+
+The correlation fields are what make the record evidence rather than an
+anecdote. Gate D.3 compares each enforcement action against the shadow
+prediction for the same run, and a record that cannot be matched to a run, a
+placement, a boot and a moment cannot support that comparison.
+
+Fields are present and empty rather than absent when a manifest is not yet
+bound: a reader can distinguish "no placement yet" from "this writer did not
+know about placements", and only the first is true.
+
 ---
 
 ## 13. Simulation and fault injection

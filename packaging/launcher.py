@@ -13,7 +13,7 @@ import runpy
 import sys
 from typing import Dict, List, Tuple
 
-VERSION = "0.3.0a9"
+VERSION = "0.3.0a10"
 
 #: subcommand -> (module file under runtime/, implicit first argument)
 COMMANDS: Dict[str, Tuple[str, str]] = {

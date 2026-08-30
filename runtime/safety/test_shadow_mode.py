@@ -19,7 +19,8 @@ if _HERE not in sys.path:
 from contract import CONTRACT_VERSION, Confidence, Policy  # noqa: E402
 from governor import TestClock  # noqa: E402
 from shadow import (MIN_POLL_INTERVAL_SECONDS, MODE_OFF,  # noqa: E402
-                    MODE_SHADOW, MODES, FabricTelemetry, ShadowObserver,
+                    MODE_SHADOW, MODES, REQUIRED_FIELDS,
+                    SHADOW_SCHEMA_VERSION, FabricTelemetry, ShadowObserver,
                     safety_mode)
 
 CUDA = "nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033"
@@ -49,9 +50,16 @@ def fabric(cuda_free: int = TOTAL - 800 * 1024 * 1024,
     }
 
 
-def observer(mode=MODE_SHADOW, clock=None) -> ShadowObserver:
-    return ShadowObserver(mode=mode, boot_id="boot-test",
+def observer(mode=MODE_SHADOW, clock=None,
+             run_id="run-0123456789abcdef") -> ShadowObserver:
+    return ShadowObserver(mode=mode, boot_id="boot-test", run_id=run_id,
                           clock=clock or TestClock(start=1000.0))
+
+
+def manifest() -> dict:
+    return {"placementId": "pl-3e783d366cfa4aa2",
+            "manifestDigest": "d0c1ffee" * 8,
+            "model": {"fingerprint": "ff74ccb7c5e6" + "0" * 52}}
 
 
 # --------------------------------------------------------------------- modes
@@ -331,6 +339,69 @@ class SummaryTests(unittest.TestCase):
         summary = handle.summary()
         self.assertIn("drain_immediate", summary["wouldHaveActed"])
         self.assertNotIn("none", summary["wouldHaveActed"])
+
+
+
+# ------------------------------------------------------- correlation identity
+
+class CorrelationTests(unittest.TestCase):
+    """An observation that cannot be correlated is an anecdote.
+
+    Shadow evidence exists to be compared against what actually happened. A
+    record that cannot be tied to a run, a placement, a boot and a moment cannot
+    be matched to the audit trail, so it cannot support that comparison -- which
+    is the entire output of this milestone.
+    """
+
+    def record(self) -> dict:
+        handle = observer()
+        handle.observe("admission", fabric(), manifest=manifest(), force=True)
+        return handle.observations[0]
+
+    def test_every_required_field_is_present(self):
+        record = self.record()
+        missing = [name for name in REQUIRED_FIELDS if name not in record]
+        self.assertEqual(missing, [])
+
+    def test_it_carries_the_run_placement_and_manifest_identity(self):
+        record = self.record()
+        self.assertEqual(record["runId"], "run-0123456789abcdef")
+        self.assertEqual(record["placementId"], "pl-3e783d366cfa4aa2")
+        self.assertEqual(record["manifestDigest"], "d0c1ffee" * 8)
+        self.assertTrue(record["modelFingerprint"].startswith("ff74ccb7c5e6"))
+
+    def test_it_carries_the_boot_and_both_clocks(self):
+        record = self.record()
+        self.assertEqual(record["bootId"], "boot-test")
+        # Monotonic is only comparable within one boot, which bootId names;
+        # wall time orders events for a human and can step backwards. Neither
+        # alone is enough, so both are recorded.
+        self.assertGreater(record["wallTimeUtc"], 1_700_000_000)
+        self.assertGreater(record["monotonicNs"], 0)
+
+    def test_device_identity_appears_in_the_signals(self):
+        record = self.record()
+        self.assertEqual(sorted(record["safetySignals"]), sorted([CUDA, ROCM]))
+
+    def test_the_schema_version_is_recorded_and_is_its_own_version(self):
+        record = self.record()
+        self.assertEqual(record["schemaVersion"], SHADOW_SCHEMA_VERSION)
+        # Three versions that change for three different reasons: the shape of
+        # the record, the meaning of a transition, the value of a threshold. A
+        # reader that cannot tell which changed cannot safely parse an old file.
+        self.assertNotEqual(str(record["schemaVersion"]),
+                            record["safetyContractVersion"])
+        self.assertNotEqual(str(record["schemaVersion"]),
+                            record["safetyPolicyVersion"])
+
+    def test_an_absent_manifest_still_produces_a_complete_record(self):
+        # Observation can happen before a manifest is bound. The fields must
+        # still exist -- empty and present is readable, absent is not.
+        handle = observer()
+        handle.observe("preflight", fabric(), force=True)
+        record = handle.observations[0]
+        self.assertEqual([n for n in REQUIRED_FIELDS if n not in record], [])
+        self.assertEqual(record["placementId"], "")
 
 
 if __name__ == "__main__":
