@@ -100,12 +100,26 @@ class MissingReadingTests(unittest.TestCase):
 class AggregateTests(unittest.TestCase):
     def test_the_aggregate_is_never_called_a_pool(self):
         text = screen().lower()
-        self.assertNotIn("pooled vram:", text.replace("not pooled vram:", ""))
-        self.assertIn("not pooled vram", text)
+        self.assertIn("not pooled", text)
+        self.assertNotIn("pooled vram", text.replace("not pooled", ""))
+
+    def test_the_screen_says_one_model_spans_both_cards(self):
+        # The earlier wording said "no single allocation can use the aggregate",
+        # which collapsed two different claims and denied the product's whole
+        # capability. A 22.84 GiB model runs across these two cards today; what
+        # cannot happen is one tensor spanning them.
+        text = screen()
+        self.assertIn("One model spans both", text)
+        self.assertIn("too large for either card", text)
+
+    def test_the_limit_that_remains_is_stated_exactly(self):
+        text = screen()
+        self.assertIn("no allocation crosses the boundary", text)
+        self.assertIn("a single tensor still has to fit 17.00 GiB", text)
 
     def test_the_largest_single_memory_is_shown_beside_the_aggregate(self):
-        # The number that matters for "will this model fit" is the largest
-        # single memory, not the sum.
+        # The number that matters for "will one tensor fit" is the largest
+        # single memory; the aggregate is what a partitioned model can use.
         text = screen()
         self.assertIn("33.00 GiB across 2 separate memories", text)
         self.assertIn("largest single 17.00 GiB", text)

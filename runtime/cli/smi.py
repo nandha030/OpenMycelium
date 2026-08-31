@@ -155,8 +155,11 @@ def render(report: Dict[str, Any], versions: Dict[str, str],
         add("")
         add(f"  Capacity  {aggregate:.2f} GiB across {len(devices)} separate "
             f"memories; largest single {largest:.2f} GiB")
-        add("            separate physical memories, NOT pooled VRAM: no single")
-        add("            allocation can use the aggregate.")
+        add("            One model spans both: a model too large for either card")
+        add("            runs partitioned across them, which is the point of this")
+        add("            runtime. Partitioned, not pooled -- every tensor lives on")
+        add("            exactly one device and no allocation crosses the boundary,")
+        add(f"            so a single tensor still has to fit {largest:.2f} GiB.")
 
     add("")
     add("  Runtime")
