@@ -34,6 +34,13 @@ FAILED=0
 # not a waiver. It runs in full in the checkout suite.
 CHECKOUT_ONLY="test_manifest_schema.py"
 
+# Shipped, and not loadable by `unittest`: bare pytest functions, and the
+# installed venv has no pytest -- it is a runtime environment, not a test one.
+# Named separately from CHECKOUT_ONLY because the reason is different, and a
+# single "excluded" bucket would hide that one of them is about evidence and
+# the other about a test framework.
+PYTEST_ONLY="test_event_gate.py"
+
 report() { printf '  %-28s %s\n' "$1" "$2"; }
 
 unset PYTHONPATH
@@ -41,7 +48,7 @@ unset PYTHONPATH
 printf '\n  installed wheel: %s\n' "$SITE"
 "$PY" -c "import openmycelium, sys; print('  version:', openmycelium.__version__)"
 
-for group in safety serving scheduler fabric; do
+for group in safety serving scheduler fabric cli; do
     directory="$SITE/runtime/$group"
     [ -d "$directory" ] || { report "runtime/$group" "absent"; continue; }
     if ! ls "$directory"/test_*.py >/dev/null 2>&1; then
@@ -51,6 +58,12 @@ for group in safety serving scheduler fabric; do
     modules=""
     for file in "$directory"/test_*.py; do
         name=$(basename "$file")
+        case " $PYTEST_ONLY " in
+            *" $name "*)
+                report "  excluded" "$name (pytest module, no pytest installed)"
+                continue
+                ;;
+        esac
         case " $CHECKOUT_ONLY " in
             *" $name "*)
                 count=$(cd "$directory" && "$PY" -m unittest "${name%.py}" -q 2>&1 \

@@ -1,0 +1,12 @@
+{
+  "openmycelium": {
+    "version": "0.3.0a18",
+    "installedContentSha256": "b26863cbe683158b9bff8cde0541faabe9ba746b941e4c83c4341c72ada138c9",
+    "pythonFiles": 64
+  },
+  "openmycelium-mccl": {
+    "version": "0.2.0a3",
+    "installedContentSha256": "5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d",
+    "pythonFiles": 19
+  }
+}

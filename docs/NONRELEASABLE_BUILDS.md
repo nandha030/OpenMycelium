@@ -32,6 +32,21 @@ because a machine still carrying one of these needs to be identifiable.
 | `0.3.0a9` | `4f78d005fc4a1e1c5fc8299082a0351eb0dd028045928e221ae33cd970d2ca79` | Persisted observations that could not be correlated. The record carried `bootId` and device identity but no schema version, run id, placement id or timestamp, so an observation could not be matched against the audit trail of the run it described — and comparing predicted actions against actual outcomes is the whole output of shadow mode. Separately, inserting the observer split `prepare_placement` and stranded its `run_id` assignment after a `return`, where nothing reached it; dead code rather than a live fault, because `Coordinator.__init__` also issues a run id and every caller constructs one before reading `args.run_id` — but a milestone that promised to leave the `off` path unchanged had silently deleted a statement from it. Superseded by `0.3.0a10`, which is itself non-releasable; the canonical build is `0.3.0a11`. |
 | `0.3.0a10` | `36e6cd8f5a1047df47f84c19237a170f22453d8d5d67df0d0be610c8de076ac8` | Not reproducible from its own commit. Built from a working tree where 42 shipped modules carried CRLF and the rest LF: `.gitattributes` declares no rule for `.py`, so the checked-out bytes depend on `core.autocrlf` — `true` for the Windows git on this machine, unset for the WSL git — and the build ran over a mixture of the two. **Every file was byte-for-byte the committed program; zero content differences.** The artifact still cannot be reproduced, because no single checkout produces that mixture, and the identity model rests on the installed-content digest naming the committed source. This is the failure the digest exists to catch and the one it is worst at announcing: the program is identical, so every gate passes and nothing looks wrong. It surfaced only when a `git reset --hard` during an unrelated test normalised the tree and the installed-vs-checkout comparison began to fail. Tagged `v0.3.0a10` before the defect was found; the tag is left in place as a record and is superseded by `v0.3.0a11`. |
 
+## Operator-path milestone (0.3.0a12 – 0.3.0a17)
+
+Six builds in one sitting. Recorded rather than renumbered, and the count is
+itself the finding: a fix to the operator path could not be verified without
+building, installing and qualifying, and each verification found the next thing.
+
+| Version | sha256 of the wheel | Why it is not releasable |
+|---|---|---|
+| `0.3.0a12` | `1abb0d4abb49cd8c4adabff7c3bd8870847997bacfc20e86c155a6e41901b437` | Built and qualified, then a message it had just added was found to misattribute a UTF-8 byte-order mark as "text before the JSON" — blaming the runtime for PowerShell's redirection and telling the operator to rebuild something already correct. Superseded by `0.3.0a13`. |
+| `0.3.0a13` | `5603f3d1b93ef945ec67bf481e56cc334fb847f66a59b7aa5039f846e93ee0a8` | The operator-path fixes, and the first candidate. Fails both authority checks adopted afterwards: qualification scope existed only as a prose string inside the evidence, which nothing read and nothing could refuse on; and evidence parsing still scanned forward to the first `{`, so a file with arbitrary text in front of it would still produce a record. |
+| `0.3.0a14` | `06ed00e539a218c0222623b7969f6bee80238d16687215c9eb3bd39dde7189a0` | First build shipping `openmycelium smi`. Its capacity note said "no single allocation can use the aggregate", which collapsed two different claims and denied the runtime's whole capability — a 22.84 GiB model runs across these two cards. Superseded by `0.3.0a15`. |
+| `0.3.0a15` | `0ecda2f806d0ee371070670d7504292ee539d544f4016116ba66406a5d4bb669` | Corrected that claim but still led with the limit rather than the capability. Superseded by `0.3.0a16`. |
+| `0.3.0a16` | `31dc55910a03f1ab00de53c0cc16bf8ef67ffc3ee2e475d1dd8db085fe75313b` | The wording is right and it still fails both authority checks, exactly as `0.3.0a13` does. Superseded by `0.3.0a17`. |
+| `0.3.0a17` | `bb320529a737db0204188328b09d3b9206c4ca7464447d0b0a69f2eca019fa0e` | Both authority checks enforced, and it broke the console. Moving token streaming off stdout — correct for the evidence file — sent the generated text to the worker log, because the console classified by stream; the Output box filled with 637 lines of the JSON document instead, and nothing streamed live, since tokens carry no newlines and a line-buffered reader coalesces them into one late line. Found by running one real inference through the console, which is why that step is in the verification order. Superseded by `0.3.0a18`. |
+
 ### Superseded after passing
 
 | Version | sha256 of the wheel | Why it is not releasable |
@@ -40,6 +55,19 @@ because a machine still carrying one of these needs to be identifiable.
 | `0.3.0a7` | `f2827dcf238d836c91ade6e7a52d6bde4221df465b471c909ddeab18ba4347f7` | The Gate D.1 candidate. Passed D.1 and carries no known defect; superseded by the shadow-mode line. **The wheel D.1 actually gated is not this file.** D.1 built into `/tmp` and the directory was reclaimed before its digest was captured, so the hash above is a later rebuild of the same committed source. It is recorded so a build found on a machine can be identified, and it is not evidence of what D.1 measured. Evidence builds go to `dist/` since. |
 
 ## The complete artifacts
+
+**`0.3.0a18` — the operator-path candidate.** Installed content
+`b26863cbe683158b9bff8cde0541faabe9ba746b941e4c83c4341c72ada138c9` (64 files),
+canonical wheel sha256
+`11f14aa78df55abf284c069a1cbe581668f6d45b464b29e3a58b90a3020495ba`, 840 740
+bytes, MCCL `0.2.0a3` content
+`5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d`.
+
+Qualification scope on this machine: **`EXECUTION_QUALIFIED`**. That is what a
+single 24-token run establishes, and it is now a typed field rather than a
+sentence — `qualify require --scope FULL_GATE_QUALIFIED` exits 65 against it, so
+release sealing, a D.3 canary and paging work fail closed rather than relying on
+somebody remembering the distinction.
 
 **`0.3.0a11` — the canonical shadow-mode release.** Installed content
 `249e1ba255d9f5648914334cc34453d2ff62fd4b368742d0ba4af6a483823e5e`,

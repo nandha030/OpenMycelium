@@ -1,0 +1,7 @@
+qualify require --scope EXECUTION_QUALIFIED
+  EXECUTION_QUALIFIED satisfied by record c326f61af78f0b3e
+  exit 0 -- a run is permitted
+
+qualify require --scope FULL_GATE_QUALIFIED
+  refused: this situation holds EXECUTION_QUALIFIED and FULL_GATE_QUALIFIED is required. A single run establishes that the situation executes; it does not establish performance, refusal paths, the qualification lifecycle or the installed-wheel suite. Run the full gate and record its summary.
+  NON-ZERO -- refused, a sealing script fails closed

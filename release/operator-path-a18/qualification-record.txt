@@ -1,0 +1,14 @@
+  recorded c326f61af78f0b3e in /var/lib/openmycelium/xvendor_qualification.json
+    modelFingerprint       ff74ccb7c5e616ddfa3ea53f4d201be9825fb02ce8673e45f863ab892adcc7be
+    adapterId              mistral
+    adapterVersion         1
+    adapterConfigDigest    f230a7c1dea09ad930957d1fb7a446b69f85279941cb39a95bada043706c2d4a
+    openmyceliumVersion    0.3.0a18
+    openmyceliumContent    b26863cbe683158b9bff8cde0541faabe9ba746b941e4c83c4341c72ada138c9
+    mcclVersion            0.2.0a3
+    mcclContent            5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d
+    transport              host-staged-xvendor
+    cudaRuntime            2.11.0+cu128
+    rocmRuntime            2.10.0+rocm7.0
+    topology               cuda:nvidia:GPU-cbb3d045-9d5f-a225-0f2e-adb1c6d6a033 + rocm:amd:pci-0000:04:00.0, boundary after layer 19
+    situationDigest        c326f61af78f0b3e1ad382ad7b20e5c01bb044c3780687cf3d358d192374de35
