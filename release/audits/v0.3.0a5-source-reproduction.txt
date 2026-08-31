@@ -1,0 +1,23 @@
+Read-only audit of v0.3.0a5 -- does its tagged source reproduce its artifact?
+
+No rebuild. No GPU work. No tag modification. The preserved wheel is read as
+an archive; the tagged commit is cloned read-only.
+
+
+Read-only audit of v0.3.0a5
+
+  no rebuild, no GPU work, no tag modification
+
+  ok    the preserved wheel matches the recorded canonical SHA-256 -- 3eeaed3e229226f4d1408826fc42934057878fa48a91fc7fbb89900a88a04871
+  ok    the wheel reproduces the recorded installedContentSha256 -- e2eccbbe6de9aa8fdc342bbed015cede325a84161269dfa719c6f3f97c0011bf (54 .py)
+  !!    no .py inside the artifact carries CRLF -- 43 of 54 do, e.g. chat.py, config.py, config_cli.py
+
+  tagged commit ab6f25548837b46050b671f682e00bd0057cadf9
+
+  !!    [autocrlf=false] the checkout reproduces the artifact's .py -- 53 shared; 43 differ (43 line endings only, 0 substantive)
+  !!    [autocrlf=true] the checkout reproduces the artifact's .py -- 53 shared; 11 differ (11 line endings only, 0 substantive)
+
+  ok    no substantive difference under either setting -- false 0, true 0
+  the artifact's .py match a checkout written as: neither
+
+  == audit found 3 discrepancy/ies ==

@@ -55,7 +55,49 @@ canonical wheel sha256 `3eeaed3e229226f4d1408826fc42934057878fa48a91fc7fbb89900a
 MCCL `0.2.0a3` content `5f2028695fa830417793ddcfecf90aa33bfd0b9e64775115058839d94d12631d`.
 Tag `v0.3.0a5`.
 
-**A caution on `0.3.0a5`.** It was built on this machine before the
+### `0.3.0a5` — historical qualified artifact, source-reproduction caveat
+
+**Audited read-only after the end-of-line policy landed.** No rebuild, no GPU
+work, no tag modification. Evidence:
+`release/audits/v0.3.0a5-source-reproduction.txt`, reproducible with
+`scripts/repro/audit_v0_3_0a5.py`.
+
+**It remains a qualified artifact and is not non-releasable.** Its hardware
+evidence is unaffected: the wheel that was measured is the wheel that is
+preserved, and the audit confirms it.
+
+| Question | Answer |
+|---|---|
+| Preserved bytes match the recorded canonical wheel SHA-256? | **yes** — `3eeaed3e…` |
+| Wheel reproduces the recorded `installedContentSha256`? | **yes** — `e2eccbbe…` |
+| Any substantive difference from the tagged source? | **none**, under either `core.autocrlf` |
+| Reproducible from a clean checkout of `v0.3.0a5`? | **no** |
+
+**The caveat.** 43 of the 54 `.py` files inside the artifact carry CRLF. A clean
+checkout of the tagged commit `ab6f2554` differs from the artifact in 43 files
+with `core.autocrlf=false` and in 11 with `true` — **line endings only, zero
+substantive differences in either case.** The artifact matches *neither* setting,
+because it was built from a mixed tree: the same condition that made `0.3.0a10`
+non-releasable.
+
+So `0.3.0a5` was never reproducible from its commit either. Gate B's rebuild
+check reproduced `e2eccbbe…` because it ran on that same mixed tree in the same
+session, which is why it could not have caught this.
+
+**Why this is a caveat and not a reclassification.** The program in the artifact
+is byte-for-byte the tagged source; only line endings differ. The wheel was
+qualified on hardware and that evidence stands. Marking it non-releasable would
+discard valid hardware evidence over a packaging property that changes nothing
+the program does. What it cannot claim is source reproduction: anyone rebuilding
+from `v0.3.0a5` gets a different `installedContentSha256`, and that is now
+recorded rather than discovered later.
+
+`0.3.0a11` is the first artifact in this repository that *is* reproducible from
+its commit, verified across three builds.
+
+<!-- superseded caution, retained for the record:
+
+It was built on this machine before the
 line-ending defect was understood, so its recorded digest may share the
 condition that made `0.3.0a10` non-releasable — a working tree whose bytes
 depend on which `git` wrote it. This has **not** been re-checked, and
@@ -64,6 +106,8 @@ rebuild reproduced `e2eccbbe…`, but that rebuild ran in the same session and
 on the same tree, so it does not settle the question. The `.py text eol=lf`
 change should re-examine it; until then this note stands rather than a claim in
 either direction.
+
+end of superseded caution -->
 
 ### The tree must match the commit, not merely contain the same program
 
