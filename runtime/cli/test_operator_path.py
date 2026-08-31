@@ -111,12 +111,17 @@ class EvidenceFromRunTests(unittest.TestCase):
             qualify_cli._evidence(path)
         self.assertIn("not a run document", str(raised.exception))
 
-    def test_a_file_with_text_before_the_json_still_parses(self):
-        # Files written by an older build begin with the decoded tokens. The
-        # source is fixed; these must not become unreadable.
+    def test_a_file_with_text_before_the_json_is_refused_by_default(self):
+        # This test asserted the opposite until the strict-parsing authority
+        # check reversed it. Tolerating prose meant a reader that hunts for the
+        # first `{` and writes a qualification record from whatever follows,
+        # which is a different and much weaker guarantee than reading evidence.
+        # Legacy files are still importable, with --legacy-prose-evidence, and
+        # the record is marked -- see test_qualification_scope.py.
         path = written(run_document(), prefix="Cross-vendor GPU inference is\n")
-        evidence = qualify_cli._evidence(path)
-        self.assertEqual(evidence["failures"], 0)
+        with self.assertRaises(SystemExit) as raised:
+            qualify_cli._evidence(path)
+        self.assertIn("--legacy-prose-evidence", str(raised.exception))
 
     def test_a_byte_order_mark_is_not_reported_as_prose(self):
         # PowerShell's `>` writes a UTF-8 BOM. Counting it as text before the

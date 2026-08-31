@@ -26,7 +26,8 @@ import sys
 import time
 from typing import Any, Dict, List, Optional
 
-from adapters import AdapterError, ErrorCode, QualificationStatus, canonical_json
+from adapters import (AdapterError, ErrorCode, QualificationScope,
+                      QualificationStatus, canonical_json)
 
 #: The tuple. Order is fixed because it is hashed.
 #:
@@ -333,16 +334,78 @@ def require_qualified_execution(
         situation)
 
 
+#: Gate names whose evidence establishes the full battery. A summary that does
+#: not declare its scope and is not one of these grants execution only --
+#: unknown evidence gets the least authority it could deserve, never the most.
+FULL_GATE_NAMES = ("full-gate-qualification",)
+
+
+def scope_from_evidence(evidence: Optional[Dict[str, Any]]) -> str:
+    """How much this evidence proves. Derived, never asserted by a caller.
+
+    Fail-safe: anything unrecognised is EXECUTION_QUALIFIED, the weaker of the
+    two. A hand-written file claiming `failures: 0` can permit a run; it cannot
+    promote itself to a release gate by saying so.
+    """
+    evidence = evidence or {}
+    declared = evidence.get("qualificationScope")
+    if declared == QualificationScope.FULL_GATE_QUALIFIED:
+        # Declared, and only honoured when the evidence also names a gate that
+        # actually runs the battery.
+        if evidence.get("gate") in FULL_GATE_NAMES:
+            return QualificationScope.FULL_GATE_QUALIFIED
+        return QualificationScope.EXECUTION_QUALIFIED
+    if evidence.get("gate") in FULL_GATE_NAMES:
+        return QualificationScope.FULL_GATE_QUALIFIED
+    return QualificationScope.EXECUTION_QUALIFIED
+
+
+def record_scope(record: Optional[Dict[str, Any]]) -> str:
+    """The scope a record holds. Absent means UNKNOWN, never full."""
+    if not record:
+        return QualificationScope.UNKNOWN
+    return record.get("qualificationScope") or QualificationScope.UNKNOWN
+
+
 def record_from_situation(situation: Dict[str, Any],
                           evidence: Optional[Dict[str, Any]] = None
                           ) -> Dict[str, Any]:
-    """The record a passing gate writes. The gate run is its evidence."""
+    """The record a passing gate writes. The gate run is its evidence.
+
+    The scope is written into the record as a typed field, so a later caller
+    can refuse on it without reading prose or guessing from a gate name.
+    """
     return {
         "recordId": situation_digest(situation),
         "qualifiedAt": round(time.time(), 3),
+        "qualificationScope": scope_from_evidence(evidence),
         "situation": {field: situation.get(field) for field in SITUATION_FIELDS},
         "evidence": evidence or {},
     }
+
+
+def require_scope(situation: Dict[str, Any], required: str,
+                  records: Optional[List[Dict[str, Any]]] = None,
+                  path: Optional[str] = None) -> Dict[str, Any]:
+    """Refuse unless a record for this situation holds at least `required`.
+
+    This is the machine-enforced half of the distinction. Release sealing, an
+    enforcement canary and paging work call it with FULL_GATE_QUALIFIED; a
+    single-run record does not satisfy that and neither does a record written
+    before the field existed.
+    """
+    record = find_record(situation, records=records, path=path)
+    held = record_scope(record)
+    if QualificationScope.permits(held, required):
+        return {"qualificationScope": held,
+                "recordId": (record or {}).get("recordId")}
+    raise AdapterError(
+        ErrorCode.ADAPTER_UNQUALIFIED,
+        f"this situation holds {held} and {required} is required. "
+        f"A single run establishes that the situation executes; it does not "
+        f"establish performance, refusal paths, the qualification lifecycle or "
+        f"the installed-wheel suite. Run the full gate and record its summary.",
+        exit_code=65)
 
 
 def append_record(record: Dict[str, Any], path: Optional[str] = None) -> str:

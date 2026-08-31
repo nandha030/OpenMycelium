@@ -147,6 +147,27 @@ def cmd_list(args) -> int:
     return 0
 
 
+def cmd_require(args) -> int:
+    """Exit non-zero unless this situation holds at least the asked-for scope.
+
+    The machine-enforced half of the scope distinction, in a form a script can
+    call. Release sealing, an enforcement canary and paging work run this and
+    stop on a non-zero exit, so "a single run does not authorise a release" is a
+    check rather than a paragraph somebody has to remember.
+    """
+    from adapters.qualification import require_scope  # noqa: PLC0415
+    situation = _situation(args)
+    records = load_records(args.ledger)
+    try:
+        granted = require_scope(situation, args.scope, records=records)
+    except AdapterError as refusal:
+        print(f"  refused: {refusal}")
+        return refusal.exit_code
+    print(f"  {args.scope} satisfied by record "
+          f"{str(granted.get('recordId'))[:16]}")
+    return 0
+
+
 def _verdict_from_run(document: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Compute a verdict from a run document, or None if it is not one.
 
@@ -211,7 +232,8 @@ def _verdict_from_run(document: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     }
 
 
-def _evidence(path: Optional[str]) -> Dict[str, Any]:
+def _evidence(path: Optional[str],
+              allow_prose: bool = False) -> Dict[str, Any]:
     """The gate result. Required, and required to say it passed.
 
     Reading it here rather than trusting a flag means the record cannot claim a
@@ -234,23 +256,40 @@ def _evidence(path: Optional[str]) -> Dict[str, Any]:
     except OSError as error:
         raise SystemExit(f"  cannot read the evidence file {path}: {error}")
     try:
+        # Leading whitespace is fine -- json.loads accepts it, and the BOM was
+        # consumed by utf-8-sig above. Anything else before the document is
+        # refused, because scanning forward to the first `{` would accept a file
+        # with arbitrary text in front of it and silently write a qualification
+        # record from whatever followed. An evidence reader that hunts for
+        # something parseable is not verifying evidence.
         document = json.loads(text)
     except ValueError as error:
-        # Older builds streamed the decoded tokens to stdout ahead of the
-        # document, so a file written by `run --json >` began with prose. That
-        # is fixed at the source, and files already on disk still parse here
-        # rather than being rejected with a column-1 error that says nothing
-        # about the cause.
         start = text.find("{")
-        if start < 0:
+        legacy = start > 0 and not text[:start].strip()
+        if legacy:
+            # Only whitespace preceded it; json.loads would have handled that,
+            # so reaching here means the document itself is malformed.
             raise SystemExit(f"  cannot read the evidence file {path}: {error}")
-        try:
+        if start > 0 and allow_prose:
             document = json.loads(text[start:])
-        except ValueError:
+            print(f"  LEGACY IMPORT: {path} has {start} character(s) of text "
+                  "before the JSON, which is what an older runtime wrote when "
+                  "it streamed tokens to stdout under --json.")
+            print("  Accepted only because --legacy-prose-evidence was given. "
+                  "The record will be marked as a legacy import.")
+            document.setdefault("evidenceLegacyImport", True)
+            document.setdefault("evidenceProseBytesSkipped", start)
+        elif start > 0:
+            raise SystemExit(
+                f"  {path} has {start} character(s) of text before the JSON "
+                f"document. Refusing to scan past it: a reader that hunts for "
+                f"the first '{{' would write a qualification record from "
+                f"whatever happened to follow.\n"
+                f"  This is what an older runtime wrote when it streamed tokens "
+                f"to stdout under --json. Re-run the gate on a current build, "
+                f"or pass --legacy-prose-evidence to import it deliberately.")
+        else:
             raise SystemExit(f"  cannot read the evidence file {path}: {error}")
-        print(f"  note: {path} had {start} character(s) of text before the "
-              "JSON, which is what an older runtime wrote when it streamed "
-              "tokens to stdout under --json. Parsed from the document onward.")
 
     if document.get("failures") is None:
         derived = _verdict_from_run(document)
@@ -260,6 +299,13 @@ def _evidence(path: Optional[str]) -> Dict[str, Any]:
                 "document; refusing to record a qualification from evidence "
                 "that does not say whether it passed")
         derived["derivedFrom"] = "run document"
+        # Carried across, because deriving a verdict replaces the document and
+        # would otherwise drop the very marks that say this was a legacy
+        # import -- leaving the ledger with no trace of it, which is the one
+        # thing a legacy import must never do.
+        for mark in ("evidenceLegacyImport", "evidenceProseBytesSkipped"):
+            if mark in document:
+                derived[mark] = document[mark]
         document = derived
 
     failures = document.get("failures")
@@ -282,7 +328,8 @@ def cmd_record(args) -> int:
               file=sys.stderr)
         return 65
 
-    evidence = _evidence(args.evidence)
+    evidence = _evidence(args.evidence,
+                         allow_prose=getattr(args, "legacy_prose_evidence", False))
     situation = _situation(args)
     evidence["qualifiedBy"] = override.get("actor")
     evidence["qualificationReason"] = override.get("reason", "")
@@ -325,9 +372,22 @@ def main() -> int:
     record = subparsers.add_parser(
         "record", help="write a record for a situation whose gate passed")
     common(record)
+    record.add_argument("--legacy-prose-evidence", action="store_true",
+                        dest="legacy_prose_evidence",
+                        help="import evidence written by a runtime that "
+                             "streamed tokens ahead of the JSON; marked "
+                             "in the record as a legacy import")
     record.add_argument("--evidence", default="",
                         help="JSON from the passing gate; must report failures 0")
     record.set_defaults(handler=cmd_record)
+
+    require = subparsers.add_parser(
+        "require", help="exit non-zero unless this situation holds a scope")
+    common(require)
+    require.add_argument("--scope", default="FULL_GATE_QUALIFIED",
+                         choices=("EXECUTION_QUALIFIED", "FULL_GATE_QUALIFIED"),
+                         help="the minimum scope this situation must hold")
+    require.set_defaults(handler=cmd_require)
 
     args = parser.parse_args()
     try:
