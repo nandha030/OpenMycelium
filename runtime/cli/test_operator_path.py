@@ -118,6 +118,17 @@ class EvidenceFromRunTests(unittest.TestCase):
         evidence = qualify_cli._evidence(path)
         self.assertEqual(evidence["failures"], 0)
 
+    def test_a_byte_order_mark_is_not_reported_as_prose(self):
+        # PowerShell's `>` writes a UTF-8 BOM. Counting it as text before the
+        # JSON blamed the runtime for the shell's redirection, in a note that
+        # told the operator to rebuild.
+        handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False,
+                                             encoding="utf-8-sig")
+        handle.write(json.dumps(run_document()))
+        handle.close()
+        evidence = qualify_cli._evidence(handle.name)
+        self.assertEqual(evidence["failures"], 0)
+
     def test_a_file_with_no_json_at_all_is_refused(self):
         handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False,
                                              encoding="utf-8")

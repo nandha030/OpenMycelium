@@ -226,7 +226,10 @@ def _evidence(path: Optional[str]) -> Dict[str, Any]:
             "  --evidence is required: a record with no evidence is a claim, "
             "not a qualification")
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        # utf-8-sig, so a byte-order mark is consumed rather than counted as
+        # content. PowerShell's `>` writes one, and reporting it as "text before
+        # the JSON" blamed the runtime for the shell's redirection.
+        with open(path, "r", encoding="utf-8-sig") as handle:
             text = handle.read()
     except OSError as error:
         raise SystemExit(f"  cannot read the evidence file {path}: {error}")
@@ -245,9 +248,9 @@ def _evidence(path: Optional[str]) -> Dict[str, Any]:
             document = json.loads(text[start:])
         except ValueError:
             raise SystemExit(f"  cannot read the evidence file {path}: {error}")
-        print(f"  note: {path} had {start} byte(s) of text before the JSON; "
-              "parsed from the document onward. Rebuild with a runtime that "
-              "streams tokens to stderr under --json.")
+        print(f"  note: {path} had {start} character(s) of text before the "
+              "JSON, which is what an older runtime wrote when it streamed "
+              "tokens to stdout under --json. Parsed from the document onward.")
 
     if document.get("failures") is None:
         derived = _verdict_from_run(document)
