@@ -29,7 +29,7 @@ PYTEST_FILES="runtime/cli/test_event_gate.py"
 # including the pytest one, and the interpreter running this suite has no
 # pytest -- so discovery fails on an import, not on a test. Naming the modules
 # keeps both kinds running and counted once each.
-UNITTEST_FILES="runtime/cli/test_operator_path.py"
+UNITTEST_FILES="runtime/cli/test_operator_path.py runtime/cli/test_smi.py"
 
 TOTAL=0
 FAILED=0
