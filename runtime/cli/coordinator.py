@@ -215,8 +215,16 @@ class Coordinator:
             piece = event.get("text", "")
             self.text_parts.append(piece)
             if not self.args.quiet:
-                sys.stdout.write(piece)
-                sys.stdout.flush()
+                # Under --json the tokens go to stderr, so stdout carries the
+                # document and nothing else. They used to stream to stdout
+                # regardless, which put the decoded text in front of the JSON:
+                # `run --json > gate.json` produced a file whose first byte was
+                # prose, and every consumer of it failed to parse at column 1.
+                # The live stream is still worth having, so it moves rather than
+                # disappearing -- `_say` already uses stderr for the same reason.
+                stream = sys.stderr if self.args.json else sys.stdout
+                stream.write(piece)
+                stream.flush()
         elif kind == "connected":
             self._say(f"[{QUALIFYING}] transport connected; warming both "
                       f"runtimes (first BF16 kernels are slow to select)")
@@ -326,7 +334,8 @@ class Coordinator:
                         pass
         codes = {role: p.returncode for role, p in self.processes.items()}
         if not self.args.quiet:
-            print()
+            # Same reason: nothing but the document reaches stdout under --json.
+            print(file=sys.stderr if self.args.json else sys.stdout)
         if result is None or "generate" not in result:
             self._say(f"[{FAILED}] no result from the CUDA stage; exit codes {codes}")
             for role in ("cuda", "rocm"):

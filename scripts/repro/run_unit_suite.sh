@@ -24,6 +24,13 @@ fi
 UNITTEST_DIRS="runtime/serving runtime/scheduler runtime/fabric runtime/mycelium runtime/safety"
 PYTEST_FILES="runtime/cli/test_event_gate.py"
 
+# `runtime/cli` holds both kinds, so it is named module by module rather than
+# discovered. `unittest discover` over that directory imports every test_*.py
+# including the pytest one, and the interpreter running this suite has no
+# pytest -- so discovery fails on an import, not on a test. Naming the modules
+# keeps both kinds running and counted once each.
+UNITTEST_FILES="runtime/cli/test_operator_path.py"
+
 TOTAL=0
 FAILED=0
 report() { printf '  %-26s %s\n' "$1" "$2"; }
@@ -37,6 +44,28 @@ for relative in $UNITTEST_DIRS; do
     continue
   fi
   output=$(cd "$directory" && "$PY" -m unittest discover -p 'test_*.py' 2>&1)
+  status=$?
+  ran=$(printf '%s' "$output" | sed -n 's/^Ran \([0-9]*\) test.*/\1/p' | tail -1)
+  ran=${ran:-0}
+  TOTAL=$((TOTAL + ran))
+  if [ "$status" = "0" ]; then
+    report "$relative" "ok    $ran tests"
+  else
+    report "$relative" "FAIL  $ran tests"
+    printf '%s\n' "$output" | tail -25 | sed 's/^/      /'
+    FAILED=$((FAILED + 1))
+  fi
+done
+
+for relative in $UNITTEST_FILES; do
+  path="$REPO/$relative"
+  if [ ! -f "$path" ]; then
+    report "$relative" "MISSING -- the suite would silently skip this"
+    FAILED=$((FAILED + 1))
+    continue
+  fi
+  module=$(basename "$relative" .py)
+  output=$(cd "$(dirname "$path")" && "$PY" -m unittest "$module" 2>&1)
   status=$?
   ran=$(printf '%s' "$output" | sed -n 's/^Ran \([0-9]*\) test.*/\1/p' | tail -1)
   ran=${ran:-0}

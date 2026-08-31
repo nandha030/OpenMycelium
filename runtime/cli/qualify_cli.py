@@ -147,11 +147,79 @@ def cmd_list(args) -> int:
     return 0
 
 
+def _verdict_from_run(document: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Compute a verdict from a run document, or None if it is not one.
+
+    `openmycelium run --json` describes a run; it states no verdict, because a
+    run is not a gate. The console's own remediation told operators to record
+    from exactly that output, so the documented path refused itself at the last
+    step -- and the ledger shows why nobody noticed: every existing record was
+    written from a gate script's summary, never from this route.
+
+    Rather than demand a second tool, the verdict is derived here from checks
+    that are true of any correct run and need no per-model constants:
+
+      - every worker exited 0
+      - a result exists and tokens were produced
+      - the stages partition the model: no tensor owned twice, and every tensor
+        owned once
+
+    That last one is the substantive check. Disjoint layer ranges with a
+    duplicated embedding would look fine and be two copies on two devices.
+    """
+    placement = document.get("placement")
+    codes = document.get("exitCodes")
+    if not isinstance(placement, dict) or not isinstance(codes, dict):
+        return None                      # not a run document; leave it alone
+
+    result = document.get("result") or {}
+    stages = placement.get("stages") or []
+    owned = [set(stage.get("tensors") or ()) for stage in stages]
+    union = set().union(*owned) if owned else set()
+    duplicated = sum(len(s) for s in owned) - len(union)
+    declared = (placement.get("model") or {}).get("tensorCount")
+
+    checks = [
+        {"check": "every worker exited 0",
+         "passed": bool(codes) and all(int(c) == 0 for c in codes.values()),
+         "actual": codes},
+        {"check": "a result was produced",
+         "passed": bool(result.get("generatedTokens")),
+         "actual": len(result.get("generatedTokens") or [])},
+        {"check": "no tensor is owned twice",
+         "passed": duplicated == 0, "actual": duplicated},
+        {"check": "every model tensor is owned exactly once",
+         "passed": declared is not None and len(union) == declared,
+         "actual": f"{len(union)} owned, model declares {declared}"},
+    ]
+    failed = [c for c in checks if not c["passed"]]
+    return {
+        "failures": len(failed),
+        "checksRun": len(checks),
+        "checks": checks,
+        "gate": "single-run qualification",
+        # Named honestly. A record that overstated its scope would claim more
+        # was proven than was.
+        "scope": ("one run of this exact situation, with its ownership "
+                  "partition and worker exits verified. NOT the full gate "
+                  "battery: no performance campaign, no refusal paths, no "
+                  "lifecycle, no installed-wheel suite."),
+        "run": {"placementId": placement.get("placementId"),
+                "manifestDigest": placement.get("manifestDigest"),
+                "stopReason": result.get("stopReason"),
+                "promptTokens": result.get("promptTokens")},
+    }
+
+
 def _evidence(path: Optional[str]) -> Dict[str, Any]:
     """The gate result. Required, and required to say it passed.
 
     Reading it here rather than trusting a flag means the record cannot claim a
     gate that never ran: the file has to exist and has to report zero failures.
+
+    A gate summary states `failures` itself. A run document does not, so its
+    verdict is computed from the run -- see `_verdict_from_run`. Either way the
+    number is derived from evidence on disk and never taken on trust.
     """
     if not path:
         raise SystemExit(
@@ -159,18 +227,45 @@ def _evidence(path: Optional[str]) -> Dict[str, Any]:
             "not a qualification")
     try:
         with open(path, "r", encoding="utf-8") as handle:
-            document = json.load(handle)
-    except (OSError, ValueError) as error:
+            text = handle.read()
+    except OSError as error:
         raise SystemExit(f"  cannot read the evidence file {path}: {error}")
+    try:
+        document = json.loads(text)
+    except ValueError as error:
+        # Older builds streamed the decoded tokens to stdout ahead of the
+        # document, so a file written by `run --json >` began with prose. That
+        # is fixed at the source, and files already on disk still parse here
+        # rather than being rejected with a column-1 error that says nothing
+        # about the cause.
+        start = text.find("{")
+        if start < 0:
+            raise SystemExit(f"  cannot read the evidence file {path}: {error}")
+        try:
+            document = json.loads(text[start:])
+        except ValueError:
+            raise SystemExit(f"  cannot read the evidence file {path}: {error}")
+        print(f"  note: {path} had {start} byte(s) of text before the JSON; "
+              "parsed from the document onward. Rebuild with a runtime that "
+              "streams tokens to stderr under --json.")
+
+    if document.get("failures") is None:
+        derived = _verdict_from_run(document)
+        if derived is None:
+            raise SystemExit(
+                f"  {path} does not report a `failures` count and is not a run "
+                "document; refusing to record a qualification from evidence "
+                "that does not say whether it passed")
+        derived["derivedFrom"] = "run document"
+        document = derived
+
     failures = document.get("failures")
-    if failures is None:
-        raise SystemExit(
-            f"  {path} does not report a `failures` count; refusing to record "
-            "a qualification from evidence that does not say whether it passed")
     if int(failures) != 0:
+        detail = "; ".join(c["check"] for c in document.get("checks", ())
+                           if not c.get("passed"))
         raise SystemExit(
             f"  {path} reports {failures} failure(s); refusing to qualify a "
-            "situation whose gate did not pass")
+            f"situation whose gate did not pass{': ' + detail if detail else ''}")
     document.setdefault("evidencePath", os.path.abspath(path))
     return document
 
