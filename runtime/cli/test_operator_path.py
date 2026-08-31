@@ -146,15 +146,40 @@ class EvidenceFromRunTests(unittest.TestCase):
 class StdoutPurityTests(unittest.TestCase):
     """Under --json, stdout carries the document and nothing else."""
 
-    def test_tokens_are_written_to_stderr_when_json_is_asked_for(self):
-        source = os.path.join(_HERE, "coordinator.py")
-        with open(source, "r", encoding="utf-8") as handle:
-            text = handle.read()
-        # The token write must choose its stream from args.json rather than
-        # writing to stdout unconditionally.
-        self.assertIn("sys.stderr if self.args.json else sys.stdout", text)
+    def setUp(self):
+        with open(os.path.join(_HERE, "coordinator.py"), "r",
+                  encoding="utf-8") as handle:
+            self.coordinator = handle.read()
+        with open(os.path.join(_HERE, "console.py"), "r",
+                  encoding="utf-8") as handle:
+            self.console = handle.read()
+        with open(os.path.join(_HERE, "console_assets", "app.js"), "r",
+                  encoding="utf-8") as handle:
+            self.app = handle.read()
+
+    def test_tokens_do_not_go_to_stdout_under_json(self):
+        self.assertIn("TOKEN_FRAME + json.dumps", self.coordinator)
         self.assertNotIn("            if not self.args.quiet:\n"
-                         "                sys.stdout.write(piece)", text)
+                         "                sys.stdout.write(piece)",
+                         self.coordinator)
+
+    def test_a_token_is_framed_so_it_stays_identifiable(self):
+        # Raw text on stderr was the first attempt and it lost the console: a
+        # line-buffered reader coalesced the whole reply into one late line,
+        # and the console classified it by stream as a worker log.
+        self.assertIn('TOKEN_FRAME = "\\x1e"', self.coordinator)
+
+    def test_the_console_classifies_on_the_frame_not_the_stream(self):
+        self.assertIn("stripped.startswith(TOKEN_FRAME)", self.console)
+        self.assertIn('self.emit("token", text=', self.console)
+
+    def test_the_ui_renders_tokens_into_the_output_box(self):
+        self.assertIn('event.kind === "token"', self.app)
+        self.assertIn("box.textContent += event.text", self.app)
+
+    def test_the_ui_does_not_dump_the_document_into_the_output_box(self):
+        # 600 lines of JSON in the output box buries the reply it belongs to.
+        self.assertNotIn('box.textContent += event.line + "\\n"', self.app)
 
 
 class ConsoleRemediationTests(unittest.TestCase):

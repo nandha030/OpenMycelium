@@ -340,11 +340,20 @@ function connectEvents() {
   source.onmessage = (message) => {
     let event;
     try { event = JSON.parse(message.data); } catch { return; }
-    if (event.kind === "stdout") {
+    if (event.kind === "token") {
+      // Generated text, framed by the coordinator so it is identifiable
+      // whichever stream it arrives on. Appended without a newline: these are
+      // tokens, not lines, and joining them with newlines would break every
+      // word apart.
       const box = $("run-output");
       if (box.textContent === "—") box.textContent = "";
-      box.textContent += event.line + "\n";
+      box.textContent += event.text;
       box.scrollTop = box.scrollHeight;
+    } else if (event.kind === "stdout") {
+      // The JSON document, arriving a line at a time. It is parsed into
+      // `result` and rendered as metrics; dumping 600 lines of it into the
+      // output box would bury the reply it belongs to.
+      appendEvent(`stdout: ${event.line.slice(0, 120)}`);
     } else if (event.kind === "result") {
       renderMetrics(event.result);
     } else if (event.kind === "finished") {
