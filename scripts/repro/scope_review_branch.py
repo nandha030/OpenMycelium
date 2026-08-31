@@ -113,8 +113,12 @@ SCOPES: Dict[str, Scope] = {
                            "docs/MEMORY_OS.md")),
     "chore/branch-scopes": Scope(
         purpose="Generalise the scope checker so two branches can be open at once",
-        owned=("scripts/repro/scope_review_branch.py", "docs/GATE_PROCESS.md",
-               "release/hygiene/"),
+        # Named exactly rather than widened to scripts/repro/: this branch
+        # genuinely touches two files, and a scope that says "the whole harness"
+        # would have nothing to catch.
+        owned=("scripts/repro/scope_review_branch.py",
+               "scripts/repro/scope_review_negative_test.sh",
+               "docs/GATE_PROCESS.md", "release/hygiene/"),
         # This file declares every branch's forbidden set, so it names them all.
         forbidden_symbols=(),
         foreign_paths=COMMON_FOREIGN,
