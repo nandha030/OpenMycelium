@@ -97,32 +97,51 @@ class MissingReadingTests(unittest.TestCase):
         self.assertNotIn("returned nothing", text)
 
 
-class AggregateTests(unittest.TestCase):
-    def test_the_aggregate_is_never_called_a_pool(self):
+class CapacityTests(unittest.TestCase):
+    """Lead with what it does; state the stage without apologising for it.
+
+    Two failure modes, and this section guards both. Claiming pooled memory
+    would be false -- no allocation spans a device today. But the first wording
+    here said "no single allocation can use the aggregate", which read as though
+    the aggregate were unusable, when running one model across both cards is
+    precisely what this runtime does. An understatement is as inaccurate as an
+    overstatement; it is just inaccurate in the direction that looks careful.
+    """
+
+    def test_pooled_memory_is_not_claimed_in_the_present_tense(self):
         text = screen().lower()
-        self.assertIn("not pooled", text)
-        self.assertNotIn("pooled vram", text.replace("not pooled", ""))
+        self.assertNotIn("pooled vram", text)
+        self.assertNotIn("unified memory", text)
+        self.assertNotIn("virtual gpu", text)
 
-    def test_the_screen_says_one_model_spans_both_cards(self):
-        # The earlier wording said "no single allocation can use the aggregate",
-        # which collapsed two different claims and denied the product's whole
-        # capability. A 22.84 GiB model runs across these two cards today; what
-        # cannot happen is one tensor spanning them.
-        text = screen()
-        self.assertIn("One model spans both", text)
-        self.assertIn("too large for either card", text)
+    def test_the_aggregate_is_stated_as_usable_by_one_model(self):
+        self.assertIn("33.00 GiB across 2 GPUs, usable by one model", screen())
 
-    def test_the_limit_that_remains_is_stated_exactly(self):
+    def test_the_cross_vendor_achievement_is_named(self):
         text = screen()
-        self.assertIn("no allocation crosses the boundary", text)
-        self.assertIn("a single tensor still has to fit 17.00 GiB", text)
+        self.assertIn("amd + nvidia together run a model that neither card",
+                      text)
+        self.assertIn("byte-exact vendor boundary", text)
 
-    def test_the_largest_single_memory_is_shown_beside_the_aggregate(self):
-        # The number that matters for "will one tensor fit" is the largest
-        # single memory; the aggregate is what a partitioned model can use.
+    def test_the_current_stage_is_stated_as_a_stage(self):
+        # Not as a caveat. It is what is shipped and qualified, and the next
+        # stage is named so the limit reads as a position on a path.
         text = screen()
-        self.assertIn("33.00 GiB across 2 separate memories", text)
-        self.assertIn("largest single 17.00 GiB", text)
+        self.assertIn("Today   static partition, shipped and qualified", text)
+        self.assertIn("each tensor resident on one device, up to 17.00 GiB", text)
+
+    def test_the_memory_os_is_named_as_in_design_not_as_shipped(self):
+        text = screen()
+        self.assertIn("Next    Memory OS", text)
+        self.assertIn("in design", text)
+        # A schedule is a claim too, and there is no evidence for one.
+        for promise in ("coming soon", "next release", "shortly"):
+            self.assertNotIn(promise, text.lower())
+
+    def test_a_single_vendor_machine_does_not_claim_cross_vendor(self):
+        text = screen(devices=(NVIDIA,))
+        self.assertNotIn("together run a model", text)
+        self.assertIn("too large for one card", text)
 
     def test_the_json_form_says_the_aggregate_is_not_pooled(self):
         # A machine consumer cannot read a footnote.

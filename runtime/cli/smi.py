@@ -153,13 +153,22 @@ def render(report: Dict[str, Any], versions: Dict[str, str],
         aggregate = sum(d.get("total_bytes", 0) for d in devices) / GIB
         largest = max(d.get("total_bytes", 0) for d in devices) / GIB
         add("")
-        add(f"  Capacity  {aggregate:.2f} GiB across {len(devices)} separate "
-            f"memories; largest single {largest:.2f} GiB")
-        add("            One model spans both: a model too large for either card")
-        add("            runs partitioned across them, which is the point of this")
-        add("            runtime. Partitioned, not pooled -- every tensor lives on")
-        add("            exactly one device and no allocation crosses the boundary,")
-        add(f"            so a single tensor still has to fit {largest:.2f} GiB.")
+        vendors = sorted({d.get("vendor", "") for d in devices if d.get("vendor")})
+        add("")
+        add(f"  Capacity  {aggregate:.2f} GiB across {len(devices)} GPUs, "
+            f"usable by one model")
+        if len(vendors) > 1:
+            add(f"            {' + '.join(vendors)} together run a model that "
+                "neither card")
+            add("            can hold alone, with a byte-exact vendor boundary.")
+        else:
+            add("            A model too large for one card runs across both.")
+        add("")
+        add("            Today   static partition, shipped and qualified:")
+        add(f"                    each tensor resident on one device, up to "
+            f"{largest:.2f} GiB")
+        add("            Next    Memory OS -- tile residency, paging and")
+        add("                    migration across these same memories, in design")
 
     add("")
     add("  Runtime")
