@@ -40,6 +40,7 @@ for _relative in (".", "../serving", "../fabric", "../scheduler"):
         sys.path.insert(0, _path)
 
 import console_service as service  # noqa: E402
+from coordinator import TOKEN_FRAME  # noqa: E402
 
 DEFAULT_PORT = 11501
 ASSETS = os.path.join(_HERE, "console_assets")
@@ -146,11 +147,27 @@ class RunManager:
         self.emit("finished", exitCode=code)
 
     def _pump_stderr(self) -> None:
+        """Progress lines and framed tokens share stderr; they are not the same.
+
+        The coordinator frames each streamed token under `--json`, so this
+        classifies on the frame rather than on which stream the line arrived by.
+        Classifying by stream is what sent generated text to the worker log the
+        moment the token stream moved off stdout.
+        """
         assert self.process and self.process.stderr
         for line in self.process.stderr:
             stripped = line.rstrip("\n")
-            if stripped:
-                self.emit("worker", line=stripped)
+            if not stripped:
+                continue
+            if stripped.startswith(TOKEN_FRAME):
+                try:
+                    payload = json.loads(stripped[len(TOKEN_FRAME):])
+                except ValueError:
+                    self.emit("worker", line=stripped)
+                    continue
+                self.emit("token", text=payload.get("text", ""))
+                continue
+            self.emit("worker", line=stripped)
 
     def stop(self) -> Dict[str, Any]:
         """Stop only what this console started, identified by more than a PID."""
@@ -245,12 +262,20 @@ def _qualification_gate(plan: Dict[str, Any]) -> Dict[str, Any]:
         # Naming the command matters: this is the one gate an operator cannot
         # clear from the console, so a detail that only says "run the hardware
         # gate" leaves them with no next step.
+        # The command has to be one that works. This text used to name
+        # `run` without `--json`, and `run --json` used to stream the decoded
+        # tokens to stdout ahead of the document, so the file it told you to
+        # create could not be parsed -- and `qualify record` then refused it a
+        # second time for reporting no `failures`. Both are fixed; the wording
+        # is exact so it stays followable.
         gate["detail"] = (
             "no record covers this checkpoint, these runtimes and this device "
-            "pair. Qualify it from a terminal: "
+            "pair. Qualify it from a terminal, in two steps: "
             "OM_QUALIFICATION_MODE=qualify OM_QUALIFICATION_ACTOR=<you> "
-            "openmycelium run --model <MODEL> ... then "
-            "openmycelium qualify record --model <MODEL> --evidence <gate.json>")
+            "openmycelium run --model <MODEL> --prompt hello "
+            "--max-new-tokens 24 --json > gate.json   then   "
+            "OM_QUALIFICATION_MODE=qualify OM_QUALIFICATION_ACTOR=<you> "
+            "openmycelium qualify record --model <MODEL> --evidence gate.json")
     except Exception as error:                                # noqa: BLE001
         gate["detail"] = f"could not be evaluated: {str(error)[:120]}"
     return gate

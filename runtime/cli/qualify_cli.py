@@ -147,30 +147,174 @@ def cmd_list(args) -> int:
     return 0
 
 
-def _evidence(path: Optional[str]) -> Dict[str, Any]:
+def cmd_require(args) -> int:
+    """Exit non-zero unless this situation holds at least the asked-for scope.
+
+    The machine-enforced half of the scope distinction, in a form a script can
+    call. Release sealing, an enforcement canary and paging work run this and
+    stop on a non-zero exit, so "a single run does not authorise a release" is a
+    check rather than a paragraph somebody has to remember.
+    """
+    from adapters.qualification import require_scope  # noqa: PLC0415
+    situation = _situation(args)
+    records = load_records(args.ledger)
+    try:
+        granted = require_scope(situation, args.scope, records=records)
+    except AdapterError as refusal:
+        print(f"  refused: {refusal}")
+        return refusal.exit_code
+    print(f"  {args.scope} satisfied by record "
+          f"{str(granted.get('recordId'))[:16]}")
+    return 0
+
+
+def _verdict_from_run(document: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Compute a verdict from a run document, or None if it is not one.
+
+    `openmycelium run --json` describes a run; it states no verdict, because a
+    run is not a gate. The console's own remediation told operators to record
+    from exactly that output, so the documented path refused itself at the last
+    step -- and the ledger shows why nobody noticed: every existing record was
+    written from a gate script's summary, never from this route.
+
+    Rather than demand a second tool, the verdict is derived here from checks
+    that are true of any correct run and need no per-model constants:
+
+      - every worker exited 0
+      - a result exists and tokens were produced
+      - the stages partition the model: no tensor owned twice, and every tensor
+        owned once
+
+    That last one is the substantive check. Disjoint layer ranges with a
+    duplicated embedding would look fine and be two copies on two devices.
+    """
+    placement = document.get("placement")
+    codes = document.get("exitCodes")
+    if not isinstance(placement, dict) or not isinstance(codes, dict):
+        return None                      # not a run document; leave it alone
+
+    result = document.get("result") or {}
+    stages = placement.get("stages") or []
+    owned = [set(stage.get("tensors") or ()) for stage in stages]
+    union = set().union(*owned) if owned else set()
+    duplicated = sum(len(s) for s in owned) - len(union)
+    declared = (placement.get("model") or {}).get("tensorCount")
+
+    checks = [
+        {"check": "every worker exited 0",
+         "passed": bool(codes) and all(int(c) == 0 for c in codes.values()),
+         "actual": codes},
+        {"check": "a result was produced",
+         "passed": bool(result.get("generatedTokens")),
+         "actual": len(result.get("generatedTokens") or [])},
+        {"check": "no tensor is owned twice",
+         "passed": duplicated == 0, "actual": duplicated},
+        {"check": "every model tensor is owned exactly once",
+         "passed": declared is not None and len(union) == declared,
+         "actual": f"{len(union)} owned, model declares {declared}"},
+    ]
+    failed = [c for c in checks if not c["passed"]]
+    return {
+        "failures": len(failed),
+        "checksRun": len(checks),
+        "checks": checks,
+        "gate": "single-run qualification",
+        # Named honestly. A record that overstated its scope would claim more
+        # was proven than was.
+        "scope": ("one run of this exact situation, with its ownership "
+                  "partition and worker exits verified. NOT the full gate "
+                  "battery: no performance campaign, no refusal paths, no "
+                  "lifecycle, no installed-wheel suite."),
+        "run": {"placementId": placement.get("placementId"),
+                "manifestDigest": placement.get("manifestDigest"),
+                "stopReason": result.get("stopReason"),
+                "promptTokens": result.get("promptTokens")},
+    }
+
+
+def _evidence(path: Optional[str],
+              allow_prose: bool = False) -> Dict[str, Any]:
     """The gate result. Required, and required to say it passed.
 
     Reading it here rather than trusting a flag means the record cannot claim a
     gate that never ran: the file has to exist and has to report zero failures.
+
+    A gate summary states `failures` itself. A run document does not, so its
+    verdict is computed from the run -- see `_verdict_from_run`. Either way the
+    number is derived from evidence on disk and never taken on trust.
     """
     if not path:
         raise SystemExit(
             "  --evidence is required: a record with no evidence is a claim, "
             "not a qualification")
     try:
-        with open(path, "r", encoding="utf-8") as handle:
-            document = json.load(handle)
-    except (OSError, ValueError) as error:
+        # utf-8-sig, so a byte-order mark is consumed rather than counted as
+        # content. PowerShell's `>` writes one, and reporting it as "text before
+        # the JSON" blamed the runtime for the shell's redirection.
+        with open(path, "r", encoding="utf-8-sig") as handle:
+            text = handle.read()
+    except OSError as error:
         raise SystemExit(f"  cannot read the evidence file {path}: {error}")
+    try:
+        # Leading whitespace is fine -- json.loads accepts it, and the BOM was
+        # consumed by utf-8-sig above. Anything else before the document is
+        # refused, because scanning forward to the first `{` would accept a file
+        # with arbitrary text in front of it and silently write a qualification
+        # record from whatever followed. An evidence reader that hunts for
+        # something parseable is not verifying evidence.
+        document = json.loads(text)
+    except ValueError as error:
+        start = text.find("{")
+        legacy = start > 0 and not text[:start].strip()
+        if legacy:
+            # Only whitespace preceded it; json.loads would have handled that,
+            # so reaching here means the document itself is malformed.
+            raise SystemExit(f"  cannot read the evidence file {path}: {error}")
+        if start > 0 and allow_prose:
+            document = json.loads(text[start:])
+            print(f"  LEGACY IMPORT: {path} has {start} character(s) of text "
+                  "before the JSON, which is what an older runtime wrote when "
+                  "it streamed tokens to stdout under --json.")
+            print("  Accepted only because --legacy-prose-evidence was given. "
+                  "The record will be marked as a legacy import.")
+            document.setdefault("evidenceLegacyImport", True)
+            document.setdefault("evidenceProseBytesSkipped", start)
+        elif start > 0:
+            raise SystemExit(
+                f"  {path} has {start} character(s) of text before the JSON "
+                f"document. Refusing to scan past it: a reader that hunts for "
+                f"the first '{{' would write a qualification record from "
+                f"whatever happened to follow.\n"
+                f"  This is what an older runtime wrote when it streamed tokens "
+                f"to stdout under --json. Re-run the gate on a current build, "
+                f"or pass --legacy-prose-evidence to import it deliberately.")
+        else:
+            raise SystemExit(f"  cannot read the evidence file {path}: {error}")
+
+    if document.get("failures") is None:
+        derived = _verdict_from_run(document)
+        if derived is None:
+            raise SystemExit(
+                f"  {path} does not report a `failures` count and is not a run "
+                "document; refusing to record a qualification from evidence "
+                "that does not say whether it passed")
+        derived["derivedFrom"] = "run document"
+        # Carried across, because deriving a verdict replaces the document and
+        # would otherwise drop the very marks that say this was a legacy
+        # import -- leaving the ledger with no trace of it, which is the one
+        # thing a legacy import must never do.
+        for mark in ("evidenceLegacyImport", "evidenceProseBytesSkipped"):
+            if mark in document:
+                derived[mark] = document[mark]
+        document = derived
+
     failures = document.get("failures")
-    if failures is None:
-        raise SystemExit(
-            f"  {path} does not report a `failures` count; refusing to record "
-            "a qualification from evidence that does not say whether it passed")
     if int(failures) != 0:
+        detail = "; ".join(c["check"] for c in document.get("checks", ())
+                           if not c.get("passed"))
         raise SystemExit(
             f"  {path} reports {failures} failure(s); refusing to qualify a "
-            "situation whose gate did not pass")
+            f"situation whose gate did not pass{': ' + detail if detail else ''}")
     document.setdefault("evidencePath", os.path.abspath(path))
     return document
 
@@ -184,7 +328,8 @@ def cmd_record(args) -> int:
               file=sys.stderr)
         return 65
 
-    evidence = _evidence(args.evidence)
+    evidence = _evidence(args.evidence,
+                         allow_prose=getattr(args, "legacy_prose_evidence", False))
     situation = _situation(args)
     evidence["qualifiedBy"] = override.get("actor")
     evidence["qualificationReason"] = override.get("reason", "")
@@ -227,9 +372,22 @@ def main() -> int:
     record = subparsers.add_parser(
         "record", help="write a record for a situation whose gate passed")
     common(record)
+    record.add_argument("--legacy-prose-evidence", action="store_true",
+                        dest="legacy_prose_evidence",
+                        help="import evidence written by a runtime that "
+                             "streamed tokens ahead of the JSON; marked "
+                             "in the record as a legacy import")
     record.add_argument("--evidence", default="",
                         help="JSON from the passing gate; must report failures 0")
     record.set_defaults(handler=cmd_record)
+
+    require = subparsers.add_parser(
+        "require", help="exit non-zero unless this situation holds a scope")
+    common(require)
+    require.add_argument("--scope", default="FULL_GATE_QUALIFIED",
+                         choices=("EXECUTION_QUALIFIED", "FULL_GATE_QUALIFIED"),
+                         help="the minimum scope this situation must hold")
+    require.set_defaults(handler=cmd_require)
 
     args = parser.parse_args()
     try:

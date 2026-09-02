@@ -10,7 +10,13 @@ This asks a different question from the correctness gates. They ask whether the
 code works; this asks whether the code belongs here at all. A perfectly correct
 change to an unrelated subsystem is exactly what this catches.
 
-Usage:  scope_review_branch.py [base] [head]
+Scope is per branch, declared as data before the code exists. `GATE_PROCESS.md`
+already requires that -- "branch scope is stated before work begins" -- but the
+checker used to hold one global list, which encoded a strictly sequential
+roadmap: "everything else here belongs to a later one". Two branches that are
+open at the same time cannot both be checked against that.
+
+Usage:  scope_review_branch.py [base] [head] [--scope NAME]
 """
 
 from __future__ import annotations
@@ -18,27 +24,147 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from dataclasses import dataclass, field
+from typing import Dict, Tuple
 
 REPO = os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
-BASE = sys.argv[1] if len(sys.argv) > 1 else "main"
-HEAD = sys.argv[2] if len(sys.argv) > 2 else "HEAD"
+_ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+BASE = _ARGS[0] if len(_ARGS) > 0 else "main"
+HEAD = _ARGS[1] if len(_ARGS) > 1 else "HEAD"
 
-#: `feature/safety-governor` carries the Safety Governor only -- stated at
-#: branch creation, so the review checks against something written before the
-#: code rather than inferred from it afterwards. `SafetyGovernor` and
-#: `safetyMode` are this milestone; everything else here belongs to a later one.
-LATER_GATE_SYMBOLS = (
+
+@dataclass(frozen=True)
+class Scope:
+    """What one branch may touch, written before its code.
+
+    `forbidden_symbols` are the ones belonging to *another* milestone. They are
+    per branch because "later" is not a property of a symbol: `MemoryObject`
+    is forbidden on a safety branch and is the entire point of a memory branch.
+    """
+
+    purpose: str
+    owned: Tuple[str, ...]
+    forbidden_symbols: Tuple[str, ...]
+    foreign_paths: Tuple[str, ...]
+    #: Files whose job is to name what they forbid. A prohibition is not an
+    #: introduction, and a rule that fails on its own statement teaches people
+    #: to switch the rule off. Pinned exactly, never by pattern: exempting a
+    #: path does mean scope creep hidden inside it would pass, so the list is
+    #: short, per branch, and printed in the report.
+    prohibition_files: Tuple[str, ...] = field(default_factory=tuple)
+
+
+#: Every symbol either milestone cares about, so each branch can forbid the
+#: other's without repeating the list.
+MEMORY_SYMBOLS = (
     "MemoryObject", "ResidencyManager", "TransportBackend", "PrefetchPolicy",
     "EvictionPolicy", "WorkingSet", "bind_working_set", "memoryMode",
     "create_memory_object", "advise_access_pattern", "query_residency",
 )
+ENFORCEMENT_SYMBOLS = (
+    "ENFORCE_ADMISSION", "ENFORCE_DRAIN", "ENFORCE_BREAKER",
+    "ENFORCE_QUARANTINE", "enforce_full", "refuse_admission",
+)
 
-#: Subsystems this branch may not touch, whatever adjacency suggests itself.
-FOREIGN_PATHS = (
+#: Subsystems no current branch may touch, whatever adjacency suggests itself.
+COMMON_FOREIGN = (
     "runtime/mccl/", "runtime/mycelium/", "runtime/bridge/", "deploy/", "k8s/",
     "observability/", "docs/paper/",
 )
+
+_SHARED_HARNESS = ("scripts/repro/", "scripts/build_openmycelium_wheel.py",
+                   "docs/GATE_PROCESS.md", "docs/NONRELEASABLE_BUILDS.md")
+
+SCOPES: Dict[str, Scope] = {
+    "feature/safety-governor": Scope(
+        purpose="Safety Governor only: contract, deterministic core, shadow mode",
+        owned=("runtime/safety/", "runtime/cli/coordinator.py",
+               "runtime/cli/lifecycle.py", "packaging/launcher.py",
+               "docs/SAFETY_GOVERNOR.md", "release/gate-c1/", "release/gate-d1/",
+               "release/gate-d2/") + _SHARED_HARNESS,
+        forbidden_symbols=MEMORY_SYMBOLS,
+        foreign_paths=COMMON_FOREIGN,
+        prohibition_files=("docs/GATE_PROCESS.md",
+                           "scripts/repro/scope_review_branch.py",
+                           "release/gate-d2/seal/scope-review-branch.txt")),
+    "feature/safety-enforcement-d3": Scope(
+        purpose="Gate D.3 enforcement contract only. No implementation.",
+        owned=("runtime/safety/", "docs/SAFETY_ENFORCEMENT.md",
+               "docs/SAFETY_GOVERNOR.md", "release/gate-d3/") + _SHARED_HARNESS,
+        forbidden_symbols=MEMORY_SYMBOLS,
+        foreign_paths=COMMON_FOREIGN,
+        # The contract has to name Memory OS symbols in order to prohibit them,
+        # in the data and in the document alike.
+        prohibition_files=("docs/GATE_PROCESS.md",
+                           "scripts/repro/scope_review_branch.py",
+                           "runtime/safety/enforcement.py",
+                           "runtime/safety/test_enforcement_contract.py",
+                           "docs/SAFETY_ENFORCEMENT.md")),
+    "fix/operator-path": Scope(
+        purpose="The operator path: launcher, qualification flow, console, smi",
+        owned=("openmycelium.cmd", "packaging/", "runtime/cli/",
+               "runtime/serving/adapters/", "docs/NONRELEASABLE_BUILDS.md",
+               "release/operator-path-a18/") + _SHARED_HARNESS,
+        forbidden_symbols=MEMORY_SYMBOLS,
+        foreign_paths=COMMON_FOREIGN,
+        # The qualification contract and its tests name the Memory OS symbols
+        # only to keep them out of this milestone.
+        prohibition_files=("docs/GATE_PROCESS.md",
+                           "scripts/repro/scope_review_branch.py")),
+    "feature/memory-os-m1": Scope(
+        purpose="Memory OS M.1: deterministic simulator, no GPU, no enforcement",
+        owned=("runtime/memory/", "docs/MEMORY_OS.md",
+               "docs/INVENTION_LEDGER.md", "release/memory-m1/") + _SHARED_HARNESS,
+        # The mirror image: a memory branch may not implement enforcement.
+        forbidden_symbols=ENFORCEMENT_SYMBOLS,
+        foreign_paths=COMMON_FOREIGN + ("runtime/safety/",),
+        prohibition_files=("docs/GATE_PROCESS.md",
+                           "scripts/repro/scope_review_branch.py",
+                           "docs/MEMORY_OS.md")),
+    "chore/branch-scopes": Scope(
+        purpose="Generalise the scope checker so two branches can be open at once",
+        # Named exactly rather than widened to scripts/repro/: this branch
+        # genuinely touches two files, and a scope that says "the whole harness"
+        # would have nothing to catch.
+        owned=("scripts/repro/scope_review_branch.py",
+               "scripts/repro/scope_review_negative_test.sh",
+               "docs/GATE_PROCESS.md", "release/hygiene/"),
+        # This file declares every branch's forbidden set, so it names them all.
+        forbidden_symbols=(),
+        foreign_paths=COMMON_FOREIGN,
+        prohibition_files=("scripts/repro/scope_review_branch.py",)),
+}
+
+
+def resolve_scope() -> Tuple[str, Scope]:
+    """The scope for the branch under review, or a hard failure.
+
+    An undeclared branch is a failure, not a default. `GATE_PROCESS.md` requires
+    scope to be stated before work begins, and silently applying some fallback
+    would let a branch with no declared scope pass a scope review.
+    """
+    named = [a[len("--scope="):] for a in sys.argv if a.startswith("--scope=")]
+    if named:
+        name = named[0]
+    elif HEAD in SCOPES:
+        name = HEAD
+    else:
+        name = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", HEAD], cwd=REPO,
+            capture_output=True, text=True).stdout.strip()
+    if name not in SCOPES:
+        print(f"\nBranch scope review -- {BASE}...{HEAD}\n")
+        print(f"  FAIL  {name!r} declares no scope in SCOPES")
+        print("        State it before the work, not after: "
+              "GATE_PROCESS.md, 'branch scope is stated before work begins'.")
+        raise SystemExit(1)
+    return name, SCOPES[name]
+
+
+SCOPE_NAME, SCOPE = resolve_scope()
+LATER_GATE_SYMBOLS = SCOPE.forbidden_symbols
+FOREIGN_PATHS = SCOPE.foreign_paths
 
 #: Directories whose contents are frozen evidence. A modification here is a
 #: failure regardless of what it says: frozen releases are never changed.
@@ -124,12 +250,7 @@ CODE_SUFFIXES = (".py", ".sh", ".c", ".h", ".cpp", ".cu", ".js", ".go", ".ps1")
 #: Exempting a path means scope creep hidden inside it would pass. That is
 #: unavoidable for a checker that must name what it forbids, so the exemption is
 #: three exact paths, asserted below to be exactly three, and never a pattern.
-RULE_DOCUMENT = "docs/GATE_PROCESS.md"
-SELF_REFERENTIAL = (
-    RULE_DOCUMENT,
-    "scripts/repro/scope_review_branch.py",
-    "release/gate-d2/seal/scope-review-branch.txt",
-)
+SELF_REFERENTIAL = SCOPE.prohibition_files
 
 code_hits, prose_hits = {}, {}
 path = None
@@ -150,9 +271,21 @@ check("later-gate symbols are named only where they are forbidden",
       not stray_prose,
       "; ".join(f"{p}: {sorted(s)}" for p, s in sorted(stray_prose.items()))
       or "only in the rule, the checker, and the output of the checker")
-check("the self-referential exemption is exactly three named paths",
-      len(SELF_REFERENTIAL) == 3 and len(set(SELF_REFERENTIAL)) == 3,
-      ", ".join(SELF_REFERENTIAL))
+# The exemption is bounded by an invariant rather than by a count, because a
+# count is arbitrary and an invariant is not: every exempt path must be one this
+# scope already owns. That is what stops the list becoming a way to smuggle a
+# foreign file past the review -- exempting something outside the milestone is
+# now a failure regardless of how few there are.
+_outside = [p for p in SELF_REFERENTIAL
+            if not any(p.startswith(prefix) for prefix in SCOPE.owned)]
+_wild = [p for p in SELF_REFERENTIAL if "*" in p or p.endswith("/")]
+check("every prohibition exemption is an exact path this scope owns",
+      not _outside and not _wild
+      and len(set(SELF_REFERENTIAL)) == len(SELF_REFERENTIAL)
+      and 0 < len(SELF_REFERENTIAL) <= 6,
+      f"outside the scope: {_outside}" if _outside else
+      f"pattern rather than a path: {_wild}" if _wild else
+      f"{len(SELF_REFERENTIAL)}: " + ", ".join(SELF_REFERENTIAL))
 
 # 6. Line-ending churn has not been swept in. ---------------------------------
 #
@@ -172,16 +305,12 @@ check("no file changed only in whitespace or line endings", not churn,
       ", ".join(churn[:5]))
 
 # 7. Every changed path is one this milestone owns. ---------------------------
-OWNED = ("runtime/safety/", "runtime/cli/coordinator.py", "runtime/cli/lifecycle.py",
-         "packaging/launcher.py", "scripts/build_openmycelium_wheel.py",
-         "scripts/repro/", "docs/SAFETY_GOVERNOR.md", "docs/NONRELEASABLE_BUILDS.md",
-         "docs/GATE_PROCESS.md", "release/gate-c1/", "release/gate-d1/",
-         "release/gate-d2/")
 unowned = sorted(p for p in status
-                 if not any(p.startswith(prefix) for prefix in OWNED))
+                 if not any(p.startswith(prefix) for prefix in SCOPE.owned))
 check("every changed path belongs to this milestone", not unowned,
       "; ".join(unowned[:8]))
 
+print(f"  scope: {SCOPE_NAME} -- {SCOPE.purpose}\n")
 print("  changed paths")
 for added, removed, path in sorted(rows, key=lambda row: row[2]):
     print(f"    {status.get(path, '?'):<3} +{added:<6} -{removed:<6} {path}")

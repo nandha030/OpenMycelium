@@ -20,10 +20,23 @@ REM which meant a launch could silently go to a distribution that had never
 REM been provisioned -- the name exists on many machines and means nothing in
 REM particular. If exactly one distribution is installed, use it; otherwise
 REM ask, listing what is there.
+REM `wsl.exe --list --quiet` writes UTF-16LE. `for /f` reads it as ANSI and
+REM stops at the first null byte, so the loop below used to see a single token
+REM -- the letter "d" from "docker-desktop" -- count one distribution, skip the
+REM prompt, and run `wsl -d d`. Every launch then failed with
+REM WSL_E_DISTRO_NOT_FOUND unless OPENMYCELIUM_WSL_DISTRO happened to be set,
+REM which made the launcher look fine to anyone who had set it once.
+REM
+REM The list is converted to ANSI first. `chcp` alone does not help: the encoding
+REM is in the pipe, not the console.
 set "DISTRO=%OPENMYCELIUM_WSL_DISTRO%"
 if not defined DISTRO (
+    set "OMLIST=%TEMP%\openmycelium-distros.txt"
+    wsl.exe --list --quiet 2>nul > "!OMLIST!.utf16"
+    powershell.exe -NoProfile -Command ^
+        "Get-Content -Encoding Unicode '!OMLIST!.utf16' | Where-Object { $_.Trim() -ne '' } | Set-Content -Encoding ASCII '!OMLIST!'" >nul 2>&1
     set "COUNT=0"
-    for /f "usebackq delims=" %%D in (`wsl.exe --list --quiet 2^>nul`) do (
+    for /f "usebackq delims=" %%D in ("!OMLIST!") do (
         set "NAME=%%D"
         set "NAME=!NAME: =!"
         if /i not "!NAME!"=="docker-desktop" if /i not "!NAME!"=="docker-desktop-data" if not "!NAME!"=="" (
@@ -31,19 +44,26 @@ if not defined DISTRO (
             set "ONLY=!NAME!"
         )
     )
+    del "!OMLIST!.utf16" >nul 2>&1
     if "!COUNT!"=="1" (
         set "DISTRO=!ONLY!"
     ) else (
         echo.
         echo   Which WSL distribution should OpenMycelium run in?
-        echo   More than one is installed and none was selected:
-        echo.
-        for /f "usebackq delims=" %%D in (`wsl.exe --list --quiet 2^>nul`) do echo       %%D
+        if "!COUNT!"=="0" (
+            echo   None could be read from `wsl --list --quiet`.
+        ) else (
+            echo   More than one is installed and none was selected:
+            echo.
+            for /f "usebackq delims=" %%D in ("!OMLIST!") do echo       %%D
+        )
         echo.
         echo   Choose one with:      set OPENMYCELIUM_WSL_DISTRO=your-distro
         echo.
+        del "!OMLIST!" >nul 2>&1
         exit /b 78
     )
+    del "!OMLIST!" >nul 2>&1
 )
 
 REM --- is WSL there at all? ----------------------------------------------
@@ -68,6 +88,18 @@ if not defined OMBIN (
         if not errorlevel 1 set "OMBIN=%OPENMYCELIUM_VENV%/bin/openmycelium"
     )
 )
+REM A venv is not on root's login PATH on any machine tested, so `command -v`
+REM finds nothing and the launcher depended on OPENMYCELIUM_VENV being set --
+REM which the error text below never told anyone to set for the common install
+REM locations. Look in them before giving up.
+if not defined OMBIN (
+    for %%V in (/opt/om/venv /opt/openmycelium/venv /opt/omfresh/venv) do (
+        if not defined OMBIN (
+            wsl.exe -d %DISTRO% -u root test -x "%%V/bin/openmycelium" >nul 2>&1
+            if not errorlevel 1 set "OMBIN=%%V/bin/openmycelium"
+        )
+    )
+)
 if not defined OMBIN (
     echo.
     echo   OpenMycelium is not installed in WSL distribution "%DISTRO%".
@@ -83,6 +115,22 @@ if not defined OMBIN (
     echo     openmycelium provision
     echo.
     exit /b 70
+)
+
+REM --- carry the variables the runtime reads into WSL ---------------------
+REM
+REM wsl.exe forwards nothing unless WSLENV names it. Without this, the console's
+REM own remediation -- "set OM_QUALIFICATION_MODE=qualify and re-run" -- is
+REM unfollowable through this launcher: the variables are set in Windows, the
+REM process reads none of them, and the run is refused with the message that
+REM told you to set them. Same for OM_SAFETY_MODE, which shadow mode reads.
+REM
+REM Appended to any WSLENV the caller already has rather than replacing it.
+set "OMVARS=OM_QUALIFICATION_MODE:OM_QUALIFICATION_ACTOR:OM_QUALIFICATION_REASON:OM_SAFETY_MODE"
+if defined WSLENV (
+    set "WSLENV=%WSLENV%:%OMVARS%"
+) else (
+    set "WSLENV=%OMVARS%"
 )
 
 REM --- pass everything through, quoted, from any directory ---------------
