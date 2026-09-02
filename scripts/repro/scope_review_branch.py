@@ -101,6 +101,17 @@ SCOPES: Dict[str, Scope] = {
                            "runtime/safety/enforcement.py",
                            "runtime/safety/test_enforcement_contract.py",
                            "docs/SAFETY_ENFORCEMENT.md")),
+    "fix/operator-path": Scope(
+        purpose="The operator path: launcher, qualification flow, console, smi",
+        owned=("openmycelium.cmd", "packaging/", "runtime/cli/",
+               "runtime/serving/adapters/", "docs/NONRELEASABLE_BUILDS.md",
+               "release/operator-path-a18/") + _SHARED_HARNESS,
+        forbidden_symbols=MEMORY_SYMBOLS,
+        foreign_paths=COMMON_FOREIGN,
+        # The qualification contract and its tests name the Memory OS symbols
+        # only to keep them out of this milestone.
+        prohibition_files=("docs/GATE_PROCESS.md",
+                           "scripts/repro/scope_review_branch.py")),
     "feature/memory-os-m1": Scope(
         purpose="Memory OS M.1: deterministic simulator, no GPU, no enforcement",
         owned=("runtime/memory/", "docs/MEMORY_OS.md",
