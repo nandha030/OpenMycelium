@@ -52,6 +52,40 @@ class QualificationStatus:
     UNQUALIFIED = "UNQUALIFIED"
 
 
+class QualificationScope:
+    """How much a record proves. Typed, because prose does not enforce.
+
+    A single 24-token run establishes that this exact situation executes
+    correctly. It says nothing about performance, refusal paths, the
+    qualification lifecycle, or the installed-wheel suite -- so it may permit
+    execution and must not permit release sealing, an enforcement canary, or
+    paging work.
+
+    The distinction used to live in a `scope` string inside the evidence, which
+    is a comment: nothing read it and nothing could refuse on it.
+
+    `UNKNOWN` is what a record written before this field existed carries. It is
+    deliberately not treated as full: a record cannot be retroactively assumed
+    to have proven something its evidence never claimed, so anything requiring
+    the full gate refuses it.
+    """
+
+    EXECUTION_QUALIFIED = "EXECUTION_QUALIFIED"
+    FULL_GATE_QUALIFIED = "FULL_GATE_QUALIFIED"
+    UNKNOWN = "UNKNOWN"
+
+    #: Ordered weakest to strongest. Position is meaning.
+    ORDER = (UNKNOWN, EXECUTION_QUALIFIED, FULL_GATE_QUALIFIED)
+
+    @classmethod
+    def permits(cls, held: str, required: str) -> bool:
+        """Does a record of `held` scope satisfy a `required` one?"""
+        try:
+            return cls.ORDER.index(held) >= cls.ORDER.index(required)
+        except ValueError:
+            return False
+
+
 class AdapterError(RuntimeError):
     """Carries its own machine-readable code and exit status."""
 

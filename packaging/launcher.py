@@ -13,12 +13,13 @@ import runpy
 import sys
 from typing import Dict, List, Tuple
 
-VERSION = "0.3.0a11"
+VERSION = "0.3.0a18"
 
 #: subcommand -> (module file under runtime/, implicit first argument)
 COMMANDS: Dict[str, Tuple[str, str]] = {
     "doctor":  ("cli/doctor.py", ""),
     "fabric":  ("cli/fabric_cli.py", ""),
+    "smi":     ("cli/smi.py", ""),
     "model":   ("cli/models.py", ""),
     "plan":    ("cli/scheduler_cli.py", ""),
     "run":     ("cli/coordinator.py", ""),
@@ -50,6 +51,7 @@ USAGE = """
   Setup and inspection
     openmycelium provision                 build the CUDA and ROCm environments
     openmycelium config                    resolved paths and where each came from
+    openmycelium smi                       every accelerator and what is running
     openmycelium doctor                    check every precondition
     openmycelium fabric list               discovered accelerators
     openmycelium version                   versions and protocols

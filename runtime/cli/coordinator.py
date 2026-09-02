@@ -44,6 +44,13 @@ from health import (DEGRADED, FAILED, LOADING_CUDA, LOADING_ROCM,  # noqa: E402
 
 DEFAULT_ROOT = runtime_root()
 
+#: Prefix marking a streamed token on stderr under `--json`. ASCII record
+#: separator: it cannot appear in decoded text, so a reader can tell a token
+#: from a progress line without guessing at the shape of either. The console
+#: classifies on this rather than on which stream a line arrived by, which is
+#: what it used to do and what put generated text in the worker log.
+TOKEN_FRAME = "\x1e"
+
 
 def wsl_path(path: str) -> str:
     """Accept a Windows path from the launcher and use it from inside WSL.
@@ -215,8 +222,25 @@ class Coordinator:
             piece = event.get("text", "")
             self.text_parts.append(piece)
             if not self.args.quiet:
-                sys.stdout.write(piece)
-                sys.stdout.flush()
+                if self.args.json:
+                    # Under --json, stdout carries the document and nothing
+                    # else: tokens used to stream there too, which put prose in
+                    # front of the JSON and made `run --json > gate.json`
+                    # unparseable at column 1.
+                    #
+                    # They move to stderr as one framed line each, not as raw
+                    # text. Raw text was the first fix and it was wrong in a
+                    # quieter way: tokens carry no newlines, so a line-buffered
+                    # reader coalesces the whole reply into one late line, and
+                    # the console -- which classifies by stream -- filed it as a
+                    # worker log instead of output. Framing keeps the stream
+                    # live and keeps it identifiable.
+                    sys.stderr.write(
+                        TOKEN_FRAME + json.dumps({"text": piece}) + "\n")
+                    sys.stderr.flush()
+                else:
+                    sys.stdout.write(piece)
+                    sys.stdout.flush()
         elif kind == "connected":
             self._say(f"[{QUALIFYING}] transport connected; warming both "
                       f"runtimes (first BF16 kernels are slow to select)")
@@ -326,7 +350,8 @@ class Coordinator:
                         pass
         codes = {role: p.returncode for role, p in self.processes.items()}
         if not self.args.quiet:
-            print()
+            # Same reason: nothing but the document reaches stdout under --json.
+            print(file=sys.stderr if self.args.json else sys.stdout)
         if result is None or "generate" not in result:
             self._say(f"[{FAILED}] no result from the CUDA stage; exit codes {codes}")
             for role in ("cuda", "rocm"):
